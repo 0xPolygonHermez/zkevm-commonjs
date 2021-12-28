@@ -1,0 +1,44 @@
+{
+  "name": "@polygon-hermez/zkevm-commonjs",
+  "description": "Javascript library implementing common utilities for zkevm",
+  "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "setup": "npm i",
+    "test": "npx mocha ./test/*.test.js",
+    "eslint": "npx eslint src/** test/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hermeznetwork/zkevm-commonjs.git"
+  },
+  "keywords": [
+    "zkevm",
+    "snark",
+    "polygon",
+    "hermez",
+    "stark",
+    "EVM",
+    "ethereum",
+    "blockchain"
+  ],
+  "author": "polygon-hermez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hermeznetwork/zkevm-commonjs/issues"
+  },
+  "homepage": "https://github.com/hermeznetwork/zkevm-commonjs#readme",
+  "devDependencies": {
+    "eslint": "^8.5.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-mocha": "^10.0.3",
+    "mocha": "^9.1.3"
+  },
+  "dependencies": {
+    "chai": "^4.3.4",
+    "circomlibjs": "^0.1.1",
+    "ethers": "^5.5.2",
+    "ffjavascript": "^0.2.46"
+  }
+}
