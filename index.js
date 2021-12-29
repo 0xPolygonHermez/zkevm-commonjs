@@ -8,3 +8,4 @@ module.exports.stateUtils = require('./src/state-utils');
 module.exports.TmpSmtDB = require('./src/tmp-smt-db');
 module.exports.utils = require('./src/utils');
 module.exports.ZkEVMDB = require('./src/zkevm-db');
+module.exports.getPoseidon = require('./src/poseidon');

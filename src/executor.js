@@ -12,6 +12,19 @@ const { getCurrentDB } = require('./smt-utils');
 const { calculateCircuitInput, calculateBatchHashData } = require('./contract-utils');
 
 module.exports = class Executor {
+    /**
+     * constructor Executor class
+     * @param {Object} db - database
+     * @param {Number} batchNumber - batch number
+     * @param {Number} arity - arity
+     * @param {Object} poseidon - hash function
+     * @param {Number} maxNTx - maximum number of transaction allowed
+     * @param {Number} seqChainID - sequencer own chain ID
+     * @param {Field} root - state root
+     * @param {String} sequencerAddress . sequencer address
+     * @param {Field} localExitRoot - local exit root
+     * @param {Field} globalExitRoot - global exit root
+     */
     constructor(db, batchNumber, arity, poseidon, maxNTx, seqChainID, root, sequencerAddress, localExitRoot, globalExitRoot) {
         this.db = db;
         this.batchNumber = batchNumber;
@@ -30,15 +43,16 @@ module.exports = class Executor {
         this.circuitInput = {};
 
         this.oldStateRoot = root;
-        this.currentRoot = root;
+        this.currentStateRoot = root;
         this.sequencerAddress = sequencerAddress;
-        this.localExitRoot = localExitRoot;
+        this.oldLocalExitRoot = localExitRoot;
+        this.currentLocalExitRoot = localExitRoot;
         this.globalExitRoot = globalExitRoot;
     }
 
     /**
      * Add a raw transaction to the executor
-     * @param {Object} rawTx - RLP encoded transaction with signature
+     * @param {String} rawTx - RLP encoded transaction with signature
      */
     addRawTx(rawTx) {
         this._isNotBuilded();
@@ -73,7 +87,7 @@ module.exports = class Executor {
      * Try to decode and check the validity of rawTxs
      * Save the decoded transaction, whether is valid or not, and the invalidated reason if any in a new array: decodedTxs
      * Note that, even if this funcion mark a transactions as valid, there are some checks that are performed
-     * During the processing of the transactions, therefore can be invalidated after
+     * During the processing of the transactions, therefore can be invalidated afterwards
      * This funcion will check:
      * A: Well formed RLP encoding
      * B: Valid ChainID
@@ -112,14 +126,14 @@ module.exports = class Executor {
                 continue;
             }
 
-            // TODO should be check the type of every decoded parameter?
+            // TODO: mimic RLP checks of the zkproverjs
             if (!ethers.utils.isAddress(txDecoded.to)) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: To invalid address', tx: txDecoded });
                 continue;
             }
 
             // B: Valid chainID
-            if (txDecoded.chainID !== this.seqChainID && txDecoded.chainID !== Constants.defaultSeqChainID) {
+            if (txDecoded.chainID !== this.seqChainID && txDecoded.chainID !== Constants.DEFAULT_SEQ_CHAINID) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Chain ID does not match', tx: txDecoded });
                 continue;
             }
@@ -155,7 +169,7 @@ module.exports = class Executor {
             }
 
             /*
-             * The RLP encoding, encodes the 0 integer as "0x" ( empty byte array),
+             * The RLP encoding, encodes the 0 integer as "0x" (empty byte array),
              * In order to be compatible with Scalar or Number we will update the 0x integer cases with 0x00
              */
             const txParams = Object.keys(txDecoded);
@@ -173,14 +187,14 @@ module.exports = class Executor {
      * Process the decoded transactions decodedTxs
      * Also this function will perform several checks and can mark a transactions as invalid
      * This funcion will check:
-     * A: VALID NONCE
-     * B: ENOUGH UPFRONT TX COST
+     *    A: VALID NONCE
+     *    B: ENOUGH UPFRONT TX COST
      * Process transaction will perform the following operations
-     * from: increase nonce
-     * from: substract total tx cost
-     * from: refund unused gas
-     * to: increase balance
-     * update state
+     *    from: increase nonce
+     *    from: substract total tx cost
+     *    from: refund unused gas
+     *    to: increase balance
+     *    update state
      * finally pay all the fees to the sequencer address
      */
     async _processTx() {
@@ -192,7 +206,7 @@ module.exports = class Executor {
             } else {
                 // Get from state
                 const currenTx = currentDecodedTx.tx;
-                const oldStateFrom = await stateUtils.getState(currenTx.from, this.smt, this.currentRoot);
+                const oldStateFrom = await stateUtils.getState(currenTx.from, this.smt, this.currentStateRoot);
 
                 // A: VALID NONCE
                 if (Number(oldStateFrom.nonce) !== Number(currenTx.nonce)) {
@@ -220,7 +234,7 @@ module.exports = class Executor {
                     newStateTo = newStateFrom;
                 } else {
                     // Get To state
-                    const oldStateTo = await stateUtils.getState(currenTx.to, this.smt, this.currentRoot);
+                    const oldStateTo = await stateUtils.getState(currenTx.to, this.smt, this.currentStateRoot);
                     newStateTo = { ...oldStateTo };
                 }
 
@@ -243,17 +257,17 @@ module.exports = class Executor {
                 newStateTo.balance = Scalar.add(newStateTo.balance, currenTx.value);
 
                 // update root
-                this.currentRoot = await stateUtils.setAccountState(
+                this.currentStateRoot = await stateUtils.setAccountState(
                     currenTx.from,
                     this.smt,
-                    this.currentRoot,
+                    this.currentStateRoot,
                     newStateFrom.balance,
                     newStateFrom.nonce,
                 );
-                this.currentRoot = await stateUtils.setAccountState(
+                this.currentStateRoot = await stateUtils.setAccountState(
                     currenTx.to,
                     this.smt,
-                    this.currentRoot,
+                    this.currentStateRoot,
                     newStateTo.balance,
                     newStateTo.nonce,
                 );
@@ -268,17 +282,17 @@ module.exports = class Executor {
      */
     async _paySequencerFees() {
         // get sequencer state
-        const oldStateSequencer = await stateUtils.getState(this.sequencerAddress, this.smt, this.currentRoot);
+        const oldStateSequencer = await stateUtils.getState(this.sequencerAddress, this.smt, this.currentStateRoot);
         const newStateSequencer = { ...oldStateSequencer };
 
         // update balance with the accumulated fees
         newStateSequencer.balance = Scalar.add(newStateSequencer.balance, this.totalFeeAccumulated);
 
         // update root
-        this.currentRoot = await stateUtils.setAccountState(
+        this.currentStateRoot = await stateUtils.setAccountState(
             this.sequencerAddress,
             this.smt,
-            this.currentRoot,
+            this.currentStateRoot,
             newStateSequencer.balance,
             newStateSequencer.nonce,
         );
@@ -318,21 +332,23 @@ module.exports = class Executor {
 
         // compute circuit inputs
         const oldStateRoot = `0x${this.F.toString(this.oldStateRoot, 16).padStart(64, '0')}`;
-        const newStateRoot = `0x${this.F.toString(this.currentRoot, 16).padStart(64, '0')}`;
-        const localExitRoot = `0x${this.F.toString(this.localExitRoot, 16).padStart(64, '0')}`;
+        const newStateRoot = `0x${this.F.toString(this.currentStateRoot, 16).padStart(64, '0')}`;
+        const oldLocalExitRoot = `0x${this.F.toString(this.oldLocalExitRoot, 16).padStart(64, '0')}`;
+        const newLocalExitRoot = `0x${this.F.toString(this.currentLocalExitRoot, 16).padStart(64, '0')}`;
         const globalExitRoot = `0x${this.F.toString(this.globalExitRoot, 16).padStart(64, '0')}`;
 
         const batchHashData = calculateBatchHashData(this.getBatchL2Data(), globalExitRoot);
         const inputHash = calculateCircuitInput(
             oldStateRoot,
-            localExitRoot,
+            oldLocalExitRoot,
             newStateRoot,
-            localExitRoot, // should be the new exit root, but it's nod modified in this version
+            newLocalExitRoot,
             this.sequencerAddress,
             batchHashData,
             this.seqChainID,
             this.batchNumber,
         );
+
         this.circuitInput = {
             keys,
             oldStateRoot,
@@ -341,8 +357,8 @@ module.exports = class Executor {
             sequencerAddr: this.sequencerAddress,
             txs: this.rawTxs,
             newStateRoot,
-            oldLocalExitRoot: localExitRoot,
-            newLocalExitRoot: localExitRoot,
+            oldLocalExitRoot,
+            newLocalExitRoot,
             globalExitRoot,
             batchHashData,
             inputHash,

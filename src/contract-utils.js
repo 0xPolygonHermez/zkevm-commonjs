@@ -3,19 +3,19 @@ const { Scalar } = require('ffjavascript');
 
 /**
  * Compute globalHash
- * @param {String} currentStateRoot - Current state Root
- * @param {String} currentLocalExitRoot - Current local exit root
- * @param {String} newStateRoot - New State root once the batch is processed
- * @param {String} newLocalExitRoot - New local exit root once the batch is processed
- * @param {String} sequencerAddress - Sequencer address
- * @param {String} batchHashData - Batch hash data
+ * @param {String|Scalar} oldStateRoot - Old state Root
+ * @param {String|Scalar} oldLocalExitRoot - Old local exit root
+ * @param {String|Scalar} newStateRoot - New State root once the batch is processed
+ * @param {String|Scalar} newLocalExitRoot - New local exit root once the batch is processed
+ * @param {String} sequencerAddress - Sequencer address in hex encoding
+ * @param {String} batchHashData - Batch hash data in hex encoding
  * @param {Number} batchChainID - Batch chain ID
  * @param {Number} batchNum - Batch number
- * @returns {String} - Leaf value
+ * @returns {String} - global hash in hex encoding
  */
 function calculateCircuitInput(
-    currentStateRoot,
-    currentLocalExitRoot,
+    oldStateRoot,
+    oldLocalExitRoot,
     newStateRoot,
     newLocalExitRoot,
     sequencerAddress,
@@ -23,16 +23,16 @@ function calculateCircuitInput(
     batchChainID,
     batchNum,
 ) {
-    const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
-    const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
+    const oldStateRootHex = `0x${Scalar.e(oldStateRoot).toString(16).padStart(64, '0')}`;
+    const oldLocalExitRootHex = `0x${Scalar.e(oldLocalExitRoot).toString(16).padStart(64, '0')}`;
     const newStateRootHex = `0x${Scalar.e(newStateRoot).toString(16).padStart(64, '0')}`;
     const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
     return ethers.utils.solidityKeccak256(
         ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'address', 'bytes32', 'uint32', 'uint32'],
         [
-            currentStateRootHex,
-            currentLocalExitRootHex,
+            oldStateRootHex,
+            oldLocalExitRootHex,
             newStateRootHex,
             newLocalExitRootHex,
             sequencerAddress,
@@ -45,9 +45,9 @@ function calculateCircuitInput(
 
 /**
  * Batch hash data
- * @param {String} batchL2Data - All raw transaction data concatenated
- * @param {String} globalExitRoot - Global Exit Root
- * @returns {String} - Batch hash data
+ * @param {String} batchL2Data - All raw transaction data concatenated as RLP encoding
+ * @param {String|Scalar} globalExitRoot - Global Exit Root
+ * @returns {String} - Batch hash data in hex encoding
  */
 function calculateBatchHashData(
     batchL2Data,

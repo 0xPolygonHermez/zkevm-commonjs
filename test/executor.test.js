@@ -1,5 +1,4 @@
 /* eslint-disable no-await-in-loop */
-const { buildPoseidon } = require('circomlibjs');
 const { Scalar } = require('ffjavascript');
 
 const ethers = require('ethers');
@@ -8,11 +7,11 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-    MemDB, SMT, stateUtils, ZkEVMDB,
+    MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon,
 } = require('../index');
 const { setGenesisBlock } = require('./helpers/test-utils');
 
-describe('Executor Test', async function () {
+describe('Executor', async function () {
     this.timeout(10000);
     let poseidon;
     let F;
@@ -20,9 +19,9 @@ describe('Executor Test', async function () {
     let testVectors;
 
     before(async () => {
-        poseidon = await buildPoseidon();
+        poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition.test-vector.json')));
     });
 
     it('Check test vectors', async () => {
@@ -128,7 +127,7 @@ describe('Executor Test', async function () {
             // execute the transactions added to the batch
             await batch.executeTxs();
 
-            const newRoot = batch.currentRoot;
+            const newRoot = batch.currentStateRoot;
             expect(F.toString(newRoot)).to.be.equal(expectedNewRoot);
 
             // consolidate state

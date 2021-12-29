@@ -1,18 +1,16 @@
 /* eslint-disable no-await-in-loop */
-const { buildPoseidon } = require('circomlibjs');
 const { Scalar } = require('ffjavascript');
 const { assert } = require('chai');
 
-const SMT = require('../src/smt');
-const MemDB = require('../src/mem-db');
+const { SMT, MemDB, getPoseidon } = require('../index');
 
-describe('Sparse Merkle Tree', async function () {
+describe('SMT', async function () {
     let poseidon;
     let F;
     this.timeout(10000000);
 
     before(async () => {
-        poseidon = await buildPoseidon();
+        poseidon = await getPoseidon();
         F = poseidon.F;
     });
 

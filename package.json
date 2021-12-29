@@ -6,7 +6,8 @@
   "scripts": {
     "setup": "npm i",
     "test": "npx mocha ./test/*.test.js",
-    "eslint": "npx eslint src/** test/*.test.js"
+    "eslint": "npx eslint src/** test/*.test.js",
+    "eslint:fix": "npx eslint src/** test/*.test.js --fix"
   },
   "repository": {
     "type": "git",

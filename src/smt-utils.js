@@ -1,17 +1,7 @@
 const { Scalar } = require('ffjavascript');
-const { buildPoseidon } = require('circomlibjs');
 
 const constants = require('./constants');
-
-let poseidon;
-let F;
-let isBuild = false;
-
-async function build() {
-    poseidon = await buildPoseidon();
-    F = poseidon.F;
-    isBuild = true;
-}
+const getPoseidon = require('./poseidon');
 
 /**
  * Converts a Scalar into an array of 4 elements encoded as Fields elements where each one represents 64 bits
@@ -72,9 +62,10 @@ function fe2n(Fr, fe) {
  * @returns {Scalar} - key computed
  */
 async function keyEthAddrBalance(_ethAddr, arity = 4) {
-    if (!isBuild) await build();
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
 
-    const constant = F.e(constants.smtKeyBalance);
+    const constant = F.e(constants.SMT_KEY_BALANCE);
 
     let ethAddr;
     if (typeof _ethAddr === 'string') {
@@ -102,9 +93,10 @@ async function keyEthAddrBalance(_ethAddr, arity = 4) {
  * @returns {Scalar} - key computed
  */
 async function keyEthAddrNonce(_ethAddr, arity = 4) {
-    if (!isBuild) await build();
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
 
-    const constant = F.e(constants.smtKeyNonce);
+    const constant = F.e(constants.SMT_KEY_NONCE);
 
     let ethAddr;
     if (typeof _ethAddr === 'string') {
@@ -142,7 +134,7 @@ async function fillDBArray(node, db, dbObject, Fr) {
     if (Scalar.fromString(childArrayHex[0], 16) !== Scalar.e(1)) {
         for (let i = 0; i < childArrayHex.length; i++) {
             if (Scalar.fromString(childArrayHex[i], 16) !== Scalar.e(0)) {
-                await fillDBArray(F.e(`0x${childArrayHex[i]}`), db, dbObject, Fr);
+                await fillDBArray(Fr.e(`0x${childArrayHex[i]}`), db, dbObject, Fr);
             }
         }
     }

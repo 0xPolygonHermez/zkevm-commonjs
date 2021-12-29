@@ -41,7 +41,7 @@ class MemDB {
     }
 
     /**
-     * Set merjle-tree node
+     * Set merkle-tree node
      * @param {Field} key - key in Field representation
      * @param {Array[Field]} value - child array
      */

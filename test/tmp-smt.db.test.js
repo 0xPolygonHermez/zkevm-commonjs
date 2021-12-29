@@ -1,10 +1,9 @@
-const { buildPoseidon } = require('circomlibjs');
 const { Scalar } = require('ffjavascript');
 const { expect } = require('chai');
 const ethers = require('ethers');
 
 const {
-    MemDB, SMT, smtUtils, TmpSmtDB,
+    MemDB, SMT, smtUtils, TmpSmtDB, getPoseidon,
 } = require('../index');
 
 describe('TmpSmtDB', () => {
@@ -12,7 +11,7 @@ describe('TmpSmtDB', () => {
     let F;
 
     before(async () => {
-        poseidon = await buildPoseidon();
+        poseidon = await getPoseidon();
         F = poseidon.F;
     });
 
