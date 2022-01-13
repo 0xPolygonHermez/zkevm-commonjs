@@ -76,10 +76,8 @@ describe('smtUtils', async function () {
             const dataTest = testVectors[i];
             const { leafType, arity, ethAddr } = dataTest;
 
-            let res;
-
-            if (leafType === Constants.keyEthAddrBalance) {
-                await smtUtils.keyEthAddrBalance(ethAddr, arity);
+            if (leafType === Constants.SMT_KEY_BALANCE) {
+                const res = await smtUtils.keyEthAddrBalance(ethAddr, arity);
                 expect(F.toString(res)).to.be.equal(dataTest.expectedKey);
             }
         }
@@ -90,10 +88,34 @@ describe('smtUtils', async function () {
             const dataTest = testVectors[i];
             const { leafType, arity, ethAddr } = dataTest;
 
-            let res;
+            if (leafType === Constants.SMT_KEY_NONCE) {
+                const res = await smtUtils.keyEthAddrNonce(ethAddr, arity);
+                expect(F.toString(res)).to.be.equal(dataTest.expectedKey);
+            }
+        }
+    });
 
-            if (leafType === Constants.keyEthAddrNonce) {
-                await smtUtils.keyEthAddrNonce(ethAddr, arity);
+    it('keyContractCode', async () => {
+        for (let i = 0; i < testVectors.length; i++) {
+            const dataTest = testVectors[i];
+            const { leafType, arity, ethAddr } = dataTest;
+
+            if (leafType === Constants.SMT_KEY_SC_CODE) {
+                const res = await smtUtils.keyContractCode(ethAddr, arity);
+                expect(F.toString(res)).to.be.equal(dataTest.expectedKey);
+            }
+        }
+    });
+
+    it('keyContractStorage', async () => {
+        for (let i = 0; i < testVectors.length; i++) {
+            const dataTest = testVectors[i];
+            const {
+                leafType, arity, ethAddr, storagePosition,
+            } = dataTest;
+
+            if (leafType === Constants.SMT_KEY_SC_STORAGE) {
+                const res = await smtUtils.keyContractStorage(ethAddr, storagePosition, arity);
                 expect(F.toString(res)).to.be.equal(dataTest.expectedKey);
             }
         }

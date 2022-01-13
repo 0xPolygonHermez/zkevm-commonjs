@@ -118,6 +118,74 @@ async function keyEthAddrNonce(_ethAddr, arity = 4) {
 }
 
 /**
+ * Leaf type 2: H([ethAddr[0:8], ethAddr[8:16], ethAddr[16:24], 2, 0, ...])
+ * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
+ * @param {Number} arity - merkle tree bits per level. p.e: 4 is 2**4 levels each tree layer
+ * @returns {Scalar} - key computed
+ */
+async function keyContractCode(_ethAddr, arity = 4) {
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
+
+    const constant = F.e(constants.SMT_KEY_SC_CODE);
+
+    let ethAddr;
+    if (typeof _ethAddr === 'string') {
+        ethAddr = Scalar.fromString(_ethAddr, 16);
+    } else {
+        ethAddr = Scalar.e(_ethAddr);
+    }
+
+    const ethAddrArr = scalar2fea(F, ethAddr);
+
+    const key = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], constant];
+
+    // fill zeros until 2**arity
+    for (let i = key.length; i < (1 << arity); i++) {
+        key.push(F.zero);
+    }
+
+    return poseidon(key);
+}
+
+/**
+ * Leaf type 3: H([ethAddr[0:8], ethAddr[8:16], ethAddr[16:24], 3, 0,
+ *      stoPos[0:8], stoPos[8:16], stoPos[16:24], stoPos[24:32], ...])
+ * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
+ * @param {Number | Scalar} _storagePos - smart contract storage position
+ * @param {Number} arity - merkle tree bits per level. p.e: 4 is 2**4 levels each tree layer
+ * @returns {Scalar} - key computed
+ */
+async function keyContractStorage(_ethAddr, _storagePos, arity = 4) {
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
+
+    const constant = F.e(constants.SMT_KEY_SC_STORAGE);
+
+    let ethAddr;
+    if (typeof _ethAddr === 'string') {
+        ethAddr = Scalar.fromString(_ethAddr, 16);
+    } else {
+        ethAddr = Scalar.e(_ethAddr);
+    }
+
+    const ethAddrArr = scalar2fea(F, ethAddr);
+
+    const storagePos = Scalar.e(_storagePos);
+    const storagePosArray = scalar2fea(F, storagePos);
+
+    const key = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], constant,
+        storagePosArray[0], storagePosArray[1], storagePosArray[2], storagePosArray[3]];
+
+    // fill zeros until 2**arity
+    for (let i = key.length; i < (1 << arity); i++) {
+        key.push(F.zero);
+    }
+
+    return poseidon(key);
+}
+
+/**
  * Fill the dbObject with all the childs recursively
  * @param {Uint8Array} node merkle node
  * @param {Object} db Mem DB
@@ -163,5 +231,7 @@ module.exports = {
     fe2n,
     keyEthAddrBalance,
     keyEthAddrNonce,
+    keyContractCode,
+    keyContractStorage,
     getCurrentDB,
 };
