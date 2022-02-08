@@ -13,12 +13,14 @@ describe('smtUtils', async function () {
 
     let poseidon;
     let F;
-    let testVectors;
+    let testVectorsKeys;
+    let testVectorsHashBytecode;
 
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition/state-transition.json')));
+        testVectorsKeys = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/smt-utils.test-vector.json')));
+        testVectorsHashBytecode = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/smt-hash-bytecode.test-vector.json')));
     });
 
     it('scalar2fea & fea2scalar', async () => {
@@ -72,8 +74,8 @@ describe('smtUtils', async function () {
     });
 
     it('keyEthAddrBalance', async () => {
-        for (let i = 0; i < testVectors.length; i++) {
-            const dataTest = testVectors[i];
+        for (let i = 0; i < testVectorsKeys.length; i++) {
+            const dataTest = testVectorsKeys[i];
             const { leafType, arity, ethAddr } = dataTest;
 
             if (leafType === Constants.SMT_KEY_BALANCE) {
@@ -84,8 +86,8 @@ describe('smtUtils', async function () {
     });
 
     it('keyEthAddrNonce', async () => {
-        for (let i = 0; i < testVectors.length; i++) {
-            const dataTest = testVectors[i];
+        for (let i = 0; i < testVectorsKeys.length; i++) {
+            const dataTest = testVectorsKeys[i];
             const { leafType, arity, ethAddr } = dataTest;
 
             if (leafType === Constants.SMT_KEY_NONCE) {
@@ -96,8 +98,8 @@ describe('smtUtils', async function () {
     });
 
     it('keyContractCode', async () => {
-        for (let i = 0; i < testVectors.length; i++) {
-            const dataTest = testVectors[i];
+        for (let i = 0; i < testVectorsKeys.length; i++) {
+            const dataTest = testVectorsKeys[i];
             const { leafType, arity, ethAddr } = dataTest;
 
             if (leafType === Constants.SMT_KEY_SC_CODE) {
@@ -108,8 +110,8 @@ describe('smtUtils', async function () {
     });
 
     it('keyContractStorage', async () => {
-        for (let i = 0; i < testVectors.length; i++) {
-            const dataTest = testVectors[i];
+        for (let i = 0; i < testVectorsKeys.length; i++) {
+            const dataTest = testVectorsKeys[i];
             const {
                 leafType, arity, ethAddr, storagePosition,
             } = dataTest;
@@ -135,5 +137,14 @@ describe('smtUtils', async function () {
 
         const expectedNodes = 7;
         expect(expectedNodes).to.be.equal(Object.keys(fullDB).length);
+    });
+
+    it('hashContractBytecode', async () => {
+        for (let i = 0; i < testVectorsHashBytecode.length; i++) {
+            const { bytecode, expectedHash } = testVectorsHashBytecode[i];
+            const hashBytecode = await smtUtils.hashContractBytecode(bytecode);
+
+            expect(hashBytecode).to.be.equal(expectedHash);
+        }
     });
 });

@@ -225,6 +225,64 @@ async function getCurrentDB(root, db, Fr) {
     return dbObject;
 }
 
+/**
+ * Computes the bytecode hash in order to add it to the state-tree
+ * @param {String} bytecode - smart contract bytecode representes as hex string
+ * @returns {String} bytecode hash represented as hex string
+ */
+async function hashContractBytecode(_bytecode) {
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
+
+    const bytecode = _bytecode.startsWith('0x') ? _bytecode.slice(2) : _bytecode;
+
+    const numBytes = bytecode.length / 2;
+
+    let numHashes;
+    if (numBytes < constants.BYTECODE_CHUNKS * 31) {
+        numHashes = 1;
+    } else {
+        const remainingBytes = numBytes - constants.BYTECODE_CHUNKS * 31;
+        numHashes = 1 + Math.ceil(remainingBytes / ((constants.BYTECODE_CHUNKS - 1) * 31));
+    }
+
+    let tmpHash;
+    let bytesPointer = 0;
+
+    for (let i = 0; i < numHashes; i++) {
+        const maxBytesToAdd = (i === 0) ? (constants.BYTECODE_CHUNKS) * 31 : (constants.BYTECODE_CHUNKS - 1) * 31;
+        const elementsToHash = [];
+
+        if (i !== 0) {
+            elementsToHash.push(tmpHash);
+        }
+        const subsetBytecode = bytecode.slice(bytesPointer, bytesPointer + maxBytesToAdd * 2);
+        bytesPointer += maxBytesToAdd * 2;
+
+        let tmpElem = '';
+        let counter = 0;
+
+        for (let j = 0; j < maxBytesToAdd; j++) {
+            let byteToAdd = '00';
+            if (j < subsetBytecode.length / 2) {
+                byteToAdd = subsetBytecode.slice(j * 2, (j + 1) * 2);
+            }
+
+            tmpElem = tmpElem.concat(byteToAdd);
+            counter += 1;
+
+            if (counter === 31) {
+                elementsToHash.push(F.e(Scalar.fromString(tmpElem, 16)));
+                tmpElem = '';
+                counter = 0;
+            }
+        }
+        tmpHash = poseidon(elementsToHash);
+    }
+
+    return F.toString(tmpHash, 16).padStart(64, '0');
+}
+
 module.exports = {
     scalar2fea,
     fea2scalar,
@@ -234,4 +292,5 @@ module.exports = {
     keyContractCode,
     keyContractStorage,
     getCurrentDB,
+    hashContractBytecode,
 };
