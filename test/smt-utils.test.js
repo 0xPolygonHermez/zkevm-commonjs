@@ -18,7 +18,7 @@ describe('smtUtils', async function () {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/smt-utils.test-vector.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition/state-transition.json')));
     });
 
     it('scalar2fea & fea2scalar', async () => {

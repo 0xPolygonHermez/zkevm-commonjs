@@ -21,7 +21,7 @@ describe('ZkEVMDB', () => {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition.test-vector.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition/state-transition.json')));
     });
 
     it('Check zkEVMDB basic functions', async () => {
