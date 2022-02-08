@@ -10,8 +10,9 @@ const {
     MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon,
 } = require('../index');
 const { setGenesisBlock } = require('./helpers/test-utils');
+const { rawTxToCustomRawTx, toHexStringRlp } = require('../src/helpers/processor-utils');
 
-describe('Executor', async function () {
+describe('Processor', async function () {
     this.timeout(10000);
     let poseidon;
     let F;
@@ -91,16 +92,48 @@ describe('Executor', async function () {
                     gasLimit: txData.gasLimit,
                     gasPrice: ethers.utils.parseUnits(txData.gasPrice, 'gwei'),
                     chainId: txData.chainId,
+                    data: txData.data || '0x',
                 };
 
+                if (!ethers.utils.isAddress(tx.to) || !ethers.utils.isAddress(txData.from)) {
+                    expect(txData.rawTx).to.equal(undefined);
+                    // eslint-disable-next-line no-continue
+                    continue;
+                }
+
                 try {
-                    let rawTx = await walletMap[txData.from].signTransaction(tx);
-                    expect(rawTx).to.equal(txData.rawTx);
+                    let customRawTx;
+
+                    if (tx.chainId === 0) {
+                        const signData = ethers.utils.RLP.encode([
+                            toHexStringRlp(Scalar.e(tx.nonce)),
+                            toHexStringRlp(tx.gasPrice),
+                            toHexStringRlp(tx.gasLimit),
+                            toHexStringRlp(tx.to),
+                            toHexStringRlp(tx.value),
+                            toHexStringRlp(tx.data),
+                            toHexStringRlp(tx.chainId),
+                            '0x',
+                            '0x',
+                        ]);
+                        const digest = ethers.utils.keccak256(signData);
+                        const signingKey = new ethers.utils.SigningKey(walletMap[txData.from].privateKey);
+                        const signature = signingKey.signDigest(digest);
+                        const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
+                        const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
+                        const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
+                        customRawTx = signData.concat(r).concat(s).concat(v);
+                    } else {
+                        const rawTxEthers = await walletMap[txData.from].signTransaction(tx);
+                        customRawTx = rawTxToCustomRawTx(rawTxEthers);
+                    }
+
+                    expect(customRawTx).to.equal(txData.rawTx);
 
                     if (txData.encodeInvalidData) {
-                        rawTx = rawTx.slice(0, -6);
+                        customRawTx = customRawTx.slice(0, -6);
                     }
-                    rawTxs.push(rawTx);
+                    rawTxs.push(customRawTx);
                     txProcessed.push(txData);
                 } catch (error) {
                     expect(txData.rawTx).to.equal(undefined);

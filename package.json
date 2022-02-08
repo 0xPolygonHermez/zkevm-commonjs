@@ -5,7 +5,6 @@
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
-    "postinstall": "./config/post-install.sh",
     "test": "npx mocha ./test/*.test.js",
     "eslint": "npx eslint src/** test/*.test.js",
     "eslint:fix": "npx eslint src/** test/*.test.js --fix"
@@ -43,7 +42,7 @@
     "@ethereumjs/vm": "^5.6.0",
     "chai": "^4.3.4",
     "circomlibjs": "^0.1.1",
-    "ethers": "^5.5.2",
+    "ethers": "^5.5.4",
     "ffjavascript": "^0.2.46"
   }
 }
