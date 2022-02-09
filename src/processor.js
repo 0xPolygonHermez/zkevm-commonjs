@@ -10,7 +10,7 @@ const smtKeyUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateCircuitInput, calculateBatchHashData } = require('./contract-utils');
-const { decodeCustomRawTxProverMethod } = require('./helpers/processor-utils');
+const { decodeCustomRawTxProverMethod } = require('./processor-utils');
 
 module.exports = class Processor {
     /**

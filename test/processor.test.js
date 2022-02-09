@@ -10,7 +10,7 @@ const {
     MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon,
 } = require('../index');
 const { setGenesisBlock } = require('./helpers/test-utils');
-const { rawTxToCustomRawTx, toHexStringRlp } = require('../src/helpers/processor-utils');
+const { rawTxToCustomRawTx, toHexStringRlp } = require('../src/processor-utils');
 
 describe('Processor', async function () {
     this.timeout(10000);

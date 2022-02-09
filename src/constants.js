@@ -13,6 +13,7 @@ module.exports.DB_ARITY = ethers.utils.id(('ZKEVM_DB_ARITY'));
 module.exports.DEFAULT_SEQ_CHAINID = 1000;
 module.exports.DEFAULT_ARITY = 4;
 module.exports.DEFAULT_MAX_TX = 100;
+module.exports.SIGNATURE_BYTES = 32 + 32 + 1;
 
 // SMT constant keys
 module.exports.SMT_KEY_BALANCE = 0;

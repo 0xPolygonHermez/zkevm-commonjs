@@ -1,6 +1,6 @@
 const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
-
+const Constants = require('./constants');
 /**
  * Extract an integer from a byte array
  * @param {Uint8Array} data - Byte array
@@ -14,6 +14,29 @@ function unarrayifyInteger(data, offset, length) {
         result = (result * 256) + data[offset + i];
     }
     return result;
+}
+
+/**
+ * Convert a custom rawTx  [rlp(nonce,gasprice,gaslimit,to,value,data,0,0)|r|s|v]
+ * to a standar raw tx [rlp(nonce,gasprice,gaslimit,to,value,data,r,s,v)]
+ * @param {String} customRawTx -  Custom raw transaction
+ * @returns {String} - Standar raw transaction
+ */
+function customRawTxToRawTx(customRawTx) {
+    const signatureCharacters = Constants.SIGNATURE_BYTES * 2;
+    const rlpSignData = customRawTx.slice(0, -signatureCharacters);
+    const signature = `0x${customRawTx.slice(-signatureCharacters)}`;
+
+    const txFields = ethers.utils.RLP.decode(rlpSignData);
+
+    const signatureParams = ethers.utils.splitSignature(signature);
+
+    const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
+    const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+    const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+    const rlpFields = [...txFields.slice(0, -3), v, r, s];
+
+    return ethers.utils.RLP.encode(rlpFields);
 }
 
 /**
@@ -56,7 +79,6 @@ function rawTxToCustomRawTx(rawTx) {
     const r = tx.r.slice(2);
     const s = tx.s.slice(2);
     const v = (tx.v - tx.chainId * 2 - 35 + 27).toString(16).padStart(2, '0'); // 1 byte
-
     return signData.concat(r).concat(s).concat(v);
 }
 
@@ -182,7 +204,6 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     offset += lenS;
     txDecoded.v = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenV));
     offset += lenV;
-
     return { txDecoded, rlpSignData };
 }
 
@@ -190,4 +211,5 @@ module.exports = {
     decodeCustomRawTxProverMethod,
     rawTxToCustomRawTx,
     toHexStringRlp,
+    customRawTxToRawTx,
 };
