@@ -1,7 +1,7 @@
 const { Scalar } = require('ffjavascript');
 
 const Constants = require('./constants');
-const Executor = require('./executor');
+const Processor = require('./processor');
 const SMT = require('./smt');
 const { getState } = require('./state-utils');
 
@@ -24,11 +24,11 @@ class ZkEVMDB {
     }
 
     /**
-     * Return a new Executor with the current RollupDb state
+     * Return a new Processor with the current RollupDb state
      * @param {Scalar} maxNTx - Maximum number of transactions
      */
     async buildBatch(maxNTx = Constants.DEFAULT_MAX_TX) {
-        return new Executor(
+        return new Processor(
             this.db,
             Scalar.add(this.lastBatch, 1),
             this.arity,
@@ -44,49 +44,49 @@ class ZkEVMDB {
 
     /**
      * Consolidate a batch by writing it in the DB
-     * @param {Object} executor - Executor object
+     * @param {Object} processor - Processor object
      */
-    async consolidate(executor) {
-        if (executor.batchNumber !== Scalar.add(this.lastBatch, 1)) {
+    async consolidate(processor) {
+        if (processor.batchNumber !== Scalar.add(this.lastBatch, 1)) {
             throw new Error('Updating the wrong batch');
         }
 
-        if (!executor.builded) {
-            await executor.executeTxs();
+        if (!processor.builded) {
+            await processor.executeTxs();
         }
 
         // Populate actual DB with the keys and values inserted in the batch
-        await executor.tmpSmtDB.populateSrcDb();
+        await processor.tmpSmtDB.populateSrcDb();
 
         // set state root
         await this.db.setValue(
-            Scalar.add(Constants.DB_STATE_ROOT, executor.batchNumber),
-            this.F.toString(executor.currentStateRoot),
+            Scalar.add(Constants.DB_STATE_ROOT, processor.batchNumber),
+            this.F.toString(processor.currentStateRoot),
         );
 
         // Set local exit root
         await this.db.setValue(
-            Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, executor.batchNumber),
-            this.F.toString(executor.currentLocalExitRoot),
+            Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, processor.batchNumber),
+            this.F.toString(processor.currentLocalExitRoot),
         );
 
         // Set global exit root
         await this.db.setValue(
-            Scalar.add(Constants.DB_GLOBAL_EXIT_ROOT, executor.batchNumber),
-            this.F.toString(executor.globalExitRoot),
+            Scalar.add(Constants.DB_GLOBAL_EXIT_ROOT, processor.batchNumber),
+            this.F.toString(processor.globalExitRoot),
         );
 
         // Set last batch number
         await this.db.setValue(
             Constants.DB_LAST_BATCH,
-            executor.batchNumber,
+            processor.batchNumber,
         );
 
         // Update ZKEVMDB variables
-        this.lastBatch = executor.batchNumber;
-        this.stateRoot = executor.currentStateRoot;
-        this.localExitRoot = executor.currentLocalExitRoot;
-        this.globalExitRoot = executor.globalExitRoot;
+        this.lastBatch = processor.batchNumber;
+        this.stateRoot = processor.currentStateRoot;
+        this.localExitRoot = processor.currentLocalExitRoot;
+        this.globalExitRoot = processor.globalExitRoot;
     }
 
     /**
@@ -136,30 +136,14 @@ class ZkEVMDB {
      * @param {Object} seqChainID - Sequencer chian id
      * @param {Object} poseidon - Poseidon object
      * @param {String} sequencerAddress - Sequencer address
-     * @param {Uint8Array} root - Executor object
+     * @param {Uint8Array} root - Merkle root
      * @returns {Object} ZkEVMDB object
      */
     static async newZkEVM(db, seqChainID, arity, poseidon, sequencerAddress, stateRoot, localExitRoot, globalExitRoot) {
-        try {
-            const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
-            const DBStateRoot = await db.getValue(Scalar.add(Constants.DB_STATE_ROOT, lastBatch));
-            const DBLocalExitRoot = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatch));
-            const DBGlobalExitRoot = await db.getValue(Scalar.add(Constants.DB_GLOBAL_EXIT_ROOT, lastBatch));
-            const dBSeqChainID = Scalar.toNumber(await db.getValue(Constants.DB_SEQ_CHAINID));
-            const dBArity = Scalar.toNumber(await db.getValue(Constants.DB_ARITY));
+        const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
 
-            return new ZkEVMDB(
-                db,
-                lastBatch,
-                DBStateRoot,
-                DBLocalExitRoot,
-                DBGlobalExitRoot,
-                dBArity,
-                dBSeqChainID,
-                poseidon,
-                sequencerAddress,
-            );
-        } catch (error) {
+        // If it is null, instantiate a new evm-db
+        if (lastBatch === null) {
             const setSeqChainID = seqChainID || Constants.DEFAULT_SEQ_CHAINID;
             const setArity = arity || Constants.DEFAULT_ARITY;
 
@@ -178,6 +162,24 @@ class ZkEVMDB {
                 sequencerAddress,
             );
         }
+
+        const DBStateRoot = await db.getValue(Scalar.add(Constants.DB_STATE_ROOT, lastBatch));
+        const DBLocalExitRoot = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatch));
+        const DBGlobalExitRoot = await db.getValue(Scalar.add(Constants.DB_GLOBAL_EXIT_ROOT, lastBatch));
+        const dBSeqChainID = Scalar.toNumber(await db.getValue(Constants.DB_SEQ_CHAINID));
+        const dBArity = Scalar.toNumber(await db.getValue(Constants.DB_ARITY));
+
+        return new ZkEVMDB(
+            db,
+            lastBatch,
+            DBStateRoot,
+            DBLocalExitRoot,
+            DBGlobalExitRoot,
+            dBArity,
+            dBSeqChainID,
+            poseidon,
+            sequencerAddress,
+        );
     }
 }
 

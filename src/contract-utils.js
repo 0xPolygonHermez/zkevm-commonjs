@@ -1,46 +1,48 @@
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
+const { Fr } = require('./constants');
 
 /**
  * Compute globalHash
- * @param {String|Scalar} oldStateRoot - Old state Root
- * @param {String|Scalar} oldLocalExitRoot - Old local exit root
+ * @param {String|Scalar} currentStateRoot - Old state Root
+ * @param {String|Scalar} currentLocalExitRoot - Old local exit root
  * @param {String|Scalar} newStateRoot - New State root once the batch is processed
  * @param {String|Scalar} newLocalExitRoot - New local exit root once the batch is processed
  * @param {String} sequencerAddress - Sequencer address in hex encoding
  * @param {String} batchHashData - Batch hash data in hex encoding
  * @param {Number} batchChainID - Batch chain ID
- * @param {Number} batchNum - Batch number
+ * @param {Number} numBatch - Batch number
  * @returns {String} - global hash in hex encoding
  */
 function calculateCircuitInput(
-    oldStateRoot,
-    oldLocalExitRoot,
+    currentStateRoot,
+    currentLocalExitRoot,
     newStateRoot,
     newLocalExitRoot,
     sequencerAddress,
     batchHashData,
     batchChainID,
-    batchNum,
+    numBatch,
 ) {
-    const oldStateRootHex = `0x${Scalar.e(oldStateRoot).toString(16).padStart(64, '0')}`;
-    const oldLocalExitRootHex = `0x${Scalar.e(oldLocalExitRoot).toString(16).padStart(64, '0')}`;
+    const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
+    const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
     const newStateRootHex = `0x${Scalar.e(newStateRoot).toString(16).padStart(64, '0')}`;
     const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
-    return ethers.utils.solidityKeccak256(
+    const hashKeccak = ethers.utils.solidityKeccak256(
         ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'address', 'bytes32', 'uint32', 'uint32'],
         [
-            oldStateRootHex,
-            oldLocalExitRootHex,
+            currentStateRootHex,
+            currentLocalExitRootHex,
             newStateRootHex,
             newLocalExitRootHex,
             sequencerAddress,
             batchHashData,
             batchChainID,
-            batchNum,
+            numBatch,
         ],
     );
+    return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), Fr).toString(16).padStart(64, '0')}`;
 }
 
 /**
