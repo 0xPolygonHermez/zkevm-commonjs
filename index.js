@@ -1,6 +1,7 @@
 module.exports.Constants = require('./src/constants');
 module.exports.contractUtils = require('./src/contract-utils');
-module.exports.Executor = require('./src/processor');
+module.exports.Processor = require('./src/processor');
+module.exports.processorUtils = require('./src/processor-utils');
 module.exports.MemDB = require('./src/mem-db');
 module.exports.smtUtils = require('./src/smt-utils');
 module.exports.SMT = require('./src/smt');

@@ -7,10 +7,9 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-    MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon,
+    MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
 const { setGenesisBlock } = require('./helpers/test-utils');
-const { rawTxToCustomRawTx, toHexStringRlp } = require('../src/processor-utils');
 
 describe('Processor', async function () {
     this.timeout(10000);
@@ -106,13 +105,13 @@ describe('Processor', async function () {
 
                     if (tx.chainId === 0) {
                         const signData = ethers.utils.RLP.encode([
-                            toHexStringRlp(Scalar.e(tx.nonce)),
-                            toHexStringRlp(tx.gasPrice),
-                            toHexStringRlp(tx.gasLimit),
-                            toHexStringRlp(tx.to),
-                            toHexStringRlp(tx.value),
-                            toHexStringRlp(tx.data),
-                            toHexStringRlp(tx.chainId),
+                            processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
+                            processorUtils.toHexStringRlp(tx.gasPrice),
+                            processorUtils.toHexStringRlp(tx.gasLimit),
+                            processorUtils.toHexStringRlp(tx.to),
+                            processorUtils.toHexStringRlp(tx.value),
+                            processorUtils.toHexStringRlp(tx.data),
+                            processorUtils.toHexStringRlp(tx.chainId),
                             '0x',
                             '0x',
                         ]);
@@ -125,7 +124,7 @@ describe('Processor', async function () {
                         customRawTx = signData.concat(r).concat(s).concat(v);
                     } else {
                         const rawTxEthers = await walletMap[txData.from].signTransaction(tx);
-                        customRawTx = rawTxToCustomRawTx(rawTxEthers);
+                        customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
                     }
 
                     expect(customRawTx).to.equal(txData.rawTx);
