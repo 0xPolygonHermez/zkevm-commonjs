@@ -6,15 +6,14 @@ const { expect } = require('chai');
 const fs = require('fs');
 const path = require('path');
 const { Scalar } = require('ffjavascript');
-const {
-    toHexStringRlp, customRawTxToRawTx, rawTxToCustomRawTx, decodeCustomRawTxProverMethod,
-} = require('../src/processor-utils');
+const { processorUtils } = require('../index');
+const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Encode and decode transactions in RLP', () => {
     let testVectors;
 
     before(async () => {
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'state-transition/state-transition.json')));
     });
 
     it('Check encode and decode transactions', async () => {
@@ -62,13 +61,13 @@ describe('Encode and decode transactions in RLP', () => {
 
                     if (tx.chainId === 0) {
                         const signData = ethers.utils.RLP.encode([
-                            toHexStringRlp(Scalar.e(tx.nonce)),
-                            toHexStringRlp(tx.gasPrice),
-                            toHexStringRlp(tx.gasLimit),
-                            toHexStringRlp(tx.to),
-                            toHexStringRlp(tx.value),
-                            toHexStringRlp(tx.data),
-                            toHexStringRlp(tx.chainId),
+                            processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
+                            processorUtils.toHexStringRlp(tx.gasPrice),
+                            processorUtils.toHexStringRlp(tx.gasLimit),
+                            processorUtils.toHexStringRlp(tx.to),
+                            processorUtils.toHexStringRlp(tx.value),
+                            processorUtils.toHexStringRlp(tx.data),
+                            processorUtils.toHexStringRlp(tx.chainId),
                             '0x',
                             '0x',
                         ]);
@@ -81,23 +80,23 @@ describe('Encode and decode transactions in RLP', () => {
                         customRawTx = signData.concat(r).concat(s).concat(v);
                     } else {
                         const rawTxEthers = await walletMap[txData.from].signTransaction(tx);
-                        customRawTx = rawTxToCustomRawTx(rawTxEthers);
+                        customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
 
-                        const reconstructedEthers = customRawTxToRawTx(customRawTx);
+                        const reconstructedEthers = processorUtils.customRawTxToRawTx(customRawTx);
                         expect(rawTxEthers).to.equal(reconstructedEthers);
                     }
                     expect(customRawTx).to.equal(txData.rawTx);
 
                     // Test decode raw tx prover method
-                    const { txDecoded, rlpSignData } = decodeCustomRawTxProverMethod(customRawTx);
+                    const { txDecoded, rlpSignData } = processorUtils.decodeCustomRawTxProverMethod(customRawTx);
                     const signData = ethers.utils.RLP.encode([
-                        toHexStringRlp(Scalar.e(tx.nonce)),
-                        toHexStringRlp(tx.gasPrice),
-                        toHexStringRlp(tx.gasLimit),
-                        toHexStringRlp(tx.to),
-                        toHexStringRlp(tx.value),
-                        toHexStringRlp(tx.data),
-                        toHexStringRlp(tx.chainId),
+                        processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
+                        processorUtils.toHexStringRlp(tx.gasPrice),
+                        processorUtils.toHexStringRlp(tx.gasLimit),
+                        processorUtils.toHexStringRlp(tx.to),
+                        processorUtils.toHexStringRlp(tx.value),
+                        processorUtils.toHexStringRlp(tx.data),
+                        processorUtils.toHexStringRlp(tx.chainId),
                         '0x',
                         '0x',
                     ]);

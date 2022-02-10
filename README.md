@@ -9,7 +9,7 @@ const hermezCommons = require("@hermez-polygon/zkevm-commonjs");
 You will find the following modules inside the package:
 - `Constants`: zkevm global constants
 - `contractUtils`: zkevm smart contract utils
-- `Executor`: class to add transactions and process them
+- `Processor`: class to add transactions and process them
 - `MemDb`: class implementing memory database
 - `smtUtils`: sparse-merkle-tree utils
 - `SMT`: class implementing the zkevm sparse-merkle-tree
@@ -17,6 +17,7 @@ You will find the following modules inside the package:
 - `TmpSmtDB`: temporary sparse-merkle-tree database
 - `utils`: general utils
 - `ZkEVMDB`: class implementing the zkevm database
+- `getPoseidon`: singleton to build poseidon just only once
 
 ## Test
 ```

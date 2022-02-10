@@ -1,4 +1,7 @@
+const path = require('path');
 const { stateUtils } = require('../../index');
+
+const pathTestVectors = path.join(__dirname, '../../node_modules/test-vectors');
 
 async function setGenesisBlock(addressArray, amountArray, nonceArray, smt) {
     let currentRoot = smt.F.zero;
@@ -11,4 +14,5 @@ async function setGenesisBlock(addressArray, amountArray, nonceArray, smt) {
 
 module.exports = {
     setGenesisBlock,
+    pathTestVectors,
 };

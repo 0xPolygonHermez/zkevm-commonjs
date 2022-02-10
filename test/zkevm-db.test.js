@@ -7,10 +7,9 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-    MemDB, SMT, stateUtils, Constants, ZkEVMDB, getPoseidon,
+    MemDB, SMT, stateUtils, Constants, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
-const { setGenesisBlock } = require('./helpers/test-utils');
-const { rawTxToCustomRawTx, toHexStringRlp } = require('../src/processor-utils');
+const { setGenesisBlock, pathTestVectors } = require('./helpers/test-utils');
 
 describe('ZkEVMDB', () => {
     let poseidon;
@@ -21,7 +20,7 @@ describe('ZkEVMDB', () => {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'state-transition/state-transition.json')));
     });
 
     it('Check zkEVMDB basic functions', async () => {
@@ -172,13 +171,13 @@ describe('ZkEVMDB', () => {
 
                 if (tx.chainId === 0) {
                     const signData = ethers.utils.RLP.encode([
-                        toHexStringRlp(Scalar.e(tx.nonce)),
-                        toHexStringRlp(tx.gasPrice),
-                        toHexStringRlp(tx.gasLimit),
-                        toHexStringRlp(tx.to),
-                        toHexStringRlp(tx.value),
-                        toHexStringRlp(tx.data),
-                        toHexStringRlp(tx.chainId),
+                        processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
+                        processorUtils.toHexStringRlp(tx.gasPrice),
+                        processorUtils.toHexStringRlp(tx.gasLimit),
+                        processorUtils.toHexStringRlp(tx.to),
+                        processorUtils.toHexStringRlp(tx.value),
+                        processorUtils.toHexStringRlp(tx.data),
+                        processorUtils.toHexStringRlp(tx.chainId),
                         '0x',
                         '0x',
                     ]);
@@ -191,7 +190,7 @@ describe('ZkEVMDB', () => {
                     customRawTx = signData.concat(r).concat(s).concat(v);
                 } else {
                     const rawTxEthers = await walletMap[txData.from].signTransaction(tx);
-                    customRawTx = rawTxToCustomRawTx(rawTxEthers);
+                    customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
                 }
                 expect(customRawTx).to.equal(txData.rawTx);
 
