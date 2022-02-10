@@ -9,8 +9,7 @@ const path = require('path');
 const {
     MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
-const { setGenesisBlock } = require('./helpers/test-utils');
-const { pathTestVectors } = require('./helpers/test-utils');
+const { setGenesisBlock, pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor', async function () {
     this.timeout(10000);
