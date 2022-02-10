@@ -40,6 +40,15 @@ function customRawTxToRawTx(customRawTx) {
 }
 
 /**
+ * Reduce an array of rawTx to a single string wich will be the BatchL2Data
+ * @param {Array} rawTxs -  Array of rawTxs
+ * @returns {String} - Reduced array
+ */
+function arrayToEncodedString(rawTxs) {
+    return rawTxs.reduce((previousValue, currentValue) => previousValue + currentValue.slice(2), '0x');
+}
+
+/**
  * Convert a number type to a hex string starting with 0x and with a integer number of bytes
  * @param {Number | BigInt | BigNumber | Object} num - Number
  * @returns {Number} - Hex string
@@ -80,6 +89,48 @@ function rawTxToCustomRawTx(rawTx) {
     const s = tx.s.slice(2);
     const v = (tx.v - tx.chainId * 2 - 35 + 27).toString(16).padStart(2, '0'); // 1 byte
     return signData.concat(r).concat(s).concat(v);
+}
+
+/**
+ * Decode the BatchL2Data to an array of rawTxs
+ * @param {String} encodedTransactions -  Reduced array
+ * @returns {Array} - Array of rawTxs
+ */
+function encodedStringToArray(encodedTransactions) {
+    const encodedTxBytes = ethers.utils.arrayify(encodedTransactions);
+    const decodedRawTx = [];
+
+    let offset = 0;
+
+    while (offset < encodedTxBytes.length) {
+        if (encodedTxBytes[offset] >= 0xf8) {
+            const lengthLength = encodedTxBytes[offset] - 0xf7;
+            if (offset + 1 + lengthLength > encodedTxBytes.length) {
+                throw new Error('encodedTxBytes short segment too short');
+            }
+
+            const length = unarrayifyInteger(encodedTxBytes, offset + 1, lengthLength);
+            if (offset + 1 + lengthLength + length > encodedTxBytes.length) {
+                throw new Error('encodedTxBytes long segment too short');
+            }
+
+            decodedRawTx.push(ethers.utils.hexlify(
+                encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES),
+            ));
+            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES;
+        } else if (encodedTxBytes[offset] >= 0xc0) {
+            const length = encodedTxBytes[offset] - 0xc0;
+            if (offset + 1 + length > encodedTxBytes.length) {
+                throw new Error('encodedTxBytes array too short');
+            }
+
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES)));
+            offset = offset + 1 + length + Constants.SIGNATURE_BYTES;
+        } else {
+            throw new Error('Error');
+        }
+    }
+    return decodedRawTx;
 }
 
 /**
@@ -212,4 +263,6 @@ module.exports = {
     rawTxToCustomRawTx,
     toHexStringRlp,
     customRawTxToRawTx,
+    arrayToEncodedString,
+    encodedStringToArray,
 };
