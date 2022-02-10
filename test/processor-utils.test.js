@@ -7,12 +7,13 @@ const fs = require('fs');
 const path = require('path');
 const { Scalar } = require('ffjavascript');
 const { processorUtils } = require('../index');
+const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Encode and decode transactions in RLP', () => {
     let testVectors;
 
     before(async () => {
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'state-transition/state-transition.json')));
     });
 
     it('Check encode and decode transactions', async () => {

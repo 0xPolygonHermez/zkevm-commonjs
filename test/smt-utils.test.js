@@ -6,6 +6,7 @@ const { expect } = require('chai');
 const {
     smtUtils, getPoseidon, Constants, SMT, MemDB,
 } = require('../index');
+const { pathTestVectors } = require('./helpers/test-utils');
 
 // eslint-disable-next-line prefer-arrow-callback
 describe('smtUtils', async function () {
@@ -22,11 +23,11 @@ describe('smtUtils', async function () {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectorsKeysBalance = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/merkle-tree/smt-key-eth-balance.json')));
-        testVectorsKeysNonce = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/merkle-tree/smt-key-eth-nonce.json')));
-        testVectorsKeysContractCode = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/merkle-tree/smt-key-contract-code.json')));
-        testVectorsKeysContractStorage = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/merkle-tree/smt-key-contract-storage.json')));
-        testVectorsHashBytecode = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/merkle-tree/smt-hash-bytecode.json')));
+        testVectorsKeysBalance = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-key-eth-balance.json')));
+        testVectorsKeysNonce = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-key-eth-nonce.json')));
+        testVectorsKeysContractCode = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-key-contract-code.json')));
+        testVectorsKeysContractStorage = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-key-contract-storage.json')));
+        testVectorsHashBytecode = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-hash-bytecode.json')));
     });
 
     it('scalar2fea & fea2scalar', async () => {

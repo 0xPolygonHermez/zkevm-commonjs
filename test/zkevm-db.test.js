@@ -9,7 +9,7 @@ const path = require('path');
 const {
     MemDB, SMT, stateUtils, Constants, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
-const { setGenesisBlock } = require('./helpers/test-utils');
+const { setGenesisBlock, pathTestVectors } = require('./helpers/test-utils');
 
 describe('ZkEVMDB', () => {
     let poseidon;
@@ -20,7 +20,7 @@ describe('ZkEVMDB', () => {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'state-transition/state-transition.json')));
     });
 
     it('Check zkEVMDB basic functions', async () => {

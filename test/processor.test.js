@@ -10,6 +10,7 @@ const {
     MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
 const { setGenesisBlock } = require('./helpers/test-utils');
+const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor', async function () {
     this.timeout(10000);
@@ -21,7 +22,7 @@ describe('Processor', async function () {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(__dirname, '../test-vectors/state-transition/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'state-transition/state-transition.json')));
     });
 
     it('Check test vectors', async () => {

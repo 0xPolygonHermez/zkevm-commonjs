@@ -1,3 +1,0 @@
-[submodule "test-vectors"]
-	path = test-vectors
-	url = git@github.com:hermeznetwork/test-vectors.git
