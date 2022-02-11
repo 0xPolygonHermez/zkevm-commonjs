@@ -12,10 +12,9 @@ const {
 const { setGenesisBlock, pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor', async function () {
-    this.timeout(10000);
+    this.timeout(1000000);
     let poseidon;
     let F;
-
     let testVectors;
 
     before(async () => {
@@ -149,6 +148,7 @@ describe('Processor', async function () {
                 genesisRoot,
                 F.e(Scalar.e(localExitRoot)),
                 F.e(Scalar.e(globalExitRoot)),
+                genesis,
             );
 
             const batch = await zkEVMDB.buildBatch();

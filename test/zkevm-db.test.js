@@ -30,7 +30,7 @@ describe('ZkEVMDB', () => {
         const genesisRoot = F.e('0x0000000000000000000000000000000000000000000000000000000000000000');
         const localExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
         const globalExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
-
+        const genesis = [];
         const db = new MemDB(F);
 
         // create a zkEVMDB and build a batch
@@ -43,6 +43,7 @@ describe('ZkEVMDB', () => {
             genesisRoot,
             localExitRoot,
             globalExitRoot,
+            genesis,
         );
 
         // check intiialize parameters
@@ -214,6 +215,7 @@ describe('ZkEVMDB', () => {
             genesisRoot,
             F.e(Scalar.e(localExitRoot)),
             F.e(Scalar.e(globalExitRoot)),
+            genesis,
         );
         const batch = await zkEVMDB.buildBatch();
         for (let j = 0; j < rawTxs.length; j++) {
