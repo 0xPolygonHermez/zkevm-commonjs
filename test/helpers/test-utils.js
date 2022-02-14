@@ -1,7 +1,7 @@
 const path = require('path');
 const { stateUtils } = require('../../index');
 
-const pathTestVectors = path.join(__dirname, '../../node_modules/test-vectors');
+const pathTestVectors = path.join(__dirname, '../../node_modules/@polygon-hermez/test-vectors');
 
 async function setGenesisBlock(addressArray, amountArray, nonceArray, smt) {
     let currentRoot = smt.F.zero;
