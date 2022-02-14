@@ -30,6 +30,7 @@ describe('ZkEVMDB', () => {
         const genesisRoot = F.e('0x0000000000000000000000000000000000000000000000000000000000000000');
         const localExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
         const globalExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
+        const timestamp = 1;
 
         const db = new MemDB(F);
 
@@ -53,7 +54,7 @@ describe('ZkEVMDB', () => {
         expect(Scalar.toNumber(arityDB)).to.be.equal(arity);
 
         // build an empty batch
-        const batch = await zkEVMDB.buildBatch();
+        const batch = await zkEVMDB.buildBatch(timestamp);
         await batch.executeTxs();
         const newRoot = batch.currentStateRoot;
         expect(newRoot).to.be.equal(genesisRoot);
@@ -107,6 +108,7 @@ describe('ZkEVMDB', () => {
             sequencerAddress,
             localExitRoot,
             globalExitRoot,
+            timestamp,
         } = testVectors[0];
 
         const db = new MemDB(F);
@@ -215,7 +217,7 @@ describe('ZkEVMDB', () => {
             F.e(Scalar.e(localExitRoot)),
             F.e(Scalar.e(globalExitRoot)),
         );
-        const batch = await zkEVMDB.buildBatch();
+        const batch = await zkEVMDB.buildBatch(timestamp);
         for (let j = 0; j < rawTxs.length; j++) {
             batch.addRawTx(rawTxs[j]);
         }

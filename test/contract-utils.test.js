@@ -11,25 +11,40 @@ describe('contractUtils', function () {
     this.timeout(10000);
     let testVector;
 
-    const expectedBatchHashData = '0x3567576c83ca658d335055b092195e2fc9d15bf20495a04f879944c160844e28';
-    const expectedGlobalHash = '0x1c0620e20e2670641adcd92a20ac534e4294638370af24f54fbd7abc2ff18c6e';
+    const expectedBatchHashData = '0x767ef4be9367c5f826078e1584bbb93cf0c1a024364a132da284d488d8069950';
+    const expectedGlobalHash = '0x060d1716370f95a8a57ec6549eb73d8538201871a5b7c8b46cea5d758ec2022f';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_0.json')));
     });
 
     it('calculateBatchHashData', async () => {
-        const { batchL2Data, globalExitRoot } = testVector;
-        const computedBatchHashData = await contractUtils.calculateBatchHashData(batchL2Data, globalExitRoot);
+        const {
+            batchL2Data, globalExitRoot, timestamp, sequencerAddr, chainId,
+        } = testVector;
+        const computedBatchHashData = await contractUtils.calculateBatchHashData(
+            batchL2Data,
+            globalExitRoot,
+            timestamp,
+            sequencerAddr,
+            chainId,
+        );
 
+        /*
+         * const batchHashData = calculateBatchHashData(
+         *     this.getBatchL2Data(),
+         *     globalExitRoot,
+         *     this.timestamp,
+         *     this.sequencerAddress,
+         *     this.seqChainID,
+         * );
+         */
         expect(expectedBatchHashData).to.be.equal(computedBatchHashData);
     });
 
     it('calculateCircuitInput', async () => {
         const {
             numBatch,
-            sequencerAddr,
-            chainId,
             oldLocalExitRoot,
             newLocalExitRoot,
             oldStateRoot,
@@ -41,9 +56,7 @@ describe('contractUtils', function () {
             oldLocalExitRoot,
             newStateRoot,
             newLocalExitRoot,
-            sequencerAddr,
             expectedBatchHashData,
-            chainId,
             numBatch,
         );
 
