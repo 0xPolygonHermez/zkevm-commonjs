@@ -18,6 +18,8 @@ You will find the following modules inside the package:
 - `utils`: general utils
 - `ZkEVMDB`: class implementing the zkevm database
 - `getPoseidon`: singleton to build poseidon just only once
+- `MTBridge`: Merkle tree implementation used by the bridge
+- `mtBridgeUtils`: Merkle tree bridge utils
 
 ## Test
 ```
