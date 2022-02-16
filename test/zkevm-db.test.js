@@ -136,7 +136,7 @@ describe('ZkEVMDB', () => {
             expect(currentState.nonce).to.be.equal(nonceArray[j]);
         }
 
-        expect(F.toString(genesisRoot)).to.be.equal(expectedOldRoot);
+        expect(`0x${Scalar.e(F.toString(genesisRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
 
         /*
          * build, sign transaction and generate rawTxs
@@ -216,7 +216,7 @@ describe('ZkEVMDB', () => {
         await batch.executeTxs();
 
         const newRoot = batch.currentStateRoot;
-        expect(F.toString(newRoot)).to.be.equal(expectedNewRoot);
+        expect(`0x${Scalar.e(F.toString(newRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedNewRoot);
 
         // checks previous consolidate zkEVMDB
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
@@ -224,14 +224,15 @@ describe('ZkEVMDB', () => {
 
         const numBatch = Scalar.e(0);
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(numBatch);
-        expect(F.toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(expectedOldRoot);
+
+        expect(`0x${Scalar.e(F.toString(zkEVMDB.getCurrentStateRoot())).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
 
         // consoldate state
         await zkEVMDB.consolidate(batch);
 
         // checks after consolidate zkEVMDB
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(Scalar.add(numBatch, 1));
-        expect(F.toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(expectedNewRoot);
+        expect(`0x${Scalar.e(F.toString(zkEVMDB.getCurrentStateRoot())).toString(16).padStart(64, '0')}`).to.be.equal(expectedNewRoot);
         expect(zkEVMDB.getCurrentLocalExitRoot()).to.be.deep.equal(F.e(localExitRoot));
 
         const lastBatchDB = await db.getValue(Constants.DB_LAST_BATCH);
