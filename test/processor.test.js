@@ -21,7 +21,7 @@ describe('Processor', async function () {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'state-transition/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'test-vector-data/state-transition.json')));
     });
 
     it('Check test vectors', async () => {
@@ -88,15 +88,15 @@ describe('Processor', async function () {
                 const tx = {
                     to: txData.to,
                     nonce: txData.nonce,
-                    value: ethers.utils.parseEther(txData.value),
+                    value: ethers.utils.parseUnits(txData.value, 'wei'),
                     gasLimit: txData.gasLimit,
-                    gasPrice: ethers.utils.parseUnits(txData.gasPrice, 'gwei'),
+                    gasPrice: ethers.utils.parseUnits(txData.gasPrice, 'wei'),
                     chainId: txData.chainId,
                     data: txData.data || '0x',
                 };
 
                 if (!ethers.utils.isAddress(tx.to) || !ethers.utils.isAddress(txData.from)) {
-                    expect(txData.rawTx).to.equal(undefined);
+                    expect(txData.customRawTx).to.equal(undefined);
                     // eslint-disable-next-line no-continue
                     continue;
                 }
@@ -128,7 +128,7 @@ describe('Processor', async function () {
                         customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
                     }
 
-                    expect(customRawTx).to.equal(txData.rawTx);
+                    expect(customRawTx).to.equal(txData.customRawTx);
 
                     if (txData.encodeInvalidData) {
                         customRawTx = customRawTx.slice(0, -6);
@@ -136,7 +136,7 @@ describe('Processor', async function () {
                     rawTxs.push(customRawTx);
                     txProcessed.push(txData);
                 } catch (error) {
-                    expect(txData.rawTx).to.equal(undefined);
+                    expect(txData.customRawTx).to.equal(undefined);
                 }
             }
 
@@ -194,8 +194,8 @@ describe('Processor', async function () {
             expect(batchL2Data).to.be.equal(batch.getBatchL2Data());
 
             // Check the batchHashData and the input hash
-            expect(batchHashData).to.be.equal(Scalar.e(circuitInput.batchHashData).toString());
-            expect(inputHash).to.be.equal(Scalar.e(circuitInput.inputHash).toString());
+            expect(batchHashData).to.be.equal(circuitInput.batchHashData);
+            expect(inputHash).to.be.equal(circuitInput.inputHash);
 
             // /*
             //  *  // Save outuput in file

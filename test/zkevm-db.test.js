@@ -20,7 +20,7 @@ describe('ZkEVMDB', () => {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'state-transition/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'test-vector-data/state-transition.json')));
     });
 
     it('Check zkEVMDB basic functions', async () => {
@@ -156,14 +156,14 @@ describe('ZkEVMDB', () => {
             const tx = {
                 to: txData.to,
                 nonce: txData.nonce,
-                value: ethers.utils.parseEther(txData.value),
+                value: ethers.utils.parseUnits(txData.value, 'wei'),
                 gasLimit: txData.gasLimit,
-                gasPrice: ethers.utils.parseUnits(txData.gasPrice, 'gwei'),
+                gasPrice: ethers.utils.parseUnits(txData.gasPrice, 'wei'),
                 chainId: txData.chainId,
                 data: txData.data || '0x',
             };
             if (!ethers.utils.isAddress(tx.to) || !ethers.utils.isAddress(txData.from)) {
-                expect(txData.rawTx).to.equal(undefined);
+                expect(txData.customRawTx).to.equal(undefined);
                 // eslint-disable-next-line no-continue
                 continue;
             }
@@ -194,7 +194,7 @@ describe('ZkEVMDB', () => {
                     const rawTxEthers = await walletMap[txData.from].signTransaction(tx);
                     customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
                 }
-                expect(customRawTx).to.equal(txData.rawTx);
+                expect(customRawTx).to.equal(txData.customRawTx);
 
                 if (txData.encodeInvalidData) {
                     customRawTx = customRawTx.slice(0, -6);
