@@ -40,7 +40,7 @@ describe('ZkEVMDB', () => {
             arity,
             poseidon,
             genesisRoot,
-            localExitRoot
+            localExitRoot,
         );
 
         // check intiialize parameters
@@ -205,7 +205,7 @@ describe('ZkEVMDB', () => {
             arity,
             poseidon,
             genesisRoot,
-            F.e(Scalar.e(localExitRoot))
+            F.e(Scalar.e(localExitRoot)),
         );
         const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
         for (let j = 0; j < rawTxs.length; j++) {

@@ -126,7 +126,6 @@ async function setContractStorage(ethAddr, smt, root, storage) {
     return tmpRoot;
 }
 
-
 /**
  * Set the smt genesis with an array of addresses, amounts and nonces
  * @param {String} addressArray ethereum address array
@@ -143,7 +142,6 @@ async function setGenesisBlock(addressArray, amountArray, nonceArray, smt) {
     return currentRoot;
 }
 
-
 module.exports = {
     getState,
     setAccountState,
@@ -151,5 +149,5 @@ module.exports = {
     setContractStorage,
     getContractHashBytecode,
     getContractStorage,
-    setGenesisBlock
+    setGenesisBlock,
 };
