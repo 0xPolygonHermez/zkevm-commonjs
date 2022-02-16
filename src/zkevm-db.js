@@ -1,12 +1,19 @@
 const { Scalar } = require('ffjavascript');
-
+const VM = require('@ethereumjs/vm').default;
+const Common = require('@ethereumjs/common').default;
+const {
+    Address, Account, BN, toBuffer,
+} = require('ethereumjs-util');
+const { Chain, Hardfork } = require('@ethereumjs/common');
 const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
 const { getState } = require('./state-utils');
 
+const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
+
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, arity, poseidon) {
+    constructor(db, lastBatch, stateRoot, localExitRoot, arity, poseidon, vm) {
         this.db = db;
         this.lastBatch = lastBatch || Scalar.e(0);
         this.poseidon = poseidon;
@@ -17,6 +24,7 @@ class ZkEVMDB {
 
         this.arity = arity;
         this.smt = new SMT(this.db, this.arity, this.poseidon, this.F);
+        this.vm = vm;
     }
 
     /**
@@ -37,6 +45,7 @@ class ZkEVMDB {
             this.localExitRoot,
             globalExitRoot,
             timestamp,
+            this.vm.copy(),
         );
     }
 
@@ -78,6 +87,9 @@ class ZkEVMDB {
         this.lastBatch = processor.batchNumber;
         this.stateRoot = processor.currentStateRoot;
         this.localExitRoot = processor.currentLocalExitRoot;
+        // Consolidate batch in the evm
+        await this.vm.stateManager.checkpoint();
+        await this.vm.stateManager.commit();
     }
 
     /**
@@ -122,13 +134,32 @@ class ZkEVMDB {
      * @param {Uint8Array} localExitRoot - exit merkle root
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, arity, poseidon, stateRoot, localExitRoot) {
+    static async newZkEVM(db, arity, poseidon, stateRoot, localExitRoot, genesis, vm) {
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
 
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
             const setArity = arity || Constants.DEFAULT_ARITY;
+            const newVm = new VM({ common });
             await db.setValue(Constants.DB_ARITY, setArity);
+            // Add genesis to the vm
+            for (let j = 0; j < genesis.length; j++) {
+                const {
+                    address, balance, nonce,
+                } = genesis[j];
+
+                // Add account to VM
+                const evmAddr = new Address(toBuffer(address));
+                const evmAccData = {
+                    nonce: Number(nonce),
+                    balance: new BN(balance),
+                };
+                const evmAcc = Account.fromAccountData(evmAccData);
+                await newVm.stateManager.putAccount(evmAddr, evmAcc);
+            }
+            // Consolidate genesis in the evm
+            await newVm.stateManager.checkpoint();
+            await newVm.stateManager.commit();
 
             return new ZkEVMDB(
                 db,
@@ -137,6 +168,7 @@ class ZkEVMDB {
                 localExitRoot,
                 setArity,
                 poseidon,
+                newVm,
             );
         }
 
@@ -151,6 +183,7 @@ class ZkEVMDB {
             DBLocalExitRoot,
             dBArity,
             poseidon,
+            vm,
         );
     }
 }

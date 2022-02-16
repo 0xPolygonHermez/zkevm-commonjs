@@ -1,5 +1,9 @@
 /* eslint-disable no-continue */
 const ethers = require('ethers');
+const { Transaction } = require('@ethereumjs/tx');
+const {
+    Address, Account, BN, toBuffer,
+} = require('ethereumjs-util');
 
 const { Scalar } = require('ffjavascript');
 const SMT = require('./smt');
@@ -24,8 +28,9 @@ module.exports = class Processor {
      * @param {String} sequencerAddress . sequencer address
      * @param {Field} oldLocalExitRoot - local exit root
      * @param {Field} globalExitRoot - global exit root
+     * @param {Field} vm - vm instance
      */
-    constructor(db, batchNumber, arity, poseidon, maxNTx, seqChainID, root, sequencerAddress, localExitRoot, globalExitRoot, timestamp) {
+    constructor(db, batchNumber, arity, poseidon, maxNTx, seqChainID, root, sequencerAddress, localExitRoot, globalExitRoot, timestamp, vm) {
         this.db = db;
         this.batchNumber = batchNumber;
         this.arity = arity;
@@ -48,6 +53,7 @@ module.exports = class Processor {
         this.currentLocalExitRoot = localExitRoot;
         this.globalExitRoot = globalExitRoot;
         this.timestamp = timestamp;
+        this.vm = vm;
     }
 
     /**
@@ -236,6 +242,19 @@ module.exports = class Processor {
                     newStateTo.nonce,
                 );
 
+                // Run tx in the EVM
+                const evmTx = Transaction.fromTxData({
+                    nonce: currenTx.nonce,
+                    gasPrice: currenTx.gasPrice,
+                    gasLimit: currenTx.gasLimit,
+                    to: currenTx.to,
+                    value: currenTx.value,
+                    data: currenTx.data,
+                    v: Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35,
+                    r: currenTx.r,
+                    s: currenTx.s,
+                });
+                await this.vm.runTx({ tx: evmTx });
                 // Pay sequencer fees
 
                 // Get sequencer state
@@ -253,6 +272,15 @@ module.exports = class Processor {
                     newStateSequencer.balance,
                     newStateSequencer.nonce,
                 );
+
+                // Pay sequencer fees in EVM
+                const seqAddr = new Address(toBuffer(this.sequencerAddress));
+                const seqAcc = await this.vm.stateManager.getAccount(seqAddr);
+                const seqAccData = {
+                    nonce: seqAcc.nonce,
+                    balance: new BN(Scalar.add(feeGasCost, seqAcc.balance)),
+                };
+                await this.vm.stateManager.putAccount(seqAddr, Account.fromAccountData(seqAccData));
             }
         }
     }

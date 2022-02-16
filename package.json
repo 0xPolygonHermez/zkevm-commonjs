@@ -43,6 +43,7 @@
     "@polygon-hermez/test-vectors": "https://github.com/hermeznetwork/test-vectors.git#0.0.2",
     "chai": "^4.3.4",
     "circomlibjs": "^0.1.1",
+    "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.46",
     "lodash": "^4.17.21"
