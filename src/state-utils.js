@@ -126,6 +126,22 @@ async function setContractStorage(ethAddr, smt, root, storage) {
     return tmpRoot;
 }
 
+/**
+ * Set the smt genesis with an array of addresses, amounts and nonces
+ * @param {String} addressArray ethereum address array
+ * @param {Object} amountArray amount array
+ * @param {Uint8Array} nonceArray nonce array
+ * @param {Object} smt merkle tree structure
+ */
+async function setGenesisBlock(addressArray, amountArray, nonceArray, smt) {
+    let currentRoot = smt.F.zero;
+    for (let i = 0; i < addressArray.length; i++) {
+        currentRoot = await setAccountState(addressArray[i], smt, currentRoot, amountArray[i], nonceArray[i]);
+    }
+
+    return currentRoot;
+}
+
 module.exports = {
     getState,
     setAccountState,
@@ -133,4 +149,5 @@ module.exports = {
     setContractStorage,
     getContractHashBytecode,
     getContractStorage,
+    setGenesisBlock,
 };

@@ -9,7 +9,7 @@ const path = require('path');
 const {
     MemDB, SMT, stateUtils, Constants, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
-const { setGenesisBlock, pathTestVectors } = require('./helpers/test-utils');
+const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('ZkEVMDB', () => {
     let poseidon;
@@ -37,24 +37,19 @@ describe('ZkEVMDB', () => {
         // create a zkEVMDB and build a batch
         const zkEVMDB = await ZkEVMDB.newZkEVM(
             db,
-            chainIdSequencer,
             arity,
             poseidon,
-            sequencerAddress,
             genesisRoot,
             localExitRoot,
-            globalExitRoot,
         );
 
         // check intiialize parameters
-        const chainIDDB = await db.getValue(Constants.DB_SEQ_CHAINID);
         const arityDB = await db.getValue(Constants.DB_ARITY);
 
-        expect(Scalar.toNumber(chainIDDB)).to.be.equal(chainIdSequencer);
         expect(Scalar.toNumber(arityDB)).to.be.equal(arity);
 
         // build an empty batch
-        const batch = await zkEVMDB.buildBatch(timestamp);
+        const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
         await batch.executeTxs();
         const newRoot = batch.currentStateRoot;
         expect(newRoot).to.be.equal(genesisRoot);
@@ -83,9 +78,7 @@ describe('ZkEVMDB', () => {
         const zkEVMDBImported = await ZkEVMDB.newZkEVM(
             db,
             null,
-            null,
             poseidon,
-            sequencerAddress,
             null,
             null,
             null,
@@ -135,7 +128,7 @@ describe('ZkEVMDB', () => {
         }
 
         // set genesis block
-        const genesisRoot = await setGenesisBlock(addressArray, amountArray, nonceArray, smt);
+        const genesisRoot = await stateUtils.setGenesisBlock(addressArray, amountArray, nonceArray, smt);
         for (let j = 0; j < addressArray.length; j++) {
             const currentState = await stateUtils.getState(addressArray[j], smt, genesisRoot);
 
@@ -209,15 +202,12 @@ describe('ZkEVMDB', () => {
         // create a zkEVMDB and build a batch
         const zkEVMDB = await ZkEVMDB.newZkEVM(
             db,
-            chainIdSequencer,
             arity,
             poseidon,
-            sequencerAddress,
             genesisRoot,
             F.e(Scalar.e(localExitRoot)),
-            F.e(Scalar.e(globalExitRoot)),
         );
-        const batch = await zkEVMDB.buildBatch(timestamp);
+        const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
         for (let j = 0; j < rawTxs.length; j++) {
             batch.addRawTx(rawTxs[j]);
         }
@@ -243,7 +233,6 @@ describe('ZkEVMDB', () => {
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(Scalar.add(numBatch, 1));
         expect(F.toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(expectedNewRoot);
         expect(zkEVMDB.getCurrentLocalExitRoot()).to.be.deep.equal(F.e(localExitRoot));
-        expect(zkEVMDB.getCurrentGlobalExitRoot()).to.be.deep.equal(F.e(globalExitRoot));
 
         const lastBatchDB = await db.getValue(Constants.DB_LAST_BATCH);
 
@@ -254,8 +243,5 @@ describe('ZkEVMDB', () => {
 
         const localExitRootDB = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatchDB));
         expect(F.e(localExitRootDB)).to.be.deep.equal(zkEVMDB.getCurrentLocalExitRoot());
-
-        const globalExitRootDB = await db.getValue(Scalar.add(Constants.DB_GLOBAL_EXIT_ROOT, lastBatchDB));
-        expect(F.e(globalExitRootDB)).to.be.deep.equal(zkEVMDB.getCurrentGlobalExitRoot());
     });
 });

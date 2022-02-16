@@ -9,7 +9,7 @@ const path = require('path');
 const {
     MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
-const { setGenesisBlock, pathTestVectors } = require('./helpers/test-utils');
+const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor', async function () {
     this.timeout(10000);
@@ -67,7 +67,7 @@ describe('Processor', async function () {
                 nonceArray.push(Scalar.e(nonce));
             }
 
-            const genesisRoot = await setGenesisBlock(addressArray, amountArray, nonceArray, smt);
+            const genesisRoot = await stateUtils.setGenesisBlock(addressArray, amountArray, nonceArray, smt);
             for (let j = 0; j < addressArray.length; j++) {
                 const currentState = await stateUtils.getState(addressArray[j], smt, genesisRoot);
 
@@ -143,16 +143,13 @@ describe('Processor', async function () {
             // create a zkEVMDB and build a batch
             const zkEVMDB = await ZkEVMDB.newZkEVM(
                 db,
-                chainIdSequencer,
                 arity,
                 poseidon,
-                sequencerAddress,
                 genesisRoot,
                 F.e(Scalar.e(localExitRoot)),
-                F.e(Scalar.e(globalExitRoot)),
             );
 
-            const batch = await zkEVMDB.buildBatch(timestamp);
+            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }
