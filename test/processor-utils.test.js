@@ -13,7 +13,7 @@ describe('Encode and decode transactions in RLP', () => {
     let testVectors;
 
     before(async () => {
-        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'state-transition/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'test-vector-data/state-transition.json')));
     });
 
     it('Check encode and decode transactions', async () => {
@@ -44,15 +44,15 @@ describe('Encode and decode transactions in RLP', () => {
                 const tx = {
                     to: txData.to,
                     nonce: txData.nonce,
-                    value: ethers.utils.parseEther(txData.value),
+                    value: ethers.utils.parseUnits(txData.value, 'wei'),
                     gasLimit: txData.gasLimit,
-                    gasPrice: ethers.utils.parseUnits(txData.gasPrice, 'gwei'),
+                    gasPrice: ethers.utils.parseUnits(txData.gasPrice, 'wei'),
                     chainId: txData.chainId,
                     data: txData.data || '0x',
                 };
 
                 if (!ethers.utils.isAddress(tx.to) || !ethers.utils.isAddress(txData.from)) {
-                    expect(txData.rawTx).to.equal(undefined);
+                    expect(txData.customRawTx).to.equal(undefined);
                     continue;
                 }
 
@@ -85,7 +85,7 @@ describe('Encode and decode transactions in RLP', () => {
                         const reconstructedEthers = processorUtils.customRawTxToRawTx(customRawTx);
                         expect(rawTxEthers).to.equal(reconstructedEthers);
                     }
-                    expect(customRawTx).to.equal(txData.rawTx);
+                    expect(customRawTx).to.equal(txData.customRawTx);
 
                     // Test decode raw tx prover method
                     const { txDecoded, rlpSignData } = processorUtils.decodeCustomRawTxProverMethod(customRawTx);
@@ -109,10 +109,10 @@ describe('Encode and decode transactions in RLP', () => {
                         }
                     });
                     expect(Number(txDecoded.nonce)).to.equal(tx.nonce);
-                    expect(ethers.BigNumber.from(txDecoded.gasPrice)).to.equal(tx.gasPrice);
-                    expect(ethers.BigNumber.from(txDecoded.gasLimit)).to.equal(tx.gasLimit);
-                    expect(ethers.BigNumber.from(txDecoded.to)).to.equal(ethers.BigNumber.from(tx.to));
-                    expect(ethers.BigNumber.from(txDecoded.value)).to.equal(tx.value);
+                    expect(txDecoded.gasPrice).to.equal(ethers.utils.hexlify(tx.gasPrice));
+                    expect(txDecoded.gasLimit).to.equal(ethers.utils.hexlify(tx.gasLimit));
+                    expect(ethers.utils.hexlify(txDecoded.to)).to.equal(ethers.utils.hexlify(tx.to));
+                    expect(txDecoded.value).to.equal(ethers.utils.hexlify(tx.value));
                     expect(Number(txDecoded.chainID)).to.equal(tx.chainId);
                 } catch (error) {
                     expect(txData.customRawTx).to.equal(undefined);

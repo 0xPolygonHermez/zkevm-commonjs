@@ -15,7 +15,7 @@ describe('contractUtils', function () {
     const expectedGlobalHash = '0x060d1716370f95a8a57ec6549eb73d8538201871a5b7c8b46cea5d758ec2022f';
 
     before(async () => {
-        testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_0.json')));
+        testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/inputs/input_0.json')));
     });
 
     it('calculateBatchHashData', async () => {
