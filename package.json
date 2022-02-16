@@ -45,6 +45,6 @@
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.46",
     "lodash": "^4.17.21",
-    "@polygon-hermez/test-vectors": "https://github.com/hermeznetwork/test-vectors.git"
+    "@polygon-hermez/test-vectors": "https://github.com/hermeznetwork/test-vectors.git#0.0.1"
   }
 }
