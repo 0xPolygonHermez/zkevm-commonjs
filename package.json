@@ -4,6 +4,7 @@
   "version": "0.0.3",
   "main": "index.js",
   "scripts": {
+    "postinstall": "./config/post-install.sh",
     "setup": "npm i",
     "test": "npx mocha ./test/*.test.js",
     "eslint": "npx eslint src/** test/*.test.js",

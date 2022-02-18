@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-continue */
 const ethers = require('ethers');
 const { Transaction } = require('@ethereumjs/tx');
@@ -174,8 +175,8 @@ module.exports = class Processor {
             if (currentDecodedTx.isInvalid) {
                 continue;
             } else {
-                // Get from state
                 const currenTx = currentDecodedTx.tx;
+                // Get from state
                 const oldStateFrom = await stateUtils.getState(currenTx.from, this.smt, this.currentStateRoot);
 
                 // A: VALID NONCE
@@ -195,53 +196,6 @@ module.exports = class Processor {
                     continue;
                 }
 
-                // PROCESS TX
-                const newStateFrom = { ...oldStateFrom };
-                let newStateTo;
-
-                if (Scalar.e(currenTx.from) === Scalar.e(currenTx.to)) {
-                    // In case from and to are the same, both should modify the same object
-                    newStateTo = newStateFrom;
-                } else {
-                    // Get To state
-                    const oldStateTo = await stateUtils.getState(currenTx.to, this.smt, this.currentStateRoot);
-                    newStateTo = { ...oldStateTo };
-                }
-
-                // from: increase nonce
-                newStateFrom.nonce = Scalar.add(newStateFrom.nonce, 1);
-
-                // from: substract total tx cost
-                newStateFrom.balance = Scalar.sub(newStateFrom.balance, upfronTxCost);
-
-                /*
-                 * from: refund unused gas
-                 * hardcoded gas used for an ethereum tx: 21000
-                 */
-                const gasUsed = Scalar.e(21000);
-                const feeGasCost = Scalar.mul(gasUsed, currenTx.gasPrice);
-                const refund = Scalar.sub(gasLimitCost, feeGasCost);
-                newStateFrom.balance = Scalar.add(newStateFrom.balance, refund);
-
-                // to: increase balance
-                newStateTo.balance = Scalar.add(newStateTo.balance, currenTx.value);
-
-                // update root
-                this.currentStateRoot = await stateUtils.setAccountState(
-                    currenTx.from,
-                    this.smt,
-                    this.currentStateRoot,
-                    newStateFrom.balance,
-                    newStateFrom.nonce,
-                );
-                this.currentStateRoot = await stateUtils.setAccountState(
-                    currenTx.to,
-                    this.smt,
-                    this.currentStateRoot,
-                    newStateTo.balance,
-                    newStateTo.nonce,
-                );
-
                 // Run tx in the EVM
                 const evmTx = Transaction.fromTxData({
                     nonce: currenTx.nonce,
@@ -254,33 +208,44 @@ module.exports = class Processor {
                     r: currenTx.r,
                     s: currenTx.s,
                 });
-                await this.vm.runTx({ tx: evmTx });
-                // Pay sequencer fees
-
-                // Get sequencer state
-                const oldStateSequencer = await stateUtils.getState(this.sequencerAddress, this.smt, this.currentStateRoot);
-                const newStateSequencer = { ...oldStateSequencer };
-
-                // Increase sequencer balance
-                newStateSequencer.balance = Scalar.add(newStateSequencer.balance, feeGasCost);
-
-                // update root
-                this.currentStateRoot = await stateUtils.setAccountState(
-                    this.sequencerAddress,
-                    this.smt,
-                    this.currentStateRoot,
-                    newStateSequencer.balance,
-                    newStateSequencer.nonce,
-                );
+                const txResult = await this.vm.runTx({ tx: evmTx });
+                const amountSpent = Number(txResult.amountSpent);
+                /*
+                 * await this.vm.stateManager.checkpoint();
+                 * await this.vm.stateManager.commit();
+                 */
 
                 // Pay sequencer fees in EVM
                 const seqAddr = new Address(toBuffer(this.sequencerAddress));
                 const seqAcc = await this.vm.stateManager.getAccount(seqAddr);
+                const seqBalance = new BN(Scalar.add(amountSpent, seqAcc.balance));
                 const seqAccData = {
                     nonce: seqAcc.nonce,
-                    balance: new BN(Scalar.add(feeGasCost, seqAcc.balance)),
+                    balance: seqBalance,
                 };
                 await this.vm.stateManager.putAccount(seqAddr, Account.fromAccountData(seqAccData));
+
+                // PROCESS TX in the smt
+                const touchedStack = this.vm.stateManager._customTouched;
+                for (const item of touchedStack) {
+                    const address = `0x${item}`;
+                    if (address === ethers.constants.AddressZero) {
+                        continue;
+                    }
+                    // Get touched evm account
+                    const addressInstance = Address.fromString(address);
+                    const account = await this.vm.stateManager.getAccount(addressInstance);
+                    // Update smt with touched accounts
+                    this.currentStateRoot = await stateUtils.setAccountState(
+                        address,
+                        this.smt,
+                        this.currentStateRoot,
+                        Scalar.e(account.balance),
+                        Scalar.e(account.nonce),
+                    );
+                }
+                await this.vm.stateManager.checkpoint();
+                await this.vm.stateManager.commit();
             }
         }
     }

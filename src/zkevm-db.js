@@ -87,9 +87,6 @@ class ZkEVMDB {
         this.lastBatch = processor.batchNumber;
         this.stateRoot = processor.currentStateRoot;
         this.localExitRoot = processor.currentLocalExitRoot;
-        // Consolidate batch in the evm
-        await this.vm.stateManager.checkpoint();
-        await this.vm.stateManager.commit();
     }
 
     /**
@@ -141,6 +138,7 @@ class ZkEVMDB {
         if (lastBatch === null) {
             const setArity = arity || Constants.DEFAULT_ARITY;
             const newVm = new VM({ common });
+
             await db.setValue(Constants.DB_ARITY, setArity);
             // Add genesis to the vm
             for (let j = 0; j < genesis.length; j++) {
