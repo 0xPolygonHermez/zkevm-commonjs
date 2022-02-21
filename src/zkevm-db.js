@@ -5,15 +5,19 @@ const {
     Address, Account, BN, toBuffer,
 } = require('ethereumjs-util');
 const { Chain, Hardfork } = require('@ethereumjs/common');
+const { Transaction } = require('@ethereumjs/tx');
+const { ethers } = require('ethers');
 const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
-const { getState } = require('./state-utils');
+const {
+    getState, setAccountState, setContractBytecode, setContractStorage,
+} = require('./state-utils');
 
 const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, arity, poseidon, vm) {
+    constructor(db, lastBatch, stateRoot, localExitRoot, arity, poseidon, vm, smt) {
         this.db = db;
         this.lastBatch = lastBatch || Scalar.e(0);
         this.poseidon = poseidon;
@@ -23,7 +27,7 @@ class ZkEVMDB {
         this.localExitRoot = localExitRoot || this.F.e(0);
 
         this.arity = arity;
-        this.smt = new SMT(this.db, this.arity, this.poseidon, this.F);
+        this.smt = smt;
         this.vm = vm;
     }
 
@@ -131,20 +135,74 @@ class ZkEVMDB {
      * @param {Uint8Array} localExitRoot - exit merkle root
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, arity, poseidon, stateRoot, localExitRoot, genesis, vm) {
+    static async newZkEVM(db, arity, poseidon, stateRoot, localExitRoot, genesis, vm, smt) {
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
-
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
             const setArity = arity || Constants.DEFAULT_ARITY;
             const newVm = new VM({ common });
+            const newSmt = new SMT(db, arity, poseidon, poseidon.F);
+            const accounts = genesis.accounts || genesis;
+            const contracts = genesis.contracts || [];
 
             await db.setValue(Constants.DB_ARITY, setArity);
             // Add genesis to the vm
-            for (let j = 0; j < genesis.length; j++) {
+
+            // Add contracts to genesis
+            if (contracts) {
+                for (let j = 0; j < contracts.length; j++) {
+                    const {
+                        abi, bytecode, deployerAddress, deployerPvtKey,
+                    } = contracts[j];
+                    // Add deployer account to the evm
+                    const deployerAddr = new Address(toBuffer(deployerAddress));
+                    const deployerAccData = {
+                        nonce: 0,
+                        balance: new BN('100000000000000000000'),
+                    };
+                    const deployerAcc = Account.fromAccountData(deployerAccData);
+                    await newVm.stateManager.putAccount(deployerAddr, deployerAcc);
+
+                    // Deploy th sc
+                    const contractInterface = new ethers.utils.Interface(abi);
+                    const txData = {
+                        value: 0,
+                        gasLimit: 2000000, // We assume that 2M is enough,
+                        gasPrice: 1,
+                        data: bytecode,
+                        nonce: deployerAcc.nonce,
+                    };
+                    const tx = Transaction.fromTxData(txData).sign(toBuffer(deployerPvtKey));
+                    const deploymentResult = await newVm.runTx({ tx });
+                    if (deploymentResult.execResult.exceptionError) {
+                        throw deploymentResult.execResult.exceptionError;
+                    }
+
+                    const contractAddress = deploymentResult.createdAddress.toString();
+
+                    genesis.contracts[j].contractAddress = contractAddress;
+                    genesis.contracts[j].contractInterface = contractInterface;
+
+                    // Update smt
+                    this.stateRoot = await setContractBytecode(contractAddress, newSmt, stateRoot, bytecode);
+                    const contractAddressInstance = new Address(toBuffer(contractAddress));
+                    const sto = await newVm.stateManager.dumpStorage(contractAddressInstance);
+                    const storage = {};
+
+                    const keys = Object.keys(sto).map((v) => `0x${v}`);
+                    const values = Object.values(sto).map((v) => `0x${v}`);
+                    for (let k = 0; k < keys.length; k++) {
+                        storage[keys[k]] = values[k];
+                    }
+                    this.stateRoot = await setContractStorage(contractAddress, newSmt, this.stateRoot, storage);
+                }
+            }
+
+            // Add initial accounts to genesis
+            for (let j = 0; j < accounts.length; j++) {
                 const {
                     address, balance, nonce,
-                } = genesis[j];
+                } = accounts[j];
 
                 // Add account to VM
                 const evmAddr = new Address(toBuffer(address));
@@ -154,6 +212,7 @@ class ZkEVMDB {
                 };
                 const evmAcc = Account.fromAccountData(evmAccData);
                 await newVm.stateManager.putAccount(evmAddr, evmAcc);
+                this.stateRoot = await setAccountState(address, newSmt, this.stateRoot, evmAcc.balance, evmAcc.nonce);
             }
             // Consolidate genesis in the evm
             await newVm.stateManager.checkpoint();
@@ -162,11 +221,12 @@ class ZkEVMDB {
             return new ZkEVMDB(
                 db,
                 Scalar.e(0),
-                stateRoot,
+                this.stateRoot,
                 localExitRoot,
                 setArity,
                 poseidon,
                 newVm,
+                newSmt,
             );
         }
 
@@ -182,6 +242,7 @@ class ZkEVMDB {
             dBArity,
             poseidon,
             vm,
+            smt,
         );
     }
 }

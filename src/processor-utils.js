@@ -179,7 +179,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     let offset = 0; // in zkasm this is the p
 
     let txListLength = 0;
-
+    let headerLength = 0;
     // Decode list length
     if (encodedTxBytes[offset] < 0xc0) {
         throw new Error('headerList should be a list');
@@ -187,9 +187,11 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
         const lengthLength = encodedTxBytes[offset] - 0xf7;
         txListLength = unarrayifyInteger(encodedTxBytes, offset + 1, lengthLength);
         offset = offset + 1 + lengthLength;
+        headerLength = 1 + lengthLength;
     } else if (encodedTxBytes[offset] >= 0xc0) {
         txListLength = encodedTxBytes[offset] - 0xc0;
         offset += 1;
+        headerLength = 1;
     }
 
     // Nonce read
@@ -229,7 +231,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     offset += decodedData.consumed;
     txDecoded.data = decodedData.result;
 
-    // Value READ
+    // chainID READ
     const decodedChainID = decodeNextShortStringRLP(encodedTxBytes, offset);
     offset += decodedChainID.consumed;
     txDecoded.chainID = decodedChainID.result;
@@ -239,7 +241,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     }
     offset += 2;
 
-    if (txListLength + 1 !== offset) {
+    if (txListLength + headerLength !== offset) {
         throw new Error('Invalid list length');
     }
 

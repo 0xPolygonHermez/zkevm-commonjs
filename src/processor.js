@@ -31,7 +31,20 @@ module.exports = class Processor {
      * @param {Field} globalExitRoot - global exit root
      * @param {Field} vm - vm instance
      */
-    constructor(db, batchNumber, arity, poseidon, maxNTx, seqChainID, root, sequencerAddress, localExitRoot, globalExitRoot, timestamp, vm) {
+    constructor(
+        db,
+        batchNumber,
+        arity,
+        poseidon,
+        maxNTx,
+        seqChainID,
+        root,
+        sequencerAddress,
+        localExitRoot,
+        globalExitRoot,
+        timestamp,
+        vm,
+    ) {
         this.db = db;
         this.batchNumber = batchNumber;
         this.arity = arity;
@@ -210,10 +223,6 @@ module.exports = class Processor {
                 });
                 const txResult = await this.vm.runTx({ tx: evmTx });
                 const amountSpent = Number(txResult.amountSpent);
-                /*
-                 * await this.vm.stateManager.checkpoint();
-                 * await this.vm.stateManager.commit();
-                 */
 
                 // Pay sequencer fees in EVM
                 const seqAddr = new Address(toBuffer(this.sequencerAddress));
@@ -243,6 +252,30 @@ module.exports = class Processor {
                         Scalar.e(account.balance),
                         Scalar.e(account.nonce),
                     );
+                    // If account is contract, update smt bytecode and storage
+                    if (account.isContract()) {
+                        //TODO: decide if nonce 0 or 1 for the deploy of sc
+                        this.currentStateRoot = await stateUtils.setAccountState(
+                            address,
+                            this.smt,
+                            this.currentStateRoot,
+                            Scalar.e(account.balance),
+                            Scalar.e(0),
+                        );
+                        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+                        const storage = {};
+                        const keys = Object.keys(sto).map((v) => `0x${v}`);
+                        const values = Object.values(sto).map((v) => `0x${v}`);
+                        for (let k = 0; k < keys.length; k++) {
+                            storage[keys[k]] = values[k];
+                        }
+                        this.currentStateRoot = await stateUtils.setContractStorage(
+                            address,
+                            this.smt,
+                            this.currentStateRoot,
+                            storage,
+                        );
+                    }
                 }
                 await this.vm.stateManager.checkpoint();
                 await this.vm.stateManager.commit();

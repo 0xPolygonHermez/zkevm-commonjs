@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 const { Scalar } = require('ffjavascript');
 
@@ -5,9 +6,12 @@ const ethers = require('ethers');
 const { expect } = require('chai');
 const fs = require('fs');
 const path = require('path');
+const {
+    toBuffer, Address,
+} = require('ethereumjs-util');
 
 const {
-    MemDB, SMT, stateUtils, ZkEVMDB, getPoseidon, processorUtils,
+    MemDB, stateUtils, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
@@ -24,7 +28,7 @@ describe('Processor', async function () {
     });
 
     it('Check test vectors', async () => {
-        for (let i = 0; i < testVectors.length; i++) {
+        for (let i = 10; i < testVectors.length; i++) {
             const {
                 id,
                 arity,
@@ -44,37 +48,20 @@ describe('Processor', async function () {
             } = testVectors[i];
 
             const db = new MemDB(F);
-            const smt = new SMT(db, arity, poseidon, poseidon.F);
 
             const walletMap = {};
-            const addressArray = [];
-            const amountArray = [];
-            const nonceArray = [];
 
-            // create genesis block
-            for (let j = 0; j < genesis.accounts.length; j++) {
-                const {
-                    address, pvtKey, balance, nonce,
-                } = genesis.accounts[j];
+            // create a zkEVMDB to compile the sc
+            const zkEVMDB = await ZkEVMDB.newZkEVM(
+                db,
+                arity,
+                poseidon,
+                F.zero,
+                F.e(Scalar.e(localExitRoot)),
+                genesis,
+            );
 
-                const newWallet = new ethers.Wallet(pvtKey);
-                expect(address).to.be.equal(newWallet.address);
-
-                walletMap[address] = newWallet;
-                addressArray.push(address);
-                amountArray.push(Scalar.e(balance));
-                nonceArray.push(Scalar.e(nonce));
-            }
-
-            const genesisRoot = await stateUtils.setGenesisBlock(addressArray, amountArray, nonceArray, smt);
-            for (let j = 0; j < addressArray.length; j++) {
-                const currentState = await stateUtils.getState(addressArray[j], smt, genesisRoot);
-
-                expect(currentState.balance).to.be.equal(amountArray[j]);
-                expect(currentState.nonce).to.be.equal(nonceArray[j]);
-            }
-
-            expect(`0x${Scalar.e(F.toString(genesisRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
+            expect(`0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
 
             /*
              * build, sign transaction and generate rawTxs
@@ -102,7 +89,8 @@ describe('Processor', async function () {
 
                 try {
                     let customRawTx;
-
+                    const address = genesis.accounts.find((o) => o.address === txData.from);
+                    const wallet = new ethers.Wallet(address.pvtKey);
                     if (tx.chainId === 0) {
                         const signData = ethers.utils.RLP.encode([
                             processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
@@ -116,14 +104,14 @@ describe('Processor', async function () {
                             '0x',
                         ]);
                         const digest = ethers.utils.keccak256(signData);
-                        const signingKey = new ethers.utils.SigningKey(walletMap[txData.from].privateKey);
+                        const signingKey = new ethers.utils.SigningKey(address.pvtKey);
                         const signature = signingKey.signDigest(digest);
                         const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
                         const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
                         const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
                         customRawTx = signData.concat(r).concat(s).concat(v);
                     } else {
-                        const rawTxEthers = await walletMap[txData.from].signTransaction(tx);
+                        const rawTxEthers = await wallet.signTransaction(tx);
                         customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
                     }
 
@@ -139,16 +127,6 @@ describe('Processor', async function () {
                 }
             }
 
-            // create a zkEVMDB and build a batch
-            const zkEVMDB = await ZkEVMDB.newZkEVM(
-                db,
-                arity,
-                poseidon,
-                genesisRoot,
-                F.e(Scalar.e(localExitRoot)),
-                genesis,
-            );
-
             const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
@@ -156,12 +134,16 @@ describe('Processor', async function () {
 
             // execute the transactions added to the batch
             await batch.executeTxs();
-
-            const newRoot = batch.currentStateRoot;
-            expect(`0x${Scalar.e(F.toString(newRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedNewRoot);
-
             // consolidate state
             await zkEVMDB.consolidate(batch);
+
+            const newRoot = batch.currentStateRoot;
+            for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
+                const newLeaf = await stateUtils.getState(address, zkEVMDB.smt, newRoot);
+                expect(newLeaf.balance.toString()).to.equal(leaf.balance);
+                expect(newLeaf.nonce.toString()).to.equal(leaf.nonce);
+            }
+            expect(`0x${Scalar.e(F.toString(newRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedNewRoot);
 
             // Check balances and nonces
             for (const [address, leaf] of Object.entries(expectedNewLeafs)) { // eslint-disable-line
