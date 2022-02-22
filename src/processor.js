@@ -222,9 +222,13 @@ module.exports = class Processor {
                     s: currenTx.s,
                 });
                 const txResult = await this.vm.runTx({ tx: evmTx });
-                const amountSpent = Number(txResult.amountSpent);
+                // Check transaction completed
+                if (txResult.execResult.exceptionError) {
+                    throw txResult.execResult.exceptionError;
+                }
 
-                // Pay sequencer fees in EVM
+                // Update sequencer fees in EVM
+                const amountSpent = Number(txResult.amountSpent);
                 const seqAddr = new Address(toBuffer(this.sequencerAddress));
                 const seqAcc = await this.vm.stateManager.getAccount(seqAddr);
                 const seqBalance = new BN(Scalar.add(amountSpent, seqAcc.balance));
@@ -234,7 +238,7 @@ module.exports = class Processor {
                 };
                 await this.vm.stateManager.putAccount(seqAddr, Account.fromAccountData(seqAccData));
 
-                // PROCESS TX in the smt
+                // PROCESS TX in the smt updating the touched accounts from the EVM
                 const touchedStack = this.vm.stateManager._customTouched;
                 for (const item of touchedStack) {
                     const address = `0x${item}`;
@@ -252,16 +256,9 @@ module.exports = class Processor {
                         Scalar.e(account.balance),
                         Scalar.e(account.nonce),
                     );
-                    // If account is contract, update smt bytecode and storage
+
+                    // If account is a contract, update storage
                     if (account.isContract()) {
-                        //TODO: decide if nonce 0 or 1 for the deploy of sc
-                        this.currentStateRoot = await stateUtils.setAccountState(
-                            address,
-                            this.smt,
-                            this.currentStateRoot,
-                            Scalar.e(account.balance),
-                            Scalar.e(0),
-                        );
                         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
                         const storage = {};
                         const keys = Object.keys(sto).map((v) => `0x${v}`);
@@ -277,6 +274,8 @@ module.exports = class Processor {
                         );
                     }
                 }
+
+                // Consolidate transacttions to refresh touchedAccounts
                 await this.vm.stateManager.checkpoint();
                 await this.vm.stateManager.commit();
             }

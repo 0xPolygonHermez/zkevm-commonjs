@@ -1,34 +1,29 @@
+/* eslint-disable no-console */
+/* eslint-disable multiline-comment-style */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 const { Scalar } = require('ffjavascript');
 
 const ethers = require('ethers');
 const { expect } = require('chai');
-const fs = require('fs');
-const path = require('path');
-const {
-    toBuffer, Address,
-} = require('ethereumjs-util');
 
 const {
-    MemDB, stateUtils, ZkEVMDB, getPoseidon, processorUtils,
+    MemDB, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
-const { pathTestVectors } = require('./helpers/test-utils');
+const testVectors = require('./helpers/processor-tests.json');
 
 describe('Processor', async function () {
-    this.timeout(1000000);
+    this.timeout(100000);
     let poseidon;
     let F;
-    let testVectors;
 
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'test-vector-data/state-transition.json')));
     });
 
     it('Check test vectors', async () => {
-        for (let i = 10; i < testVectors.length; i++) {
+        for (let i = 0; i < testVectors.length; i++) {
             const {
                 id,
                 arity,
@@ -48,8 +43,6 @@ describe('Processor', async function () {
             } = testVectors[i];
 
             const db = new MemDB(F);
-
-            const walletMap = {};
 
             // create a zkEVMDB to compile the sc
             const zkEVMDB = await ZkEVMDB.newZkEVM(
@@ -81,50 +74,53 @@ describe('Processor', async function () {
                     data: txData.data || '0x',
                 };
 
+                if (txData.data) {
+                    // Check tx data
+                    const contract = genesis.contracts.find((x) => x.contractName === txData.contractName);
+                    const functionData = contract.contractInterface.encodeFunctionData(txData.function, txData.params);
+                    expect(functionData).to.equal(txData.data);
+                }
                 if (!ethers.utils.isAddress(tx.to) || !ethers.utils.isAddress(txData.from)) {
                     expect(txData.customRawTx).to.equal(undefined);
                     // eslint-disable-next-line no-continue
                     continue;
                 }
 
-                try {
-                    let customRawTx;
-                    const address = genesis.accounts.find((o) => o.address === txData.from);
-                    const wallet = new ethers.Wallet(address.pvtKey);
-                    if (tx.chainId === 0) {
-                        const signData = ethers.utils.RLP.encode([
-                            processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
-                            processorUtils.toHexStringRlp(tx.gasPrice),
-                            processorUtils.toHexStringRlp(tx.gasLimit),
-                            processorUtils.toHexStringRlp(tx.to),
-                            processorUtils.toHexStringRlp(tx.value),
-                            processorUtils.toHexStringRlp(tx.data),
-                            processorUtils.toHexStringRlp(tx.chainId),
-                            '0x',
-                            '0x',
-                        ]);
-                        const digest = ethers.utils.keccak256(signData);
-                        const signingKey = new ethers.utils.SigningKey(address.pvtKey);
-                        const signature = signingKey.signDigest(digest);
-                        const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
-                        const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
-                        const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
-                        customRawTx = signData.concat(r).concat(s).concat(v);
-                    } else {
-                        const rawTxEthers = await wallet.signTransaction(tx);
-                        customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
-                    }
-
-                    expect(customRawTx).to.equal(txData.customRawTx);
-
-                    if (txData.encodeInvalidData) {
-                        customRawTx = customRawTx.slice(0, -6);
-                    }
-                    rawTxs.push(customRawTx);
-                    txProcessed.push(txData);
-                } catch (error) {
-                    expect(txData.customRawTx).to.equal(undefined);
+                let customRawTx;
+                const address = genesis.accounts.find((o) => o.address === txData.from);
+                const wallet = new ethers.Wallet(address.pvtKey);
+                if (tx.chainId === 0) {
+                    const signData = ethers.utils.RLP.encode([
+                        processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
+                        processorUtils.toHexStringRlp(tx.gasPrice),
+                        processorUtils.toHexStringRlp(tx.gasLimit),
+                        processorUtils.toHexStringRlp(tx.to),
+                        processorUtils.toHexStringRlp(tx.value),
+                        processorUtils.toHexStringRlp(tx.data),
+                        processorUtils.toHexStringRlp(tx.chainId),
+                        '0x',
+                        '0x',
+                    ]);
+                    const digest = ethers.utils.keccak256(signData);
+                    const signingKey = new ethers.utils.SigningKey(address.pvtKey);
+                    const signature = signingKey.signDigest(digest);
+                    const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
+                    const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
+                    const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
+                    customRawTx = signData.concat(r).concat(s).concat(v);
+                } else {
+                    const rawTxEthers = await wallet.signTransaction(tx);
+                    expect(rawTxEthers).to.equal(txData.rawTx);
+                    customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
                 }
+
+                expect(customRawTx).to.equal(txData.customRawTx);
+
+                if (txData.encodeInvalidData) {
+                    customRawTx = customRawTx.slice(0, -6);
+                }
+                rawTxs.push(customRawTx);
+                txProcessed.push(txData);
             }
 
             const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
@@ -138,19 +134,7 @@ describe('Processor', async function () {
             await zkEVMDB.consolidate(batch);
 
             const newRoot = batch.currentStateRoot;
-            for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
-                const newLeaf = await stateUtils.getState(address, zkEVMDB.smt, newRoot);
-                expect(newLeaf.balance.toString()).to.equal(leaf.balance);
-                expect(newLeaf.nonce.toString()).to.equal(leaf.nonce);
-            }
             expect(`0x${Scalar.e(F.toString(newRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedNewRoot);
-
-            // Check balances and nonces
-            for (const [address, leaf] of Object.entries(expectedNewLeafs)) { // eslint-disable-line
-                const newLeaf = await zkEVMDB.getCurrentAccountState(address);
-                expect(newLeaf.balance.toString()).to.equal(leaf.balance);
-                expect(newLeaf.nonce.toString()).to.equal(leaf.nonce);
-            }
 
             // Check errors on decode transactions
             const decodedTx = await batch.getDecodedTxs();
@@ -166,6 +150,13 @@ describe('Processor', async function () {
                 }
             }
 
+            // Check balances and nonces
+            for (const [address, leaf] of Object.entries(expectedNewLeafs)) { // eslint-disable-line
+                const newLeaf = await zkEVMDB.getCurrentAccountState(address);
+                expect(newLeaf.balance.toString()).to.equal(leaf.balance);
+                expect(newLeaf.nonce.toString()).to.equal(leaf.nonce);
+            }
+
             // Check the circuit input
             const circuitInput = await batch.getCircuitInput();
 
@@ -175,6 +166,7 @@ describe('Processor', async function () {
             // Check the batchHashData and the input hash
             expect(batchHashData).to.be.equal(circuitInput.batchHashData);
             expect(inputHash).to.be.equal(circuitInput.inputHash);
+            console.log(`Completed test ${i + 1}/${testVectors.length}`);
 
             // /*
             //  *  // Save outuput in file

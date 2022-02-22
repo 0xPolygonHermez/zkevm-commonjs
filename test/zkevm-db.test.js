@@ -11,7 +11,8 @@ const {
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
-describe('ZkEVMDB', () => {
+describe('ZkEVMDB', function () {
+    this.timeout(5000);
     let poseidon;
     let F;
 

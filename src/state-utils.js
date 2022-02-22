@@ -1,8 +1,5 @@
 const { Scalar } = require('ffjavascript');
 const smtUtils = require('./smt-utils');
-const buildPoseidon = require("circomlibjs").buildPoseidon;
-let poseidon 
-let F ;
 
 /**
  * Get the current state of an ethereum address
@@ -42,8 +39,6 @@ async function getState(ethAddr, smt, root) {
  * @returns {Uint8Array} new state root
  */
 async function setAccountState(ethAddr, smt, root, balance, nonce) {
-    poseidon = await buildPoseidon();
-    F = poseidon.F
     const keyBalance = await smtUtils.keyEthAddrBalance(ethAddr, smt.arity);
     const keyNonce = await smtUtils.keyEthAddrNonce(ethAddr, smt.arity);
 
@@ -125,7 +120,7 @@ async function setContractStorage(ethAddr, smt, root, storage) {
         const auxRes = await smt.set(tmpRoot, keyStoragePos, Scalar.e(value));
         tmpRoot = auxRes.newRoot;
     }
- 
+
     return tmpRoot;
 }
 
