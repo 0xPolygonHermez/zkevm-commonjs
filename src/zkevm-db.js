@@ -7,6 +7,8 @@ const {
 const { Chain, Hardfork } = require('@ethereumjs/common');
 const { Transaction } = require('@ethereumjs/tx');
 const { ethers } = require('ethers');
+const { defaultAbiCoder } = require('@ethersproject/abi');
+
 const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
@@ -157,8 +159,12 @@ class ZkEVMDB {
             // Add contracts to genesis
             for (let j = 0; j < contracts.length; j++) {
                 const {
-                    abi, bytecode, deployerPvtKey,
+                    abi, bytecode, deployerPvtKey, paramsDeploy,
                 } = contracts[j];
+                let params = '';
+                if (paramsDeploy) {
+                    params = defaultAbiCoder.encode(paramsDeploy.types, paramsDeploy.values);
+                }
 
                 // Deploy the sc into the EVM
                 const contractInterface = new ethers.utils.Interface(abi);
@@ -166,7 +172,7 @@ class ZkEVMDB {
                     value: 0,
                     gasLimit: 2000000, // We assume that 2M is enough,
                     gasPrice: 0, // Free gas deployment
-                    data: bytecode,
+                    data: bytecode + params.slice(2),
                     nonce: 0,
                 };
                 const tx = Transaction.fromTxData(txData).sign(toBuffer(deployerPvtKey));

@@ -824,7 +824,6 @@
       "contracts": [
         {
           "contractName": "Test",
-          "paramsDeploy": [],
           "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
           "deployerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
           "contractAddress": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
@@ -891,7 +890,7 @@
   },
   {
     "id": 11,
-    "description": "2 accounts + 2 contract + and 1 contract delegate",
+    "description": "2 accounts + 2 contract + and 1 tx to contract + contract call ",
     "arity": 4,
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
@@ -915,7 +914,6 @@
       "contracts": [
         {
           "contractName": "EtherTransfer",
-          "paramsDeploy": [],
           "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
           "deployerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
           "contractAddress": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
@@ -978,6 +976,100 @@
     "newLocalExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
     "inputHash": "0x22673ed76aa6d03a3b688d3bed1971d0bc79fc76f420b2767fc2c5377c0edb83",
     "batchHashData": "0xcab3d79c4264ad8e82c111ba6e4293fbb5b3c121048547aac715efb5fa682af1",
+    "localExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
+    "timestamp": 1944498031
+  },
+  {
+    "id": 12,
+    "description": "2 accounts + 2 contract with constructor + and 1 tx to contract + 1 contract call",
+    "arity": 4,
+    "chainIdSequencer": 1001,
+    "defaultChainId": 1000,
+    "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+    "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+    "genesis": {
+      "accounts": [
+        {
+          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+          "balance": "100000000000000000000",
+          "nonce": "0"
+        },
+        {
+          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+          "balance": "0",
+          "nonce": "0"
+        }
+      ],
+      "contracts": [
+        {
+          "contractName": "Constructor",
+          "paramsDeploy": {
+            "types":["uint"],
+            "values":[1]
+          },
+          "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+          "deployerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+          "contractAddress": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
+          "abi": "[\n    {\n      \"inputs\": [\n        {\n          \"internalType\": \"uint256\",\n          \"name\": \"_amount\",\n          \"type\": \"uint256\"\n        }\n      ],\n      \"stateMutability\": \"nonpayable\",\n      \"type\": \"constructor\"\n    },\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"fallback\"\n    },\n    {\n      \"inputs\": [],\n      \"name\": \"amount\",\n      \"outputs\": [\n        {\n          \"internalType\": \"uint256\",\n          \"name\": \"\",\n          \"type\": \"uint256\"\n        }\n      ],\n      \"stateMutability\": \"view\",\n      \"type\": \"function\"\n    },\n    {\n      \"inputs\": [\n        {\n          \"internalType\": \"address payable\",\n          \"name\": \"destination\",\n          \"type\": \"address\"\n        }\n      ],\n      \"name\": \"fundtransfer\",\n      \"outputs\": [],\n      \"stateMutability\": \"nonpayable\",\n      \"type\": \"function\"\n    },\n    {\n      \"inputs\": [],\n      \"name\": \"payMe\",\n      \"outputs\": [\n        {\n          \"internalType\": \"bool\",\n          \"name\": \"success\",\n          \"type\": \"bool\"\n        }\n      ],\n      \"stateMutability\": \"payable\",\n      \"type\": \"function\"\n    },\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"receive\"\n    }\n  ]",
+          "bytecode": "0x608060405234801561001057600080fd5b506040516102f43803806102f483398181016040528101906100329190610054565b80600081905550506100a7565b60008151905061004e81610090565b92915050565b60006020828403121561006a5761006961008b565b5b60006100788482850161003f565b91505092915050565b6000819050919050565b600080fd5b61009981610081565b81146100a457600080fd5b50565b61023e806100b66000396000f3fe6080604052600436106100385760003560e01c8063027e5d6114610041578063aa8c217c1461006a578063d997ccb3146100955761003f565b3661003f57005b005b34801561004d57600080fd5b5061006860048036038101906100639190610123565b6100b3565b005b34801561007657600080fd5b5061007f6100ff565b60405161008c9190610189565b60405180910390f35b61009d610105565b6040516100aa919061016e565b60405180910390f35b8073ffffffffffffffffffffffffffffffffffffffff166108fc6000549081150290604051600060405180830381858888f193505050501580156100fb573d6000803e3d6000fd5b5050565b60005481565b60006001905090565b60008135905061011d816101f1565b92915050565b600060208284031215610139576101386101ec565b5b60006101478482850161010e565b91505092915050565b610159816101b6565b82525050565b610168816101e2565b82525050565b60006020820190506101836000830184610150565b92915050565b600060208201905061019e600083018461015f565b92915050565b60006101af826101c2565b9050919050565b60008115159050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600080fd5b6101fa816101a4565b811461020557600080fd5b5056fea2646970667358221220a9efee48608417e1827ff29845461ef3eb04971ff2d938f8434c8b6d3ca80c4364736f6c63430008070033"
+        }
+      ]
+    },
+    "expectedOldRoot": "0x0eea4e3e1a48222666b19c0bbf0e9f06b01b1c919d12544108676e9b02dc9b9b",
+    "txs": [
+      {
+        "from": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "to": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
+        "nonce": 0,
+        "value": "100000000000000000",
+        "gasLimit": 100000,
+        "gasPrice": "1000000000",
+        "chainId": 1001,
+        "reason": "",
+        "customRawTx": "0xee80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9888016345785d8a0000808203e98080aa23584ffb8d24199bb1edcfd4a1de344ce6bd95683b81a59b11a7630acf52be73d43b511ad6356273bb6bf39cb4947e2d42dc447a8a2288e6dda164352acdf31c",
+        "rawTx": "0xf86e80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9888016345785d8a0000808207f6a0aa23584ffb8d24199bb1edcfd4a1de344ce6bd95683b81a59b11a7630acf52bea073d43b511ad6356273bb6bf39cb4947e2d42dc447a8a2288e6dda164352acdf3"
+      },
+      {
+        "from": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "to": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
+        "nonce": 1,
+        "value": "0",
+        "contractName": "Constructor",
+        "function": "fundtransfer",
+        "params": [
+          "0x4d5Cf5032B2a844602278b01199ED191A86c93ff"
+        ],
+        "gasLimit": 100000,
+        "gasPrice": "1000000000",
+        "data": "0x027e5d610000000000000000000000004d5cf5032b2a844602278b01199ed191a86c93ff",
+        "chainId": 1001,
+        "reason": "",
+        "customRawTx": "0xf84a01843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9880a4027e5d610000000000000000000000004d5cf5032b2a844602278b01199ed191a86c93ff8203e98080c4bde413aa0da090072cfbcd71b307697f2697aafc33b65cfd0e3dc926ee87a11e883785ae44b4dffae6789c16c936b931162fb2a51036d285101888b66fee941b",
+        "rawTx": "0xf88a01843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9880a4027e5d610000000000000000000000004d5cf5032b2a844602278b01199ed191a86c93ff8207f5a0c4bde413aa0da090072cfbcd71b307697f2697aafc33b65cfd0e3dc926ee87a1a01e883785ae44b4dffae6789c16c936b931162fb2a51036d285101888b66fee94"
+      }
+    ],
+    "expectedNewRoot": "0x10ae51a4327d54ed36dd8cbd9d30f5d77cf67d411c144f1ea2b28294784960cb",
+    "expectedNewLeafs": {
+      "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D": {
+        "balance": "99900000000000000000",
+        "nonce": "2"
+      },
+      "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98": {
+        "balance": "99999999999999999",
+        "nonce": "1"
+      },
+      "0x4d5Cf5032B2a844602278b01199ED191A86c93ff": {
+        "balance": "1",
+        "nonce": "0"
+      }
+    },
+    "batchL2Data": "0xee80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9888016345785d8a0000808203e98080aa23584ffb8d24199bb1edcfd4a1de344ce6bd95683b81a59b11a7630acf52be73d43b511ad6356273bb6bf39cb4947e2d42dc447a8a2288e6dda164352acdf31cf84a01843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9880a4027e5d610000000000000000000000004d5cf5032b2a844602278b01199ed191a86c93ff8203e98080c4bde413aa0da090072cfbcd71b307697f2697aafc33b65cfd0e3dc926ee87a11e883785ae44b4dffae6789c16c936b931162fb2a51036d285101888b66fee941b",
+    "globalExitRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
+    "newLocalExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
+    "inputHash": "0x0c00125a32093461aab5bd6c77f593f209c2973d5baa335205efbd0238e9e3ef",
+    "batchHashData": "0x94dbb90cbd7ccd0eebe219e6fd913babdf796768e6816ae2d3f959282abf688f",
     "localExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
     "timestamp": 1944498031
   }

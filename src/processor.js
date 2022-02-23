@@ -29,7 +29,8 @@ module.exports = class Processor {
      * @param {String} sequencerAddress . sequencer address
      * @param {Field} oldLocalExitRoot - local exit root
      * @param {Field} globalExitRoot - global exit root
-     * @param {Field} vm - vm instance
+     * @param {Number} timestamp - Timestamp of the batch
+     * @param {Object} vm - vm instance
      */
     constructor(
         db,
@@ -224,7 +225,9 @@ module.exports = class Processor {
                 const txResult = await this.vm.runTx({ tx: evmTx });
                 // Check transaction completed
                 if (txResult.execResult.exceptionError) {
-                    throw txResult.execResult.exceptionError;
+                    currentDecodedTx.isInvalid = true;
+                    currentDecodedTx.reason = txResult.execResult.exceptionError;
+                    continue;
                 }
 
                 // Update sequencer fees in EVM
@@ -257,8 +260,15 @@ module.exports = class Processor {
                         Scalar.e(account.nonce),
                     );
 
-                    // If account is a contract, update storage
+                    // If account is a contract, update storage and bytecode
                     if (account.isContract()) {
+                        const smCode = await this.vm.stateManager.getContractCode(addressInstance);
+                        this.currentStateRoot = await stateUtils.setContractBytecode(
+                            address,
+                            this.smt,
+                            this.currentStateRoot,
+                            smCode.toString('hex'),
+                        );
                         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
                         const storage = {};
                         const keys = Object.keys(sto).map((v) => `0x${v}`);
