@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-expressions */
 /* eslint-disable no-console */
 /* eslint-disable multiline-comment-style */
 /* eslint-disable no-restricted-syntax */
@@ -6,7 +7,9 @@ const { Scalar } = require('ffjavascript');
 
 const ethers = require('ethers');
 const { expect } = require('chai');
-
+const {
+    Address, toBuffer,
+} = require('ethereumjs-util');
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
@@ -54,6 +57,21 @@ describe('Processor', async function () {
                 genesis,
             );
 
+            // Check evm contract params
+            for (const contract of genesis.contracts) {
+                const contractAddres = new Address(toBuffer(contract.contractAddress));
+
+                const contractAccount = await zkEVMDB.vm.stateManager.getAccount(contractAddres);
+                expect(await contractAccount.isContract()).to.be.true;
+
+                const contractCode = await zkEVMDB.vm.stateManager.getContractCode(contractAddres);
+                expect(contractCode.toString('hex')).to.be.equal(contract.deployedBytecode.slice(2));
+
+                for (const [key, value] of Object.entries(contract.storage)) {
+                    const contractStorage = await zkEVMDB.vm.stateManager.getContractStorage(contractAddres, toBuffer(key));
+                    expect(contractStorage.toString('hex')).to.equal(value.slice(2));
+                }
+            }
             expect(`0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
 
             /*
@@ -151,10 +169,15 @@ describe('Processor', async function () {
             }
 
             // Check balances and nonces
-            for (const [address, leaf] of Object.entries(expectedNewLeafs)) { // eslint-disable-line
+            for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
+                // EVM
                 const newLeaf = await zkEVMDB.getCurrentAccountState(address);
                 expect(newLeaf.balance.toString()).to.equal(leaf.balance);
                 expect(newLeaf.nonce.toString()).to.equal(leaf.nonce);
+                // SMT
+                const smtNewLeaf = await zkEVMDB.getCurrentAccountState(address);
+                expect(smtNewLeaf.balance.toString()).to.equal(leaf.balance);
+                expect(smtNewLeaf.nonce.toString()).to.equal(leaf.nonce);
             }
 
             // Check the circuit input

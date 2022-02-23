@@ -1,3 +1,5 @@
+/* eslint-disable multiline-comment-style */
+/* eslint-disable no-restricted-syntax */
 const { Scalar } = require('ffjavascript');
 const VM = require('@ethereumjs/vm').default;
 const Common = require('@ethereumjs/common').default;
@@ -5,9 +7,7 @@ const {
     Address, Account, BN, toBuffer,
 } = require('ethereumjs-util');
 const { Chain, Hardfork } = require('@ethereumjs/common');
-const { Transaction } = require('@ethereumjs/tx');
 const { ethers } = require('ethers');
-const { defaultAbiCoder } = require('@ethersproject/abi');
 
 const Constants = require('./constants');
 const Processor = require('./processor');
@@ -159,47 +159,43 @@ class ZkEVMDB {
             // Add contracts to genesis
             for (let j = 0; j < contracts.length; j++) {
                 const {
-                    abi, bytecode, deployerPvtKey, paramsDeploy,
+                    abi, deployedBytecode, storage, contractAddress,
                 } = contracts[j];
-                let params = '';
-                if (paramsDeploy) {
-                    params = defaultAbiCoder.encode(paramsDeploy.types, paramsDeploy.values);
-                }
 
-                // Deploy the sc into the EVM
-                const contractInterface = new ethers.utils.Interface(abi);
-                const txData = {
-                    value: 0,
-                    gasLimit: 2000000, // We assume that 2M is enough,
-                    gasPrice: 0, // Free gas deployment
-                    data: bytecode + params.slice(2),
-                    nonce: 0,
+                // Add contract account to EVM
+                const addressInstance = new Address(toBuffer(contractAddress));
+                const evmAccData = {
+                    nonce: 1,
+                    balance: new BN(0),
                 };
-                const tx = Transaction.fromTxData(txData).sign(toBuffer(deployerPvtKey));
-                const deploymentResult = await newVm.runTx({ tx });
+                const evmAcc = Account.fromAccountData(evmAccData);
+                await newVm.stateManager.putAccount(addressInstance, evmAcc);
 
-                // Check correctly deployed
-                if (deploymentResult.execResult.exceptionError) {
-                    throw deploymentResult.execResult.exceptionError;
-                }
-
-                const contractAddress = deploymentResult.createdAddress.toString();
-                genesis.contracts[j].contractAddress = contractAddress;
+                const contractInterface = new ethers.utils.Interface(abi);
                 genesis.contracts[j].contractInterface = contractInterface;
 
-                // Update smt bytecode + storage
-                const deployedBytecode = await newVm.stateManager.getContractCode(new Address(toBuffer(contractAddress)));
-                newStateRoot = await setContractBytecode(contractAddress, newSmt, newStateRoot, `0x${deployedBytecode.toString('hex')}`);
-                const contractAddressInstance = new Address(toBuffer(contractAddress));
-                const sto = await newVm.stateManager.dumpStorage(contractAddressInstance);
-                const storage = {};
+                // Add bytecode and storage to EVM
+                await newVm.stateManager.putContractCode(addressInstance, toBuffer(deployedBytecode));
+                const skeys = Object.keys(storage).map((v) => toBuffer(v));
+                const svalues = Object.values(storage).map((v) => toBuffer(v));
+
+                for (let k = 0; k < skeys.length; k++) {
+                    await newVm.stateManager.putContractStorage(addressInstance, skeys[k], svalues[k]);
+                }
+
+                // Update smt bytecode + storage from EVM
+                const evmDeployedBytecode = await newVm.stateManager.getContractCode(addressInstance);
+                newStateRoot = await setContractBytecode(contractAddress, newSmt, newStateRoot, `0x${evmDeployedBytecode.toString('hex')}`);
+
+                const sto = await newVm.stateManager.dumpStorage(addressInstance);
+                const smtSto = {};
 
                 const keys = Object.keys(sto).map((v) => `0x${v}`);
                 const values = Object.values(sto).map((v) => `0x${v}`);
                 for (let k = 0; k < keys.length; k++) {
-                    storage[keys[k]] = values[k];
+                    smtSto[keys[k]] = values[k];
                 }
-                newStateRoot = await setContractStorage(contractAddress, newSmt, newStateRoot, storage);
+                newStateRoot = await setContractStorage(contractAddress, newSmt, newStateRoot, smtSto);
             }
 
             // Add genesis accounts to EVM and SMT
