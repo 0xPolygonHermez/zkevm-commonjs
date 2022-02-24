@@ -11,6 +11,7 @@ const SMT = require('./smt');
 const TmpSmtDB = require('./tmp-smt-db');
 const Constants = require('./constants');
 const stateUtils = require('./state-utils');
+const smtUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateCircuitInput, calculateBatchHashData } = require('./contract-utils');
@@ -60,7 +61,7 @@ module.exports = class Processor {
         this.decodedTxs = [];
         this.builded = false;
         this.circuitInput = {};
-
+        this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;
         this.sequencerAddress = sequencerAddress;
@@ -282,6 +283,13 @@ module.exports = class Processor {
                             this.currentStateRoot,
                             storage,
                         );
+
+                        if (currenTx.to && currenTx.to !== ethers.constants.AddressZero) {
+                            // Set bytecode at db when smart contract is called
+                            const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
+                            this.db.setValue(hashedBytecode, smCode.toString('hex'));
+                            this.contractsBytecode[hashedBytecode] = smCode.toString('hex');
+                        }
                     }
                 }
 
@@ -296,38 +304,6 @@ module.exports = class Processor {
      * Compute circuit input
      */
     async _computeCircuitInput() {
-        /*
-         * // compute keys used
-         * const keys = {};
-         * const mapAddress = {};
-         * for (let i = 0; i < this.decodedTxs.length; i++) {
-         *     const currentTx = this.decodedTxs[i].tx;
-         *     if (!currentTx) {
-         *         continue;
-         *     }
-         *     const { from, to } = currentTx;
-         */
-
-        /*
-         *     if (from && mapAddress[from] === undefined) {
-         *         const keyBalance = this.F.toString(await smtKeyUtils.keyEthAddrBalance(from, this.arity), 16).padStart(64, '0');
-         *         const keyNonce = this.F.toString(await smtKeyUtils.keyEthAddrNonce(from, this.arity), 16).padStart(64, '0');
-         *         const previousState = await stateUtils.getState(from, this.smt, this.oldStateRoot);
-         *         keys[keyBalance] = Scalar.e(previousState.balance).toString(16).padStart(64, '0');
-         *         keys[keyNonce] = Scalar.e(previousState.nonce).toString(16).padStart(64, '0');
-         *         mapAddress[from] = true;
-         *     }
-         *     if (mapAddress[to] === undefined) {
-         *         const keyBalance = this.F.toString(await smtKeyUtils.keyEthAddrBalance(to, this.arity), 16).padStart(64, '0');
-         *         const keyNonce = this.F.toString(await smtKeyUtils.keyEthAddrNonce(to, this.arity), 16).padStart(64, '0');
-         *         const previousState = await stateUtils.getState(to, this.smt, this.oldStateRoot);
-         *         keys[keyBalance] = Scalar.e(previousState.balance).toString(16).padStart(64, '0');
-         *         keys[keyNonce] = Scalar.e(previousState.nonce).toString(16).padStart(64, '0');
-         *         mapAddress[to] = true;
-         *     }
-         * }
-         */
-
         // compute circuit inputs
         const oldStateRoot = `0x${this.F.toString(this.oldStateRoot, 16).padStart(64, '0')}`;
         const newStateRoot = `0x${this.F.toString(this.currentStateRoot, 16).padStart(64, '0')}`;
@@ -347,7 +323,7 @@ module.exports = class Processor {
             oldStateRoot,
             oldLocalExitRoot,
             newStateRoot,
-            newLocalExitRoot, // should be the new exit root, but it's nod modified in this version
+            newLocalExitRoot, // should be the new exit root, but it's not modified in this version
             batchHashData,
         );
         this.circuitInput = {
@@ -364,6 +340,7 @@ module.exports = class Processor {
             inputHash,
             numBatch: Scalar.toNumber(this.batchNumber),
             timestamp: this.timestamp,
+            contractsBytecode: this.contractsBytecode,
         };
     }
 

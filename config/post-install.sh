@@ -7,13 +7,10 @@ cp config/baseStateManager.js node_modules/@ethereumjs/vm/dist/state/baseStateMa
 # SecureTrie does a hash of the key to insert in the trie
 # if storage is dumped and used again, the original key is hashed twice
 
-# No need to set readlink for macOS users
-if [[ "$OSTYPE" != "darwin"* ]]; then
-    SCRIPT=$(readlink -f "$0")
-    BUILD_CONFIG_HOME=$(dirname "$SCRIPT")
+SCRIPT=$(readlink -f "$0")
+BUILD_CONFIG_HOME=$(dirname "$SCRIPT")
 
-    cd ${BUILD_CONFIG_HOME}/..
-fi
+cd ${BUILD_CONFIG_HOME}/..
 
 TOREPLACE="SecureTrie"
 NEW="CheckpointTrie"
