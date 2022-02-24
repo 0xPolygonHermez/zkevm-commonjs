@@ -9,7 +9,6 @@ const { Fr } = require('./constants');
  * @param {String} newStateRoot - New State root once the batch is processed
  * @param {String} newLocalExitRoot - New local exit root once the batch is processed
  * @param {String} batchHashData - Batch hash data
- * @param {Number} numBatch - Batch number
  * @returns {String} - global hash in hex encoding
  */
 function calculateCircuitInput(
@@ -18,7 +17,6 @@ function calculateCircuitInput(
     newStateRoot,
     newLocalExitRoot,
     batchHashData,
-    numBatch,
 ) {
     const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
     const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
@@ -26,14 +24,13 @@ function calculateCircuitInput(
     const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint32'],
+        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
         [
             currentStateRootHex,
             currentLocalExitRootHex,
             newStateRootHex,
             newLocalExitRootHex,
             batchHashData,
-            numBatch,
         ],
     );
 
@@ -47,6 +44,7 @@ function calculateCircuitInput(
  * @param {String} sequencerAddress - Sequencer address
  * @param {Number} timestamp - Block timestamp
  * @param {Number} batchChainID - Batch chain ID
+ * @param {Number} numBatch - Batch number
  * @returns {String} - Batch hash data
  */
 function calculateBatchHashData(
@@ -55,16 +53,18 @@ function calculateBatchHashData(
     timestamp,
     sequencerAddress,
     batchChainID,
+    numBatch,
 ) {
     const globalExitRootHex = `0x${Scalar.e(globalExitRoot).toString(16).padStart(64, '0')}`;
     return ethers.utils.solidityKeccak256(
-        ['bytes', 'bytes32', 'uint256', 'address', 'uint32'],
+        ['bytes', 'bytes32', 'uint64', 'address', 'uint64', 'uint64'],
         [
             transactions,
             globalExitRootHex,
             timestamp,
             sequencerAddress,
             batchChainID,
+            numBatch,
         ],
     );
 }
@@ -80,7 +80,7 @@ function generateSolidityInputs(
     publicSignals,
 ) {
     const proofA = [proof.pi_a[0],
-        proof.pi_a[1],
+    proof.pi_a[1],
     ];
     const proofB = [
         [
@@ -93,7 +93,7 @@ function generateSolidityInputs(
         ],
     ];
     const proofC = [proof.pi_c[0],
-        proof.pi_c[1],
+    proof.pi_c[1],
     ];
     const input = publicSignals;
     return {

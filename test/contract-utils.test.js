@@ -11,8 +11,8 @@ describe('contractUtils', function () {
     this.timeout(10000);
     let testVector;
 
-    const expectedBatchHashData = '0x767ef4be9367c5f826078e1584bbb93cf0c1a024364a132da284d488d8069950';
-    const expectedGlobalHash = '0x060d1716370f95a8a57ec6549eb73d8538201871a5b7c8b46cea5d758ec2022f';
+    const expectedBatchHashData = '0x3d53e7e5be04b00f66af647512af6d17e4e767a5e41fa1293010b885c9fe06db';
+    const expectedGlobalHash = '0x2a3ae871f2767d7dcc8f076646aaac562f565913f1aaa01835c99da11587432a';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/inputs/input_0.json')));
@@ -20,7 +20,8 @@ describe('contractUtils', function () {
 
     it('calculateBatchHashData', async () => {
         const {
-            batchL2Data, globalExitRoot, timestamp, sequencerAddr, chainId,
+            batchL2Data, globalExitRoot, timestamp, sequencerAddr, chainId, numBatch,
+
         } = testVector;
         const computedBatchHashData = await contractUtils.calculateBatchHashData(
             batchL2Data,
@@ -28,23 +29,14 @@ describe('contractUtils', function () {
             timestamp,
             sequencerAddr,
             chainId,
+            numBatch,
         );
 
-        /*
-         * const batchHashData = calculateBatchHashData(
-         *     this.getBatchL2Data(),
-         *     globalExitRoot,
-         *     this.timestamp,
-         *     this.sequencerAddress,
-         *     this.seqChainID,
-         * );
-         */
-        expect(expectedBatchHashData).to.be.equal(computedBatchHashData);
+        expect(computedBatchHashData).to.be.equal(expectedBatchHashData);
     });
 
     it('calculateCircuitInput', async () => {
         const {
-            numBatch,
             oldLocalExitRoot,
             newLocalExitRoot,
             oldStateRoot,
@@ -57,7 +49,6 @@ describe('contractUtils', function () {
             newStateRoot,
             newLocalExitRoot,
             expectedBatchHashData,
-            numBatch,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedGlobalHash);
