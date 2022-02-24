@@ -80,7 +80,7 @@ function generateSolidityInputs(
     publicSignals,
 ) {
     const proofA = [proof.pi_a[0],
-    proof.pi_a[1],
+        proof.pi_a[1],
     ];
     const proofB = [
         [
@@ -93,7 +93,7 @@ function generateSolidityInputs(
         ],
     ];
     const proofC = [proof.pi_c[0],
-    proof.pi_c[1],
+        proof.pi_c[1],
     ];
     const input = publicSignals;
     return {
