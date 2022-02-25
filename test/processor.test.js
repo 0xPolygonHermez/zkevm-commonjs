@@ -1,3 +1,5 @@
+/* eslint-disable global-require */
+/* eslint-disable import/no-dynamic-require */
 /* eslint-disable no-unused-expressions */
 /* eslint-disable no-console */
 /* eslint-disable multiline-comment-style */
@@ -10,6 +12,11 @@ const { expect } = require('chai');
 const {
     Address, toBuffer,
 } = require('ethereumjs-util');
+const { defaultAbiCoder } = require('@ethersproject/abi');
+const path = require('path');
+
+const artifactsPath = path.join(__dirname, 'artifacts/contracts');
+
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
@@ -82,23 +89,43 @@ describe('Processor', async function () {
             const rawTxs = [];
             for (let j = 0; j < txs.length; j++) {
                 const txData = txs[j];
+
                 const tx = {
                     to: txData.to,
                     nonce: txData.nonce,
-                    value: ethers.utils.parseUnits(txData.value, 'wei'),
+                    value: processorUtils.toHexStringRlp(ethers.utils.parseUnits(txData.value, 'wei')),
                     gasLimit: txData.gasLimit,
-                    gasPrice: ethers.utils.parseUnits(txData.gasPrice, 'wei'),
+                    gasPrice: processorUtils.toHexStringRlp(ethers.utils.parseUnits(txData.gasPrice, 'wei')),
                     chainId: txData.chainId,
                     data: txData.data || '0x',
                 };
 
+                // The tx will have paramsDeploy in case is a deployment with constructor
+                // let params = '';
+                // if (txData.paramsDeploy) {
+                //     params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
+                //     tx.data += params.slice(2);
+                // }
+
                 if (txData.data) {
-                    // Check tx data
-                    const contract = genesis.contracts.find((x) => x.contractName === txData.contractName);
-                    const functionData = contract.contractInterface.encodeFunctionData(txData.function, txData.params);
-                    expect(functionData).to.equal(txData.data);
+                    if (txData.to) {
+                        if (txData.contractName) {
+                            // Call to genesis contract
+                            const contract = genesis.contracts.find((x) => x.contractName === txData.contractName);
+                            const functionData = contract.contractInterface.encodeFunctionData(txData.function, txData.params);
+                            expect(functionData).to.equal(txData.data);
+                        }
+                    } else {
+                        // Contract deployment from tx
+                        delete tx.to;
+
+                        const { bytecode } = require(`${artifactsPath}/${txData.contractName}.sol/${txData.contractName}.json`);
+                        const params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
+                        expect(tx.data).to.equal(bytecode + params.slice(2));
+                    }
                 }
-                if (!ethers.utils.isAddress(tx.to) || !ethers.utils.isAddress(txData.from)) {
+
+                if ((tx.to && tx.to !== '0x0' && !ethers.utils.isAddress(tx.to)) || !ethers.utils.isAddress(txData.from)) {
                     expect(txData.customRawTx).to.equal(undefined);
                     // eslint-disable-next-line no-continue
                     continue;

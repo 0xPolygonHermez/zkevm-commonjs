@@ -78,7 +78,7 @@ function rawTxToCustomRawTx(rawTx) {
         toHexStringRlp(tx.nonce),
         toHexStringRlp(tx.gasPrice),
         toHexStringRlp(tx.gasLimit),
-        toHexStringRlp(tx.to),
+        toHexStringRlp(tx.to || '0x'),
         toHexStringRlp(tx.value),
         toHexStringRlp(tx.data),
         toHexStringRlp(tx.chainId),
@@ -212,7 +212,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     // To READ
     if (encodedTxBytes[offset] === 0x80) {
         txDecoded.to = '0x';
-        // isContract = true
+        offset += 1;
     } else if (encodedTxBytes[offset] === 0x94) {
         const length = 20;
         txDecoded.to = ethers.utils.hexlify(encodedTxBytes.slice(offset + 1, offset + 1 + length));

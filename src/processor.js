@@ -161,7 +161,7 @@ module.exports = class Processor {
             const txParams = Object.keys(txDecoded);
 
             txParams.forEach((key) => {
-                if (txDecoded[key] === '0x' && key !== 'data') {
+                if (txDecoded[key] === '0x' && key !== 'data' && key !== 'to') {
                     txDecoded[key] = '0x00';
                 }
             });
