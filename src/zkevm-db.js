@@ -1,7 +1,7 @@
 /* eslint-disable multiline-comment-style */
 /* eslint-disable no-restricted-syntax */
 const { Scalar } = require('ffjavascript');
-const VM = require('@ethereumjs/vm').default;
+const VM = require('@polygon-hermez/vm').default;
 const Common = require('@ethereumjs/common').default;
 const {
     Address, Account, BN, toBuffer,
