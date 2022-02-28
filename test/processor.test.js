@@ -6,6 +6,7 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 const { Scalar } = require('ffjavascript');
+const fs = require('fs');
 
 const ethers = require('ethers');
 const { expect } = require('chai');
@@ -21,6 +22,9 @@ const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils,
 } = require('../index');
 const testVectors = require('./helpers/processor-tests.json');
+const newTestVectors = require('./helpers/processor-tests.json');
+
+const replace = true;
 
 describe('Processor', async function () {
     this.timeout(100000);
@@ -211,23 +215,20 @@ describe('Processor', async function () {
             const circuitInput = await batch.getCircuitInput();
 
             // Check the encode transaction match with the vector test
-            expect(batchL2Data).to.be.equal(batch.getBatchL2Data());
+            if (!replace) {
+                expect(batchL2Data).to.be.equal(batch.getBatchL2Data());
+                // Check the batchHashData and the input hash
+                expect(batchHashData).to.be.equal(circuitInput.batchHashData);
+                expect(inputHash).to.be.equal(circuitInput.inputHash);
+            } else {
+                newTestVectors[i].batchL2Data = batch.getBatchL2Data();
+                newTestVectors[i].batchHashData = circuitInput.batchHashData;
+            }
 
-            // Check the batchHashData and the input hash
-            expect(batchHashData).to.be.equal(circuitInput.batchHashData);
-            expect(inputHash).to.be.equal(circuitInput.inputHash);
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
-
-            // /*
-            //  *  // Save outuput in file
-            //  *  const dir = path.join(__dirname, './helpers/inputs-executor/');
-            //  *  if (!fs.existsSync(dir)) {
-            //  *      fs.mkdirSync(dir);
-            //  *  }
-            //  *  await fs.writeFileSync(`${dir}input_${id}.json`, JSON.stringify(circuitInput, null, 2));
-            //  */
-            // const expectedInput = require(`./helpers/inputs-executor/input_${id}.json`); // eslint-disable-line
-            // expect(circuitInput).to.be.deep.equal(expectedInput);
+        }
+        if (replace) {
+            await fs.writeFileSync(path.join(__dirname, './helpers/processor-tests.json'), JSON.stringify(newTestVectors, null, 2));
         }
     });
 });
