@@ -24,7 +24,7 @@ const {
 const testVectors = require('./helpers/processor-tests.json');
 const newTestVectors = require('./helpers/processor-tests.json');
 
-const replace = true;
+const replace = false;
 
 describe('Processor', async function () {
     this.timeout(100000);
@@ -117,6 +117,7 @@ describe('Processor', async function () {
                             // Call to genesis contract
                             const contract = genesis.contracts.find((x) => x.contractName === txData.contractName);
                             const functionData = contract.contractInterface.encodeFunctionData(txData.function, txData.params);
+                            delete contract.contractInterface;
                             expect(functionData).to.equal(txData.data);
                         }
                     } else {
@@ -223,6 +224,8 @@ describe('Processor', async function () {
             } else {
                 newTestVectors[i].batchL2Data = batch.getBatchL2Data();
                 newTestVectors[i].batchHashData = circuitInput.batchHashData;
+                newTestVectors[i].inputHash = circuitInput.inputHash;
+                delete newTestVectors[i].contractInterface;
             }
 
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
