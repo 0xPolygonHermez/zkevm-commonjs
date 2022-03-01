@@ -26,10 +26,10 @@ describe('Encode and decode transactions in RLP', () => {
             const walletMap = {};
 
             // load wallets
-            for (let j = 0; j < genesis.length; j++) {
+            for (let j = 0; j < genesis.accounts.length; j++) {
                 const {
                     address, pvtKey,
-                } = genesis[j];
+                } = genesis.accounts[j];
                 const newWallet = new ethers.Wallet(pvtKey);
                 expect(address).to.be.equal(newWallet.address);
                 walletMap[address] = newWallet;

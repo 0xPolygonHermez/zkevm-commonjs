@@ -306,6 +306,7 @@ module.exports = class Processor {
             this.timestamp,
             this.sequencerAddress,
             this.seqChainID,
+            this.batchNumber,
         );
         const inputHash = calculateCircuitInput(
             oldStateRoot,
@@ -313,7 +314,6 @@ module.exports = class Processor {
             newStateRoot,
             newLocalExitRoot, // should be the new exit root, but it's nod modified in this version
             batchHashData,
-            this.batchNumber,
         );
         this.circuitInput = {
             oldStateRoot,

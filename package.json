@@ -1,7 +1,7 @@
 {
   "name": "@polygon-hermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
@@ -40,11 +40,11 @@
     "@ethereumjs/common": "^2.6.0",
     "@ethereumjs/tx": "^3.4.0",
     "@ethereumjs/vm": "^5.6.0",
+    "@polygon-hermez/test-vectors": "https://github.com/hermeznetwork/test-vectors.git#v0.0.4",
     "chai": "^4.3.4",
     "circomlibjs": "^0.1.1",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.46",
-    "lodash": "^4.17.21",
-    "@polygon-hermez/test-vectors": "https://github.com/hermeznetwork/test-vectors.git#0.0.1"
+    "lodash": "^4.17.21"
   }
 }
