@@ -86,6 +86,7 @@ class MemDB {
     endCapture() {
         const res = this.capturing;
         delete this.capturing;
+
         return res;
     }
 }

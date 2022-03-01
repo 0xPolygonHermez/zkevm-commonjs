@@ -106,5 +106,9 @@ dist
 # VScode
 .vscode/
 
+# Hardhat build
+test/artifacts
+test/cache
+
 # custom
 package-lock.json

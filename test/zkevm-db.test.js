@@ -11,7 +11,8 @@ const {
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
-describe('ZkEVMDB', () => {
+describe('ZkEVMDB', function () {
+    this.timeout(5000);
     let poseidon;
     let F;
 
@@ -31,7 +32,7 @@ describe('ZkEVMDB', () => {
         const localExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
         const globalExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
         const timestamp = 1;
-
+        const genesis = [];
         const db = new MemDB(F);
 
         // create a zkEVMDB and build a batch
@@ -41,6 +42,7 @@ describe('ZkEVMDB', () => {
             poseidon,
             genesisRoot,
             localExitRoot,
+            genesis,
         );
 
         // check intiialize parameters
@@ -206,6 +208,7 @@ describe('ZkEVMDB', () => {
             poseidon,
             genesisRoot,
             F.e(Scalar.e(localExitRoot)),
+            genesis,
         );
         const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
         for (let j = 0; j < rawTxs.length; j++) {

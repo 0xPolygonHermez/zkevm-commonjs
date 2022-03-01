@@ -37,6 +37,9 @@ jobs:
           ssh-add /tmp/ssh-key
           npm install -g npm@7.13.0
           npm run setup
+          cd test
+          npx hardhat compile
+          cd ..
       - name: eslint
         run: npm run eslint
       - name: test

@@ -26,6 +26,7 @@ async function getState(ethAddr, smt, root) {
             nonce: Scalar.e(0),
         };
     }
+
     return response;
 }
 

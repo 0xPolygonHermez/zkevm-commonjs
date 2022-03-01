@@ -1,12 +1,25 @@
+/* eslint-disable multiline-comment-style */
+/* eslint-disable no-restricted-syntax */
 const { Scalar } = require('ffjavascript');
+const VM = require('@polygon-hermez/vm').default;
+const Common = require('@ethereumjs/common').default;
+const {
+    Address, Account, BN, toBuffer,
+} = require('ethereumjs-util');
+const { Chain, Hardfork } = require('@ethereumjs/common');
+const { ethers } = require('ethers');
 
 const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
-const { getState } = require('./state-utils');
+const {
+    getState, setAccountState, setContractBytecode, setContractStorage,
+} = require('./state-utils');
+
+const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, arity, poseidon) {
+    constructor(db, lastBatch, stateRoot, localExitRoot, arity, poseidon, vm, smt) {
         this.db = db;
         this.lastBatch = lastBatch || Scalar.e(0);
         this.poseidon = poseidon;
@@ -16,7 +29,8 @@ class ZkEVMDB {
         this.localExitRoot = localExitRoot || this.F.e(0);
 
         this.arity = arity;
-        this.smt = new SMT(this.db, this.arity, this.poseidon, this.F);
+        this.smt = smt;
+        this.vm = vm;
     }
 
     /**
@@ -37,6 +51,7 @@ class ZkEVMDB {
             this.localExitRoot,
             globalExitRoot,
             timestamp,
+            this.vm.copy(),
         );
     }
 
@@ -120,26 +135,104 @@ class ZkEVMDB {
      * @param {Object} poseidon - Poseidon object
      * @param {Uint8Array} stateRoot - state merkle root
      * @param {Uint8Array} localExitRoot - exit merkle root
+     * @param {Object} genesis - genesis block accounts and contracts
+     * @param {Object} genesis.accounts - genesis accounts (address, pvtKey, balance, nonce)
+     * @param {Object} genesis.contracts - genesis contracts (contractName, paramsDeploy, deployerAddress, deployerPvtKey, contractAddress, bytecode)
+     * @param {Object} vm - evm if already instantiated
+     * @param {Object} smt - smt if already instantiated
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, arity, poseidon, stateRoot, localExitRoot) {
+    static async newZkEVM(db, arity, poseidon, stateRoot, localExitRoot, genesis, vm, smt) {
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
-
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
             const setArity = arity || Constants.DEFAULT_ARITY;
+            const newVm = new VM({ common });
+            const newSmt = new SMT(db, arity, poseidon, poseidon.F);
+            const accounts = genesis.accounts || genesis;
+            const contracts = genesis.contracts || [];
+            let newStateRoot = stateRoot;
+
             await db.setValue(Constants.DB_ARITY, setArity);
+            // Add genesis to the vm
+
+            // Add contracts to genesis
+            for (let j = 0; j < contracts.length; j++) {
+                const {
+                    abi, deployedBytecode, storage, contractAddress,
+                } = contracts[j];
+
+                // Add contract account to EVM
+                const addressInstance = new Address(toBuffer(contractAddress));
+                const evmAccData = {
+                    nonce: 1,
+                    balance: new BN(0),
+                };
+                const evmAcc = Account.fromAccountData(evmAccData);
+                await newVm.stateManager.putAccount(addressInstance, evmAcc);
+
+                const contractInterface = new ethers.utils.Interface(abi);
+                genesis.contracts[j].contractInterface = contractInterface;
+
+                // Add bytecode and storage to EVM
+                await newVm.stateManager.putContractCode(addressInstance, toBuffer(deployedBytecode));
+                const skeys = Object.keys(storage).map((v) => toBuffer(v));
+                const svalues = Object.values(storage).map((v) => toBuffer(v));
+
+                for (let k = 0; k < skeys.length; k++) {
+                    await newVm.stateManager.putContractStorage(addressInstance, skeys[k], svalues[k]);
+                }
+
+                // Update smt bytecode + storage from EVM
+                const evmDeployedBytecode = await newVm.stateManager.getContractCode(addressInstance);
+                newStateRoot = await setContractBytecode(contractAddress, newSmt, newStateRoot, `0x${evmDeployedBytecode.toString('hex')}`);
+
+                const sto = await newVm.stateManager.dumpStorage(addressInstance);
+                const smtSto = {};
+
+                const keys = Object.keys(sto).map((v) => `0x${v}`);
+                const values = Object.values(sto).map((v) => `0x${v}`);
+                for (let k = 0; k < keys.length; k++) {
+                    smtSto[keys[k]] = values[k];
+                }
+                newStateRoot = await setContractStorage(contractAddress, newSmt, newStateRoot, smtSto);
+            }
+
+            // Add genesis accounts to EVM and SMT
+            for (let j = 0; j < accounts.length; j++) {
+                const {
+                    address, balance, nonce,
+                } = accounts[j];
+
+                // Add account to VM
+                const evmAddr = new Address(toBuffer(address));
+                const evmAccData = {
+                    nonce: Number(nonce),
+                    balance: new BN(balance),
+                };
+                const evmAcc = Account.fromAccountData(evmAccData);
+                await newVm.stateManager.putAccount(evmAddr, evmAcc);
+                // Add account to SMT
+                newStateRoot = await setAccountState(address, newSmt, newStateRoot, evmAcc.balance, evmAcc.nonce);
+            }
+
+            // Consolidate genesis in the evm
+            await newVm.stateManager.checkpoint();
+            await newVm.stateManager.commit();
 
             return new ZkEVMDB(
                 db,
                 Scalar.e(0),
-                stateRoot,
+                newStateRoot,
                 localExitRoot,
                 setArity,
                 poseidon,
+                newVm,
+                newSmt,
             );
         }
 
+        // Update current zkevm instance
         const DBStateRoot = await db.getValue(Scalar.add(Constants.DB_STATE_ROOT, lastBatch));
         const DBLocalExitRoot = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatch));
         const dBArity = Scalar.toNumber(await db.getValue(Constants.DB_ARITY));
@@ -151,6 +244,8 @@ class ZkEVMDB {
             DBLocalExitRoot,
             dBArity,
             poseidon,
+            vm,
+            smt,
         );
     }
 }

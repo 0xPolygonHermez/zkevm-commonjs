@@ -1,11 +1,17 @@
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-continue */
 const ethers = require('ethers');
+const { Transaction } = require('@ethereumjs/tx');
+const {
+    Address, Account, BN, toBuffer,
+} = require('ethereumjs-util');
 
 const { Scalar } = require('ffjavascript');
 const SMT = require('./smt');
 const TmpSmtDB = require('./tmp-smt-db');
 const Constants = require('./constants');
 const stateUtils = require('./state-utils');
+const smtUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateCircuitInput, calculateBatchHashData } = require('./contract-utils');
@@ -24,8 +30,23 @@ module.exports = class Processor {
      * @param {String} sequencerAddress . sequencer address
      * @param {Field} oldLocalExitRoot - local exit root
      * @param {Field} globalExitRoot - global exit root
+     * @param {Number} timestamp - Timestamp of the batch
+     * @param {Object} vm - vm instance
      */
-    constructor(db, batchNumber, arity, poseidon, maxNTx, seqChainID, root, sequencerAddress, localExitRoot, globalExitRoot, timestamp) {
+    constructor(
+        db,
+        batchNumber,
+        arity,
+        poseidon,
+        maxNTx,
+        seqChainID,
+        root,
+        sequencerAddress,
+        localExitRoot,
+        globalExitRoot,
+        timestamp,
+        vm,
+    ) {
         this.db = db;
         this.batchNumber = batchNumber;
         this.arity = arity;
@@ -40,7 +61,7 @@ module.exports = class Processor {
         this.decodedTxs = [];
         this.builded = false;
         this.circuitInput = {};
-
+        this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;
         this.sequencerAddress = sequencerAddress;
@@ -48,6 +69,7 @@ module.exports = class Processor {
         this.currentLocalExitRoot = localExitRoot;
         this.globalExitRoot = globalExitRoot;
         this.timestamp = timestamp;
+        this.vm = vm;
     }
 
     /**
@@ -139,7 +161,7 @@ module.exports = class Processor {
             const txParams = Object.keys(txDecoded);
 
             txParams.forEach((key) => {
-                if (txDecoded[key] === '0x' && key !== 'data') {
+                if (txDecoded[key] === '0x' && key !== 'data' && key !== 'to') {
                     txDecoded[key] = '0x00';
                 }
             });
@@ -168,8 +190,8 @@ module.exports = class Processor {
             if (currentDecodedTx.isInvalid) {
                 continue;
             } else {
-                // Get from state
                 const currenTx = currentDecodedTx.tx;
+                // Get from state
                 const oldStateFrom = await stateUtils.getState(currenTx.from, this.smt, this.currentStateRoot);
 
                 // A: VALID NONCE
@@ -189,70 +211,91 @@ module.exports = class Processor {
                     continue;
                 }
 
-                // PROCESS TX
-                const newStateFrom = { ...oldStateFrom };
-                let newStateTo;
-
-                if (Scalar.e(currenTx.from) === Scalar.e(currenTx.to)) {
-                    // In case from and to are the same, both should modify the same object
-                    newStateTo = newStateFrom;
-                } else {
-                    // Get To state
-                    const oldStateTo = await stateUtils.getState(currenTx.to, this.smt, this.currentStateRoot);
-                    newStateTo = { ...oldStateTo };
+                // Run tx in the EVM
+                const evmTx = Transaction.fromTxData({
+                    nonce: currenTx.nonce,
+                    gasPrice: currenTx.gasPrice,
+                    gasLimit: currenTx.gasLimit,
+                    to: currenTx.to,
+                    value: currenTx.value,
+                    data: currenTx.data,
+                    v: Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35,
+                    r: currenTx.r,
+                    s: currenTx.s,
+                });
+                const txResult = await this.vm.runTx({ tx: evmTx });
+                // Check transaction completed
+                if (txResult.execResult.exceptionError) {
+                    currentDecodedTx.isInvalid = true;
+                    currentDecodedTx.reason = txResult.execResult.exceptionError;
+                    continue;
                 }
 
-                // from: increase nonce
-                newStateFrom.nonce = Scalar.add(newStateFrom.nonce, 1);
+                // Update sequencer fees in EVM
+                const amountSpent = Number(txResult.amountSpent);
+                const seqAddr = new Address(toBuffer(this.sequencerAddress));
+                const seqAcc = await this.vm.stateManager.getAccount(seqAddr);
+                const seqBalance = new BN(Scalar.add(amountSpent, seqAcc.balance));
+                const seqAccData = {
+                    nonce: seqAcc.nonce,
+                    balance: seqBalance,
+                };
+                await this.vm.stateManager.putAccount(seqAddr, Account.fromAccountData(seqAccData));
 
-                // from: substract total tx cost
-                newStateFrom.balance = Scalar.sub(newStateFrom.balance, upfronTxCost);
+                // PROCESS TX in the smt updating the touched accounts from the EVM
+                const touchedStack = this.vm.stateManager._customTouched;
+                for (const item of touchedStack) {
+                    const address = `0x${item}`;
+                    if (address === ethers.constants.AddressZero) {
+                        continue;
+                    }
+                    // Get touched evm account
+                    const addressInstance = Address.fromString(address);
+                    const account = await this.vm.stateManager.getAccount(addressInstance);
+                    // Update smt with touched accounts
+                    this.currentStateRoot = await stateUtils.setAccountState(
+                        address,
+                        this.smt,
+                        this.currentStateRoot,
+                        Scalar.e(account.balance),
+                        Scalar.e(account.nonce),
+                    );
 
-                /*
-                 * from: refund unused gas
-                 * hardcoded gas used for an ethereum tx: 21000
-                 */
-                const gasUsed = Scalar.e(21000);
-                const feeGasCost = Scalar.mul(gasUsed, currenTx.gasPrice);
-                const refund = Scalar.sub(gasLimitCost, feeGasCost);
-                newStateFrom.balance = Scalar.add(newStateFrom.balance, refund);
+                    // If account is a contract, update storage and bytecode
+                    if (account.isContract()) {
+                        const smCode = await this.vm.stateManager.getContractCode(addressInstance);
+                        this.currentStateRoot = await stateUtils.setContractBytecode(
+                            address,
+                            this.smt,
+                            this.currentStateRoot,
+                            smCode.toString('hex'),
+                        );
+                        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+                        const storage = {};
+                        const keys = Object.keys(sto).map((v) => `0x${v}`);
+                        const values = Object.values(sto).map((v) => `0x${v}`);
+                        for (let k = 0; k < keys.length; k++) {
+                            storage[keys[k]] = values[k];
+                        }
+                        this.currentStateRoot = await stateUtils.setContractStorage(
+                            address,
+                            this.smt,
+                            this.currentStateRoot,
+                            storage,
+                        );
 
-                // to: increase balance
-                newStateTo.balance = Scalar.add(newStateTo.balance, currenTx.value);
+                        if (currenTx.to && currenTx.to !== ethers.constants.AddressZero) {
+                            // Set bytecode at db when smart contract is called
+                            const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
+                            this.db.setValue(hashedBytecode, smCode.toString('hex'));
+                            this.contractsBytecode[hashedBytecode] = smCode.toString('hex');
+                        }
+                    }
+                }
 
-                // update root
-                this.currentStateRoot = await stateUtils.setAccountState(
-                    currenTx.from,
-                    this.smt,
-                    this.currentStateRoot,
-                    newStateFrom.balance,
-                    newStateFrom.nonce,
-                );
-                this.currentStateRoot = await stateUtils.setAccountState(
-                    currenTx.to,
-                    this.smt,
-                    this.currentStateRoot,
-                    newStateTo.balance,
-                    newStateTo.nonce,
-                );
-
-                // Pay sequencer fees
-
-                // Get sequencer state
-                const oldStateSequencer = await stateUtils.getState(this.sequencerAddress, this.smt, this.currentStateRoot);
-                const newStateSequencer = { ...oldStateSequencer };
-
-                // Increase sequencer balance
-                newStateSequencer.balance = Scalar.add(newStateSequencer.balance, feeGasCost);
-
-                // update root
-                this.currentStateRoot = await stateUtils.setAccountState(
-                    this.sequencerAddress,
-                    this.smt,
-                    this.currentStateRoot,
-                    newStateSequencer.balance,
-                    newStateSequencer.nonce,
-                );
+                // Consolidate transacttions to refresh touchedAccounts
+                await this.vm.stateManager.checkpoint();
+                await this.vm.stateManager.commit();
             }
         }
     }
@@ -261,38 +304,6 @@ module.exports = class Processor {
      * Compute circuit input
      */
     async _computeCircuitInput() {
-        /*
-         * // compute keys used
-         * const keys = {};
-         * const mapAddress = {};
-         * for (let i = 0; i < this.decodedTxs.length; i++) {
-         *     const currentTx = this.decodedTxs[i].tx;
-         *     if (!currentTx) {
-         *         continue;
-         *     }
-         *     const { from, to } = currentTx;
-         */
-
-        /*
-         *     if (from && mapAddress[from] === undefined) {
-         *         const keyBalance = this.F.toString(await smtKeyUtils.keyEthAddrBalance(from, this.arity), 16).padStart(64, '0');
-         *         const keyNonce = this.F.toString(await smtKeyUtils.keyEthAddrNonce(from, this.arity), 16).padStart(64, '0');
-         *         const previousState = await stateUtils.getState(from, this.smt, this.oldStateRoot);
-         *         keys[keyBalance] = Scalar.e(previousState.balance).toString(16).padStart(64, '0');
-         *         keys[keyNonce] = Scalar.e(previousState.nonce).toString(16).padStart(64, '0');
-         *         mapAddress[from] = true;
-         *     }
-         *     if (mapAddress[to] === undefined) {
-         *         const keyBalance = this.F.toString(await smtKeyUtils.keyEthAddrBalance(to, this.arity), 16).padStart(64, '0');
-         *         const keyNonce = this.F.toString(await smtKeyUtils.keyEthAddrNonce(to, this.arity), 16).padStart(64, '0');
-         *         const previousState = await stateUtils.getState(to, this.smt, this.oldStateRoot);
-         *         keys[keyBalance] = Scalar.e(previousState.balance).toString(16).padStart(64, '0');
-         *         keys[keyNonce] = Scalar.e(previousState.nonce).toString(16).padStart(64, '0');
-         *         mapAddress[to] = true;
-         *     }
-         * }
-         */
-
         // compute circuit inputs
         const oldStateRoot = `0x${this.F.toString(this.oldStateRoot, 16).padStart(64, '0')}`;
         const newStateRoot = `0x${this.F.toString(this.currentStateRoot, 16).padStart(64, '0')}`;
@@ -312,7 +323,7 @@ module.exports = class Processor {
             oldStateRoot,
             oldLocalExitRoot,
             newStateRoot,
-            newLocalExitRoot, // should be the new exit root, but it's nod modified in this version
+            newLocalExitRoot, // should be the new exit root, but it's not modified in this version
             batchHashData,
         );
         this.circuitInput = {
@@ -329,6 +340,7 @@ module.exports = class Processor {
             inputHash,
             numBatch: Scalar.toNumber(this.batchNumber),
             timestamp: this.timestamp,
+            contractsBytecode: this.contractsBytecode,
         };
     }
 
@@ -344,6 +356,7 @@ module.exports = class Processor {
      */
     getCircuitInput() {
         this._isBuilded();
+
         return this.circuitInput;
     }
 
@@ -367,6 +380,7 @@ module.exports = class Processor {
      */
     async getDecodedTxs() {
         this._isBuilded();
+
         return this.decodedTxs;
     }
 };

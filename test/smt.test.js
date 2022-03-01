@@ -7,7 +7,7 @@ const { SMT, MemDB, getPoseidon } = require('../index');
 describe('SMT', async function () {
     let poseidon;
     let F;
-    this.timeout(10000000);
+    this.timeout(100000);
 
     before(async () => {
         poseidon = await getPoseidon();

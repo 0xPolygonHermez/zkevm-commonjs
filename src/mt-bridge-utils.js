@@ -11,6 +11,7 @@ function generateZeroHashes(height) {
     for (let i = 1; i < height; i++) {
         zeroHashes.push(ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [zeroHashes[i - 1], zeroHashes[i - 1]]));
     }
+
     return zeroHashes;
 }
 
@@ -31,6 +32,7 @@ function verifyMerkleProof(leaf, smtProof, index, root) {
             value = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [value, smtProof[i]]);
         }
     }
+
     return value === root;
 }
 

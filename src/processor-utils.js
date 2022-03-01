@@ -13,6 +13,7 @@ function unarrayifyInteger(data, offset, length) {
     for (let i = 0; i < length; i++) {
         result = (result * 256) + data[offset + i];
     }
+
     return result;
 }
 
@@ -63,6 +64,7 @@ function toHexStringRlp(num) {
         numHex = num.startsWith('0x') ? num.slice(2) : num;
     }
     numHex = (numHex.length % 2 === 1) ? (`0x0${numHex}`) : (`0x${numHex}`);
+
     return numHex;
 }
 
@@ -78,7 +80,7 @@ function rawTxToCustomRawTx(rawTx) {
         toHexStringRlp(tx.nonce),
         toHexStringRlp(tx.gasPrice),
         toHexStringRlp(tx.gasLimit),
-        toHexStringRlp(tx.to),
+        toHexStringRlp(tx.to || '0x'),
         toHexStringRlp(tx.value),
         toHexStringRlp(tx.data),
         toHexStringRlp(tx.chainId),
@@ -88,6 +90,7 @@ function rawTxToCustomRawTx(rawTx) {
     const r = tx.r.slice(2);
     const s = tx.s.slice(2);
     const v = (tx.v - tx.chainId * 2 - 35 + 27).toString(16).padStart(2, '0'); // 1 byte
+
     return signData.concat(r).concat(s).concat(v);
 }
 
@@ -130,6 +133,7 @@ function encodedStringToArray(encodedTransactions) {
             throw new Error('Error');
         }
     }
+
     return decodedRawTx;
 }
 
@@ -145,6 +149,7 @@ function decodeNextShortStringRLP(encodedTxBytes, offset) {
     } else if (encodedTxBytes[offset] >= 0x80) {
         const length = encodedTxBytes[offset] - 0x80;
         const result = ethers.utils.hexlify(encodedTxBytes.slice(offset + 1, offset + 1 + length));
+
         return { consumed: (1 + length), result };
     } else {
         return { consumed: 1, result: ethers.utils.hexlify(encodedTxBytes[offset]) };
@@ -161,8 +166,10 @@ function decodeNextStringRLP(encodedTxBytes, offset) {
         const lengthLength = encodedTxBytes[offset] - 0xb7;
         const length = unarrayifyInteger(encodedTxBytes, offset + 1, lengthLength);
         const result = ethers.utils.hexlify(encodedTxBytes.slice(offset + 1 + lengthLength, offset + 1 + lengthLength + length));
+
         return { consumed: (1 + lengthLength + length), result };
     }
+
     return decodeNextShortStringRLP(encodedTxBytes, offset);
 }
 
@@ -179,7 +186,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     let offset = 0; // in zkasm this is the p
 
     let txListLength = 0;
-
+    let headerLength = 0;
     // Decode list length
     if (encodedTxBytes[offset] < 0xc0) {
         throw new Error('headerList should be a list');
@@ -187,9 +194,11 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
         const lengthLength = encodedTxBytes[offset] - 0xf7;
         txListLength = unarrayifyInteger(encodedTxBytes, offset + 1, lengthLength);
         offset = offset + 1 + lengthLength;
+        headerLength = 1 + lengthLength;
     } else if (encodedTxBytes[offset] >= 0xc0) {
         txListLength = encodedTxBytes[offset] - 0xc0;
         offset += 1;
+        headerLength = 1;
     }
 
     // Nonce read
@@ -210,7 +219,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     // To READ
     if (encodedTxBytes[offset] === 0x80) {
         txDecoded.to = '0x';
-        // isContract = true
+        offset += 1;
     } else if (encodedTxBytes[offset] === 0x94) {
         const length = 20;
         txDecoded.to = ethers.utils.hexlify(encodedTxBytes.slice(offset + 1, offset + 1 + length));
@@ -229,7 +238,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     offset += decodedData.consumed;
     txDecoded.data = decodedData.result;
 
-    // Value READ
+    // chainID READ
     const decodedChainID = decodeNextShortStringRLP(encodedTxBytes, offset);
     offset += decodedChainID.consumed;
     txDecoded.chainID = decodedChainID.result;
@@ -239,7 +248,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     }
     offset += 2;
 
-    if (txListLength + 1 !== offset) {
+    if (txListLength + headerLength !== offset) {
         throw new Error('Invalid list length');
     }
 
@@ -255,6 +264,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     offset += lenS;
     txDecoded.v = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenV));
     offset += lenV;
+
     return { txDecoded, rlpSignData };
 }
 

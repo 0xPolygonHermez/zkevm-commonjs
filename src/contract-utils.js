@@ -56,6 +56,7 @@ function calculateBatchHashData(
     numBatch,
 ) {
     const globalExitRootHex = `0x${Scalar.e(globalExitRoot).toString(16).padStart(64, '0')}`;
+
     return ethers.utils.solidityKeccak256(
         ['bytes', 'bytes32', 'uint64', 'address', 'uint64', 'uint64'],
         [
@@ -96,6 +97,7 @@ function generateSolidityInputs(
         proof.pi_c[1],
     ];
     const input = publicSignals;
+
     return {
         proofA, proofB, proofC, input,
     };

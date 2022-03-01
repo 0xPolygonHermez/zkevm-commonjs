@@ -16,6 +16,7 @@ function scalar2fea(Fr, scalar) {
     const r1 = Scalar.band(Scalar.shr(scalar, 64), Scalar.e('0xFFFFFFFFFFFFFFFF'));
     const r2 = Scalar.band(Scalar.shr(scalar, 128), Scalar.e('0xFFFFFFFFFFFFFFFF'));
     const r3 = Scalar.band(Scalar.shr(scalar, 192), Scalar.e('0xFFFFFFFFFFFFFFFF'));
+
     return [Fr.e(r0), Fr.e(r1), Fr.e(r2), Fr.e(r3)];
 }
 
@@ -31,6 +32,7 @@ function fea2scalar(Fr, arr) {
     res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[1]), 64));
     res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[2]), 128));
     res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[3]), 192));
+
     return res;
 }
 

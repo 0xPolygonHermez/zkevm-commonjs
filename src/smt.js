@@ -54,12 +54,14 @@ class SMT {
                 }
             }
             if (nFound === 1) return fnd;
+
             return -1;
         }
 
         async function hashSave(a) {
             const h = self.hash(a);
             await self.db.setSmtNode(h, a);
+
             return h;
         }
 
@@ -355,6 +357,7 @@ class SMT {
             res.push(Scalar.toNumber(Scalar.band(auxk, self.mask)));
             auxk = Scalar.shr(auxk, self.arity);
         }
+
         return res;
     }
 }
