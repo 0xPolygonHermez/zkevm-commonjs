@@ -7,7 +7,6 @@ const {
     Address, Account, BN, toBuffer,
 } = require('ethereumjs-util');
 const { Chain, Hardfork } = require('@ethereumjs/common');
-const { ethers } = require('ethers');
 
 const Constants = require('./constants');
 const Processor = require('./processor');
@@ -135,9 +134,7 @@ class ZkEVMDB {
      * @param {Object} poseidon - Poseidon object
      * @param {Uint8Array} stateRoot - state merkle root
      * @param {Uint8Array} localExitRoot - exit merkle root
-     * @param {Object} genesis - genesis block accounts and contracts
-     * @param {Object} genesis.accounts - genesis accounts (address, pvtKey, balance, nonce)
-     * @param {Object} genesis.contracts - genesis contracts (contractName, paramsDeploy, deployerAddress, deployerPvtKey, contractAddress, bytecode)
+     * @param {Object} genesis - genesis block accounts (address, nonce, balance, deployedBytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
      * @returns {Object} ZkEVMDB object
@@ -149,71 +146,52 @@ class ZkEVMDB {
             const setArity = arity || Constants.DEFAULT_ARITY;
             const newVm = new VM({ common });
             const newSmt = new SMT(db, arity, poseidon, poseidon.F);
-            const accounts = genesis.accounts || genesis;
-            const contracts = genesis.contracts || [];
             let newStateRoot = stateRoot;
 
             await db.setValue(Constants.DB_ARITY, setArity);
             // Add genesis to the vm
 
             // Add contracts to genesis
-            for (let j = 0; j < contracts.length; j++) {
+            for (let j = 0; j < genesis.length; j++) {
                 const {
-                    abi, deployedBytecode, storage, contractAddress,
-                } = contracts[j];
+                    address, nonce, balance, deployedBytecode, storage,
+                } = genesis[j];
 
                 // Add contract account to EVM
-                const addressInstance = new Address(toBuffer(contractAddress));
+                const addressInstance = new Address(toBuffer(address));
                 const evmAccData = {
-                    nonce: 1,
-                    balance: new BN(0),
-                };
-                const evmAcc = Account.fromAccountData(evmAccData);
-                await newVm.stateManager.putAccount(addressInstance, evmAcc);
-
-                const contractInterface = new ethers.utils.Interface(abi);
-                genesis.contracts[j].contractInterface = contractInterface;
-
-                // Add bytecode and storage to EVM
-                await newVm.stateManager.putContractCode(addressInstance, toBuffer(deployedBytecode));
-                const skeys = Object.keys(storage).map((v) => toBuffer(v));
-                const svalues = Object.values(storage).map((v) => toBuffer(v));
-
-                for (let k = 0; k < skeys.length; k++) {
-                    await newVm.stateManager.putContractStorage(addressInstance, skeys[k], svalues[k]);
-                }
-
-                // Update smt bytecode + storage from EVM
-                const evmDeployedBytecode = await newVm.stateManager.getContractCode(addressInstance);
-                newStateRoot = await setContractBytecode(contractAddress, newSmt, newStateRoot, `0x${evmDeployedBytecode.toString('hex')}`);
-
-                const sto = await newVm.stateManager.dumpStorage(addressInstance);
-                const smtSto = {};
-
-                const keys = Object.keys(sto).map((v) => `0x${v}`);
-                const values = Object.values(sto).map((v) => `0x${v}`);
-                for (let k = 0; k < keys.length; k++) {
-                    smtSto[keys[k]] = values[k];
-                }
-                newStateRoot = await setContractStorage(contractAddress, newSmt, newStateRoot, smtSto);
-            }
-
-            // Add genesis accounts to EVM and SMT
-            for (let j = 0; j < accounts.length; j++) {
-                const {
-                    address, balance, nonce,
-                } = accounts[j];
-
-                // Add account to VM
-                const evmAddr = new Address(toBuffer(address));
-                const evmAccData = {
-                    nonce: Number(nonce),
+                    nonce: new BN(nonce),
                     balance: new BN(balance),
                 };
                 const evmAcc = Account.fromAccountData(evmAccData);
-                await newVm.stateManager.putAccount(evmAddr, evmAcc);
-                // Add account to SMT
+                await newVm.stateManager.putAccount(addressInstance, evmAcc);
                 newStateRoot = await setAccountState(address, newSmt, newStateRoot, evmAcc.balance, evmAcc.nonce);
+
+                // Add bytecode and storage to EVM and SMT
+                if (deployedBytecode) {
+                    await newVm.stateManager.putContractCode(addressInstance, toBuffer(deployedBytecode));
+                    const evmDeployedBytecode = await newVm.stateManager.getContractCode(addressInstance);
+                    newStateRoot = await setContractBytecode(address, newSmt, newStateRoot, `0x${evmDeployedBytecode.toString('hex')}`);
+                }
+
+                if (storage) {
+                    const skeys = Object.keys(storage).map((v) => toBuffer(v));
+                    const svalues = Object.values(storage).map((v) => toBuffer(v));
+
+                    for (let k = 0; k < skeys.length; k++) {
+                        await newVm.stateManager.putContractStorage(addressInstance, skeys[k], svalues[k]);
+                    }
+
+                    const sto = await newVm.stateManager.dumpStorage(addressInstance);
+                    const smtSto = {};
+
+                    const keys = Object.keys(sto).map((v) => `0x${v}`);
+                    const values = Object.values(sto).map((v) => `0x${v}`);
+                    for (let k = 0; k < keys.length; k++) {
+                        smtSto[keys[k]] = values[k];
+                    }
+                    newStateRoot = await setContractStorage(address, newSmt, newStateRoot, smtSto);
+                }
             }
 
             // Consolidate genesis in the evm

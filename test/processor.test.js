@@ -5,6 +5,7 @@
 /* eslint-disable multiline-comment-style */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
+
 const { Scalar } = require('ffjavascript');
 const fs = require('fs');
 
@@ -69,22 +70,30 @@ describe('Processor', async function () {
             );
 
             // Check evm contract params
-            for (const contract of genesis.contracts) {
-                const contractAddres = new Address(toBuffer(contract.contractAddress));
+            for (const contract of genesis) {
+                if (contract.contractName) {
+                // Add contract interface for future contract interaction
+                    const contractInterface = new ethers.utils.Interface(contract.abi);
+                    contract.contractInterface = contractInterface;
+                    const contractAddres = new Address(toBuffer(contract.address));
 
-                const contractAccount = await zkEVMDB.vm.stateManager.getAccount(contractAddres);
-                expect(await contractAccount.isContract()).to.be.true;
+                    const contractAccount = await zkEVMDB.vm.stateManager.getAccount(contractAddres);
+                    expect(await contractAccount.isContract()).to.be.true;
 
-                const contractCode = await zkEVMDB.vm.stateManager.getContractCode(contractAddres);
-                expect(contractCode.toString('hex')).to.be.equal(contract.deployedBytecode.slice(2));
+                    const contractCode = await zkEVMDB.vm.stateManager.getContractCode(contractAddres);
+                    expect(contractCode.toString('hex')).to.be.equal(contract.deployedBytecode.slice(2));
 
-                for (const [key, value] of Object.entries(contract.storage)) {
-                    const contractStorage = await zkEVMDB.vm.stateManager.getContractStorage(contractAddres, toBuffer(key));
-                    expect(contractStorage.toString('hex')).to.equal(value.slice(2));
+                    for (const [key, value] of Object.entries(contract.storage)) {
+                        const contractStorage = await zkEVMDB.vm.stateManager.getContractStorage(contractAddres, toBuffer(key));
+                        expect(contractStorage.toString('hex')).to.equal(value.slice(2));
+                    }
                 }
             }
-            expect(`0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
-
+            if (!replace) {
+                expect(`0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
+            } else {
+                newTestVectors[i].expectedOldRoot = `0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`;
+            }
             /*
              * build, sign transaction and generate rawTxs
              * rawTxs would be the calldata inserted in the contract
@@ -115,7 +124,7 @@ describe('Processor', async function () {
                     if (txData.to) {
                         if (txData.contractName) {
                             // Call to genesis contract
-                            const contract = genesis.contracts.find((x) => x.contractName === txData.contractName);
+                            const contract = genesis.find((x) => x.contractName === txData.contractName);
                             const functionData = contract.contractInterface.encodeFunctionData(txData.function, txData.params);
                             delete contract.contractInterface;
                             expect(functionData).to.equal(txData.data);
@@ -137,7 +146,7 @@ describe('Processor', async function () {
                 }
 
                 let customRawTx;
-                const address = genesis.accounts.find((o) => o.address === txData.from);
+                const address = genesis.find((o) => o.address === txData.from);
                 const wallet = new ethers.Wallet(address.pvtKey);
                 if (tx.chainId === 0) {
                     const signData = ethers.utils.RLP.encode([
