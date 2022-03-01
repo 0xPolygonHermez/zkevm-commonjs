@@ -26,6 +26,7 @@ async function getState(ethAddr, smt, root) {
             nonce: Scalar.e(0),
         };
     }
+
     return response;
 }
 
@@ -44,6 +45,7 @@ async function setAccountState(ethAddr, smt, root, balance, nonce) {
 
     let auxRes = await smt.set(root, keyBalance, Scalar.e(balance));
     auxRes = await smt.set(auxRes.newRoot, keyNonce, Scalar.e(nonce));
+
     return auxRes.newRoot;
 }
 
@@ -74,6 +76,7 @@ async function setContractBytecode(ethAddr, smt, root, bytecode) {
     const keyContractCode = await smtUtils.keyContractCode(ethAddr, smt.arity);
 
     const res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
+
     return res.newRoot;
 }
 

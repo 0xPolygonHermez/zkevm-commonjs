@@ -26,5 +26,6 @@ module.exports = {
         'lines-between-class-members': ['error', 'always', { exceptAfterSingleLine: true }],
         'multiline-comment-style': 'error',
         'no-await-in-loop': 'off',
+        'newline-before-return': 'error',
     },
 };

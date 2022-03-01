@@ -12,6 +12,7 @@ async function getPoseidon() {
         poseidon = await buildPoseidon();
         isBuild = true;
     }
+
     return poseidon;
 }
 

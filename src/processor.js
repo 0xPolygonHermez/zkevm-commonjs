@@ -356,6 +356,7 @@ module.exports = class Processor {
      */
     getCircuitInput() {
         this._isBuilded();
+
         return this.circuitInput;
     }
 
@@ -379,6 +380,7 @@ module.exports = class Processor {
      */
     async getDecodedTxs() {
         this._isBuilded();
+
         return this.decodedTxs;
     }
 };

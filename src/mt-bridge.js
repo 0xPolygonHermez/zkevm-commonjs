@@ -45,11 +45,13 @@ class MTBridge {
             else proof.push(this.zeroHashes[i]);
             currentIndex = Math.floor(currentIndex / 2);
         }
+
         return proof;
     }
 
     getProofTreeByValue(value) {
         const index = this.tree[0].indexOf(value);
+
         return this.getProofTreeByIndex(index);
     }
 
@@ -59,6 +61,7 @@ class MTBridge {
             return ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [this.zeroHashes[this.height - 1], this.zeroHashes[this.height - 1]]);
         }
         if (this.dirty) this.calcBranches();
+
         return this.tree[this.height][0];
     }
 }

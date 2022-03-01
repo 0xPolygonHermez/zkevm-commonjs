@@ -27,6 +27,7 @@ class TmpSmtDB {
         } else {
             res = await this.srcDb.getSmtNode(key);
         }
+
         return res;
     }
 
