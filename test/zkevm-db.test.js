@@ -115,10 +115,10 @@ describe('ZkEVMDB', function () {
         const nonceArray = [];
 
         // create genesis block
-        for (let j = 0; j < genesis.accounts.length; j++) {
+        for (let j = 0; j < genesis.length; j++) {
             const {
                 address, pvtKey, balance, nonce,
-            } = genesis.accounts[j];
+            } = genesis[j];
 
             const newWallet = new ethers.Wallet(pvtKey);
             expect(address).to.be.equal(newWallet.address);

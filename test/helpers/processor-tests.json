@@ -6,23 +6,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "txs": [
       {
@@ -65,41 +62,38 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9",
-          "pvtKey": "0x1d0722aff4b29780e9a78e0bf28d5e127fb276cfbb0c3eb6a0e1728401777f17",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x187Bd40226A7073b49163b1f6c2b73d8F2aa8478",
-          "pvtKey": "0xd049e68efa0d85a3824c0b79f6817a986bb0cb3a075bcc2699118eca881d70ce",
-          "balance": "000000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0xabCcEd19d7f290B84608feC510bEe872CC8F5112",
-          "pvtKey": "0x0b929d50d7fda8155539e6befa96ff297e3e9ebce4d908f570310bdf774cb32b",
-          "balance": "000000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9",
+        "pvtKey": "0x1d0722aff4b29780e9a78e0bf28d5e127fb276cfbb0c3eb6a0e1728401777f17",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x187Bd40226A7073b49163b1f6c2b73d8F2aa8478",
+        "pvtKey": "0xd049e68efa0d85a3824c0b79f6817a986bb0cb3a075bcc2699118eca881d70ce",
+        "balance": "000000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0xabCcEd19d7f290B84608feC510bEe872CC8F5112",
+        "pvtKey": "0x0b929d50d7fda8155539e6befa96ff297e3e9ebce4d908f570310bdf774cb32b",
+        "balance": "000000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
     "txs": [
       {
@@ -206,23 +200,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "txs": [
       {
@@ -265,23 +256,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "txs": [
       {
@@ -359,23 +347,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "txs": [
       {
@@ -419,23 +404,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "txs": [
       {
@@ -478,23 +460,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "txs": [
       {
@@ -576,23 +555,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "txs": [
       {
@@ -635,23 +611,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "0",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "0",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x1a6403ad411addc4d3324a00903f9cad30b9516d4b1cb1f03e02607ce2c85d97",
     "txs": [
       {
@@ -707,23 +680,20 @@
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "txs": [
       {
@@ -806,36 +776,34 @@
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "200000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "contractName": "Test",
+        "nonce": "1",
+        "balance": "0",
+        "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x01",
+          "0x0000000000000000000000000000000000000000000000000000000000000001": "0x02"
         },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "200000000000000000000",
-          "nonce": "0"
-        }
-      ],
-      "contracts": [
-        {
-          "contractName": "Test",
-          "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "storage": {
-            "0x0000000000000000000000000000000000000000000000000000000000000000": "0x01",
-            "0x0000000000000000000000000000000000000000000000000000000000000001": "0x02"
-          },
-          "contractAddress": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
-          "abi": "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_stoFirst\",\"type\":\"uint256\"}],\"name\":\"setFirst\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"key\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setMapping\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_stoSecond\",\"type\":\"uint256\"}],\"name\":\"setSecond\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"stoFirst\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"stoMapping\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"stoSecond\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]\n",
-          "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100625760003560e01c80630f0db778146100675780635ef3d3dd146100835780638ca3165d1461009f578063b698c129146100bd578063e4081625146100d9578063e795befc146100f7575b600080fd5b610081600480360381019061007c91906101bd565b610127565b005b61009d60048036038101906100989190610190565b610143565b005b6100a761014d565b6040516100b4919061020c565b60405180910390f35b6100d760048036038101906100d29190610190565b610153565b005b6100e161015d565b6040516100ee919061020c565b60405180910390f35b610111600480360381019061010c9190610190565b610163565b60405161011e919061020c565b60405180910390f35b8060026000848152602001908152602001600020819055505050565b8060008190555050565b60005481565b8060018190555050565b60015481565b60026020528060005260406000206000915090505481565b60008135905061018a81610236565b92915050565b6000602082840312156101a6576101a5610231565b5b60006101b48482850161017b565b91505092915050565b600080604083850312156101d4576101d3610231565b5b60006101e28582860161017b565b92505060206101f38582860161017b565b9150509250929050565b61020681610227565b82525050565b600060208201905061022160008301846101fd565b92915050565b6000819050919050565b600080fd5b61023f81610227565b811461024a57600080fd5b5056fea2646970667358221220f2b0f3f22d7910ad84c31be49bddfc8b0d2a4e362965987ae9afaedd6e41023a64736f6c63430008070033"
-        }
-      ]
-    },
-    "expectedOldRoot": "0x0c1495368d013a98e9f1e434fdfae1cbf58f774547f6be9bd86e25a0f09a90f5",
+        "address": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
+        "abi": "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_stoFirst\",\"type\":\"uint256\"}],\"name\":\"setFirst\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"key\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setMapping\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_stoSecond\",\"type\":\"uint256\"}],\"name\":\"setSecond\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"stoFirst\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"stoMapping\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"stoSecond\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]\n",
+        "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100625760003560e01c80630f0db778146100675780635ef3d3dd146100835780638ca3165d1461009f578063b698c129146100bd578063e4081625146100d9578063e795befc146100f7575b600080fd5b610081600480360381019061007c91906101bd565b610127565b005b61009d60048036038101906100989190610190565b610143565b005b6100a761014d565b6040516100b4919061020c565b60405180910390f35b6100d760048036038101906100d29190610190565b610153565b005b6100e161015d565b6040516100ee919061020c565b60405180910390f35b610111600480360381019061010c9190610190565b610163565b60405161011e919061020c565b60405180910390f35b8060026000848152602001908152602001600020819055505050565b8060008190555050565b60005481565b8060018190555050565b60015481565b60026020528060005260406000206000915090505481565b60008135905061018a81610236565b92915050565b6000602082840312156101a6576101a5610231565b5b60006101b48482850161017b565b91505092915050565b600080604083850312156101d4576101d3610231565b5b60006101e28582860161017b565b92505060206101f38582860161017b565b9150509250929050565b61020681610227565b82525050565b600060208201905061022160008301846101fd565b92915050565b6000819050919050565b600080fd5b61023f81610227565b811461024a57600080fd5b5056fea2646970667358221220f2b0f3f22d7910ad84c31be49bddfc8b0d2a4e362965987ae9afaedd6e41023a64736f6c63430008070033"
+      }
+    ],
+    "expectedOldRoot": "0x2b2d5a02a7ba7a1e7e007825c80af4bafd9d6e7e25de420509f6d21f2635a492",
     "txs": [
       {
         "from": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
@@ -886,7 +854,7 @@
     "batchL2Data": "0xf84a80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9880a45ef3d3dd00000000000000000000000000000000000000000000000000000000000000078203e98080303bb7ca3c1f979a291ba35e8bc1241e161124faa69bba1f4cdc438c3a4491d1591878b8672bb534c3d152a5fcb38a7ded1629043fe6ea47f2ffbc52dc80f9841bee80843b9aca00830186a0944d5cf5032b2a844602278b01199ed191a86c93ff88016345785d8a0000808203e980801186622d03b6b8da7cf111d1ccba5bb185c56deae6a322cebc6dda0556f3cb9700910c26408b64b51c5da36ba2f38ef55ba1cee719d5a6c012259687999074321b",
     "globalExitRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "newLocalExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
-    "inputHash": "0x2c374aa36b6671e2bcd1c9267975805e4ab7ea2627938d7aa269f4aa36003b7d",
+    "inputHash": "0x14f8a78c019e4d455cb51835978a1eae3249323eb35217fa0bdf59d713cb6914",
     "batchHashData": "0x749f9131621c8f948aec6e61b255b82eb68140a157b59bf2acbacde4e4808145",
     "localExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
     "timestamp": 1944498031
@@ -899,33 +867,31 @@
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "0",
-          "nonce": "0"
-        }
-      ],
-      "contracts": [
-        {
-          "contractName": "EtherTransfer",
-          "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "contractAddress": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
-          "storage": {},
-          "abi": "[\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"fallback\"\n    },\n    {\n      \"inputs\": [\n        {\n          \"internalType\": \"address payable\",\n          \"name\": \"destination\",\n          \"type\": \"address\"\n        },\n        {\n          \"internalType\": \"uint256\",\n          \"name\": \"amount\",\n          \"type\": \"uint256\"\n        }\n      ],\n      \"name\": \"fundtransfer\",\n      \"outputs\": [],\n      \"stateMutability\": \"nonpayable\",\n      \"type\": \"function\"\n    },\n    {\n      \"inputs\": [],\n      \"name\": \"payMe\",\n      \"outputs\": [\n        {\n          \"internalType\": \"bool\",\n          \"name\": \"success\",\n          \"type\": \"bool\"\n        }\n      ],\n      \"stateMutability\": \"payable\",\n      \"type\": \"function\"\n    },\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"receive\"\n    }\n  ]",
-          "deployedBytecode": "0x60806040526004361061002d5760003560e01c8063494e4bc314610036578063d997ccb31461005f57610034565b3661003457005b005b34801561004257600080fd5b5061005d600480360381019061005891906100fb565b61007d565b005b6100676100c8565b604051610074919061014a565b60405180910390f35b8173ffffffffffffffffffffffffffffffffffffffff166108fc829081150290604051600060405180830381858888f193505050501580156100c3573d6000803e3d6000fd5b505050565b60006001905090565b6000813590506100e0816101b2565b92915050565b6000813590506100f5816101c9565b92915050565b60008060408385031215610112576101116101ad565b5b6000610120858286016100d1565b9250506020610131858286016100e6565b9150509250929050565b61014481610177565b82525050565b600060208201905061015f600083018461013b565b92915050565b600061017082610183565b9050919050565b60008115159050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600080fd5b6101bb81610165565b81146101c657600080fd5b50565b6101d2816101a3565b81146101dd57600080fd5b5056fea264697066735822122054325a6629f2b24e341c8ce24bcc3ae7cf668501373cd0f85390ab8889de3a8464736f6c63430008070033"
-        }
-      ]
-    },
-    "expectedOldRoot": "0x086c2f9977a01281c8117ff0df2a9aec4e7914664a5816c2bf5c94b3aa7c0dd1",
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "0",
+        "nonce": "0"
+      },
+      {
+        "contractName": "EtherTransfer",
+        "nonce": "1",
+        "balance": "0",
+        "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "address": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
+        "storage": {},
+        "abi": "[\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"fallback\"\n    },\n    {\n      \"inputs\": [\n        {\n          \"internalType\": \"address payable\",\n          \"name\": \"destination\",\n          \"type\": \"address\"\n        },\n        {\n          \"internalType\": \"uint256\",\n          \"name\": \"amount\",\n          \"type\": \"uint256\"\n        }\n      ],\n      \"name\": \"fundtransfer\",\n      \"outputs\": [],\n      \"stateMutability\": \"nonpayable\",\n      \"type\": \"function\"\n    },\n    {\n      \"inputs\": [],\n      \"name\": \"payMe\",\n      \"outputs\": [\n        {\n          \"internalType\": \"bool\",\n          \"name\": \"success\",\n          \"type\": \"bool\"\n        }\n      ],\n      \"stateMutability\": \"payable\",\n      \"type\": \"function\"\n    },\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"receive\"\n    }\n  ]",
+        "deployedBytecode": "0x60806040526004361061002d5760003560e01c8063494e4bc314610036578063d997ccb31461005f57610034565b3661003457005b005b34801561004257600080fd5b5061005d600480360381019061005891906100fb565b61007d565b005b6100676100c8565b604051610074919061014a565b60405180910390f35b8173ffffffffffffffffffffffffffffffffffffffff166108fc829081150290604051600060405180830381858888f193505050501580156100c3573d6000803e3d6000fd5b505050565b60006001905090565b6000813590506100e0816101b2565b92915050565b6000813590506100f5816101c9565b92915050565b60008060408385031215610112576101116101ad565b5b6000610120858286016100d1565b9250506020610131858286016100e6565b9150509250929050565b61014481610177565b82525050565b600060208201905061015f600083018461013b565b92915050565b600061017082610183565b9050919050565b60008115159050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600080fd5b6101bb81610165565b81146101c657600080fd5b50565b6101d2816101a3565b81146101dd57600080fd5b5056fea264697066735822122054325a6629f2b24e341c8ce24bcc3ae7cf668501373cd0f85390ab8889de3a8464736f6c63430008070033"
+      }
+    ],
+    "expectedOldRoot": "0x1d6dcbc8287c95ff025f3f4741c4bbb3ef73510ce6447c1a7f1f45e26273ffec",
     "txs": [
       {
         "from": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
@@ -977,7 +943,7 @@
     "batchL2Data": "0xee80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9888016345785d8a0000808203e98080aa23584ffb8d24199bb1edcfd4a1de344ce6bd95683b81a59b11a7630acf52be73d43b511ad6356273bb6bf39cb4947e2d42dc447a8a2288e6dda164352acdf31cf86b01843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9880b844494e4bc30000000000000000000000004d5cf5032b2a844602278b01199ed191a86c93ff00000000000000000000000000000000000000000000000000038d7ea4c680008203e9808093934c990813536c5155ee03217abe5619d7e4c6ad3759128a8a35154a90b77069c7541aafce232830e835ca4fc5654fc72dcd406565069452535fb1aab914711c",
     "globalExitRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "newLocalExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
-    "inputHash": "0x2dcaecbbc7f8cd59afa72ddb8d287b2496271352130dcb931757241032b90e4c",
+    "inputHash": "0x1a10df85d63cdefafe89afd0e02e97b4ab9800d62f4293aa9039a0112143fde7",
     "batchHashData": "0x79b0daf89a9fcef1bb5c6d280104b9b01e8ddea2cf9aad6a777b872ca08f1f55",
     "localExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
     "timestamp": 1944498031
@@ -990,43 +956,41 @@
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "0",
+        "nonce": "0"
+      },
+      {
+        "contractName": "Constructor",
+        "paramsDeploy": {
+          "types": [
+            "uint"
+          ],
+          "values": [
+            1
+          ]
         },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "0",
-          "nonce": "0"
-        }
-      ],
-      "contracts": [
-        {
-          "contractName": "Constructor",
-          "paramsDeploy": {
-            "types": [
-              "uint"
-            ],
-            "values": [
-              1
-            ]
-          },
-          "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "contractAddress": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
-          "storage": {
-            "0x0000000000000000000000000000000000000000000000000000000000000000": "0x01"
-          },
-          "abi": "[\n    {\n      \"inputs\": [\n        {\n          \"internalType\": \"uint256\",\n          \"name\": \"_amount\",\n          \"type\": \"uint256\"\n        }\n      ],\n      \"stateMutability\": \"nonpayable\",\n      \"type\": \"constructor\"\n    },\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"fallback\"\n    },\n    {\n      \"inputs\": [],\n      \"name\": \"amount\",\n      \"outputs\": [\n        {\n          \"internalType\": \"uint256\",\n          \"name\": \"\",\n          \"type\": \"uint256\"\n        }\n      ],\n      \"stateMutability\": \"view\",\n      \"type\": \"function\"\n    },\n    {\n      \"inputs\": [\n        {\n          \"internalType\": \"address payable\",\n          \"name\": \"destination\",\n          \"type\": \"address\"\n        }\n      ],\n      \"name\": \"fundtransfer\",\n      \"outputs\": [],\n      \"stateMutability\": \"nonpayable\",\n      \"type\": \"function\"\n    },\n    {\n      \"inputs\": [],\n      \"name\": \"payMe\",\n      \"outputs\": [\n        {\n          \"internalType\": \"bool\",\n          \"name\": \"success\",\n          \"type\": \"bool\"\n        }\n      ],\n      \"stateMutability\": \"payable\",\n      \"type\": \"function\"\n    },\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"receive\"\n    }\n  ]",
-          "deployedBytecode": "0x6080604052600436106100385760003560e01c8063027e5d6114610041578063aa8c217c1461006a578063d997ccb3146100955761003f565b3661003f57005b005b34801561004d57600080fd5b5061006860048036038101906100639190610123565b6100b3565b005b34801561007657600080fd5b5061007f6100ff565b60405161008c9190610189565b60405180910390f35b61009d610105565b6040516100aa919061016e565b60405180910390f35b8073ffffffffffffffffffffffffffffffffffffffff166108fc6000549081150290604051600060405180830381858888f193505050501580156100fb573d6000803e3d6000fd5b5050565b60005481565b60006001905090565b60008135905061011d816101f1565b92915050565b600060208284031215610139576101386101ec565b5b60006101478482850161010e565b91505092915050565b610159816101b6565b82525050565b610168816101e2565b82525050565b60006020820190506101836000830184610150565b92915050565b600060208201905061019e600083018461015f565b92915050565b60006101af826101c2565b9050919050565b60008115159050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600080fd5b6101fa816101a4565b811461020557600080fd5b5056fea2646970667358221220a9efee48608417e1827ff29845461ef3eb04971ff2d938f8434c8b6d3ca80c4364736f6c63430008070033"
-        }
-      ]
-    },
-    "expectedOldRoot": "0x2bb33f2fd77fc743bdfd9350266064c4c21ce7a58895b53de1f10684906f5155",
+        "nonce": "1",
+        "balance": "0",
+        "deployerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "address": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x01"
+        },
+        "abi": "[\n    {\n      \"inputs\": [\n        {\n          \"internalType\": \"uint256\",\n          \"name\": \"_amount\",\n          \"type\": \"uint256\"\n        }\n      ],\n      \"stateMutability\": \"nonpayable\",\n      \"type\": \"constructor\"\n    },\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"fallback\"\n    },\n    {\n      \"inputs\": [],\n      \"name\": \"amount\",\n      \"outputs\": [\n        {\n          \"internalType\": \"uint256\",\n          \"name\": \"\",\n          \"type\": \"uint256\"\n        }\n      ],\n      \"stateMutability\": \"view\",\n      \"type\": \"function\"\n    },\n    {\n      \"inputs\": [\n        {\n          \"internalType\": \"address payable\",\n          \"name\": \"destination\",\n          \"type\": \"address\"\n        }\n      ],\n      \"name\": \"fundtransfer\",\n      \"outputs\": [],\n      \"stateMutability\": \"nonpayable\",\n      \"type\": \"function\"\n    },\n    {\n      \"inputs\": [],\n      \"name\": \"payMe\",\n      \"outputs\": [\n        {\n          \"internalType\": \"bool\",\n          \"name\": \"success\",\n          \"type\": \"bool\"\n        }\n      ],\n      \"stateMutability\": \"payable\",\n      \"type\": \"function\"\n    },\n    {\n      \"stateMutability\": \"payable\",\n      \"type\": \"receive\"\n    }\n  ]",
+        "deployedBytecode": "0x6080604052600436106100385760003560e01c8063027e5d6114610041578063aa8c217c1461006a578063d997ccb3146100955761003f565b3661003f57005b005b34801561004d57600080fd5b5061006860048036038101906100639190610123565b6100b3565b005b34801561007657600080fd5b5061007f6100ff565b60405161008c9190610189565b60405180910390f35b61009d610105565b6040516100aa919061016e565b60405180910390f35b8073ffffffffffffffffffffffffffffffffffffffff166108fc6000549081150290604051600060405180830381858888f193505050501580156100fb573d6000803e3d6000fd5b5050565b60005481565b60006001905090565b60008135905061011d816101f1565b92915050565b600060208284031215610139576101386101ec565b5b60006101478482850161010e565b91505092915050565b610159816101b6565b82525050565b610168816101e2565b82525050565b60006020820190506101836000830184610150565b92915050565b600060208201905061019e600083018461015f565b92915050565b60006101af826101c2565b9050919050565b60008115159050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600080fd5b6101fa816101a4565b811461020557600080fd5b5056fea2646970667358221220a9efee48608417e1827ff29845461ef3eb04971ff2d938f8434c8b6d3ca80c4364736f6c63430008070033"
+      }
+    ],
+    "expectedOldRoot": "0x2d4e95e010173a19e523382801125a7de3060c99fc5a2000c55f1550da136901",
     "txs": [
       {
         "from": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
@@ -1077,7 +1041,7 @@
     "batchL2Data": "0xee80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9888016345785d8a0000808203e98080aa23584ffb8d24199bb1edcfd4a1de344ce6bd95683b81a59b11a7630acf52be73d43b511ad6356273bb6bf39cb4947e2d42dc447a8a2288e6dda164352acdf31cf84a01843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9880a4027e5d610000000000000000000000004d5cf5032b2a844602278b01199ed191a86c93ff8203e98080c4bde413aa0da090072cfbcd71b307697f2697aafc33b65cfd0e3dc926ee87a11e883785ae44b4dffae6789c16c936b931162fb2a51036d285101888b66fee941b",
     "globalExitRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "newLocalExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
-    "inputHash": "0x2f8f76b20cc1e0f7a108bccae8a9d7697328f3881e12d6ee98f5993a98d32786",
+    "inputHash": "0x21d6b93d4f48a787ed867254ea4653bf0db1c8dd4128aad6f64b714a7256056a",
     "batchHashData": "0xcb43ea7a8e8930d26ca4a9e8c2e6ddb995b73e4c3ab2ab219950fbb0dc8115aa",
     "localExitRoot": "0x17c04c3760510b48c6012742c540a81aba4bca2f78b9d14bfd2f123e2e53ea3e",
     "timestamp": 1944498031
@@ -1090,23 +1054,20 @@
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-    "genesis": {
-      "accounts": [
-        {
-          "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
-          "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
-          "balance": "100000000000000000000",
-          "nonce": "0"
-        },
-        {
-          "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
-          "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
-          "balance": "0",
-          "nonce": "0"
-        }
-      ],
-      "contracts": []
-    },
+    "genesis": [
+      {
+        "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
+        "balance": "100000000000000000000",
+        "nonce": "0"
+      },
+      {
+        "address": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
+        "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+        "balance": "0",
+        "nonce": "0"
+      }
+    ],
     "expectedOldRoot": "0x0b3ea3ea638cb3389dc4782b74796254743dac9ea95ec33c2caf9486b022cbf2",
     "txs": [
       {
