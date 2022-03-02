@@ -24,7 +24,7 @@ describe('SMT', async function () {
         assert(smt.nodeIsZero(r2.newRoot));
     });
 
-    it('It should update an element', async () => {
+    it('It should update an element 1', async () => {
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
 
@@ -36,7 +36,7 @@ describe('SMT', async function () {
     });
 
 
-    it('It should add a shared element', async () => {
+    it('It should add a shared element 2', async () => {
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
 
@@ -48,7 +48,7 @@ describe('SMT', async function () {
         assert(smt.nodeIsZero(r4.newRoot));
     });
 
-    it('It should add a shared element', async () => {
+    it('It should add a shared element 3', async () => {
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
 
@@ -129,7 +129,7 @@ describe('SMT', async function () {
         const smt = new SMT(db, poseidon, poseidon.F);
 
         const expectedRoot = [
-            16653234378288810553n, 2860457735487827690n, 93436030721967441n, 6974864601318093322n
+            1361534377311549574n, 6844553382454206922n, 8910524568890641498n, 5635536814180020910n
         ];
 
         const r0 = await smt.set(smt.empty, Scalar.e(0), Scalar.e(2)); // 0x00

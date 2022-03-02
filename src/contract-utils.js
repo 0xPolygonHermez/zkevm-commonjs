@@ -34,7 +34,7 @@ function calculateCircuitInput(
         ],
     );
 
-    return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), Fr).toString(16).padStart(64, '0')}`;
+    return hashKeccak;
 }
 
 /**
