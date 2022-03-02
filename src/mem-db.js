@@ -22,7 +22,7 @@ class MemDB {
      * @returns {Array[Fields] | null} Node childs if found, otherwise return null
      */
     async getSmtNode(key) {
-        const keyS = this.F.toString(key, 16).padStart(64, '0');
+        const keyS = this.key2Str(key);
         const res = [];
 
         if (typeof this.db[keyS] === 'undefined') {
@@ -40,17 +40,25 @@ class MemDB {
         return res;
     }
 
+    key2Str(key) {
+        let keyS="";
+        for (let i=0; i<4; i++) {
+            keyS = keyS + this.F.toString(key[i], 16).padStart(16, '0');
+        }
+        return keyS;
+    }
+
     /**
      * Set merkle-tree node
      * @param {Field} key - key in Field representation
      * @param {Array[Field]} value - child array
      */
     async setSmtNode(key, value) {
-        const keyS = this.F.toString(key, 16).padStart(64, '0');
+        const keyS = this.key2Str(key);
         this.db[keyS] = [];
 
         for (let i = 0; i < value.length; i++) {
-            this.db[keyS].push(this.F.toString(value[i], 16).padStart(64, '0'));
+            this.db[keyS].push(this.F.toString(value[i], 16).padStart(16, '0'));
         }
     }
 
@@ -60,8 +68,12 @@ class MemDB {
      * @param {Any} value - value to insert into the DB (JSON valid format)
      */
     async setValue(key, value) {
-        const keyS = Scalar.e(key).toString(16).padStart(64, '0');
-        this.db[keyS] = JSON.stringify(stringifyBigInts(value));
+        const keyS = this.key2Str(key);
+        this.db[keyS] = [];
+        
+        for (let i = 0; i < value.length; i++) {
+            this.db[keyS].push(this.F.toString(value[i], 16).padStart(16, '0'));
+        }
     }
 
     /**
@@ -70,13 +82,18 @@ class MemDB {
      * @returns {Any} - value retirved from database
      */
     async getValue(key) {
-        const keyS = Scalar.e(key).toString(16).padStart(64, '0');
+        const keyS = this.key2Str(key);
 
         if (typeof this.db[keyS] === 'undefined') {
             return null;
         }
 
-        return unstringifyBigInts(JSON.parse(this.db[keyS]));
+        const res = [];
+        for (let i = 0; i < 8; i++) {
+            res[i] = this.F.e("0x"+this.db[keyS][i]);
+        }
+
+        return res;
     }
 
     startCapture() {

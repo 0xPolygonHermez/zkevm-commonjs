@@ -17,8 +17,7 @@ function calculateCircuitInput(
     currentLocalExitRoot,
     newStateRoot,
     newLocalExitRoot,
-    batchHashData,
-    numBatch,
+    batchHashData
 ) {
     const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
     const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
@@ -26,18 +25,17 @@ function calculateCircuitInput(
     const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint32'],
+        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
         [
             currentStateRootHex,
             currentLocalExitRootHex,
             newStateRootHex,
             newLocalExitRootHex,
-            batchHashData,
-            numBatch,
+            batchHashData
         ],
     );
 
-    return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), Fr).toString(16).padStart(64, '0')}`;
+    return hashKeccak;
 }
 
 /**
@@ -55,16 +53,18 @@ function calculateBatchHashData(
     timestamp,
     sequencerAddress,
     batchChainID,
+    numBatch
 ) {
     const globalExitRootHex = `0x${Scalar.e(globalExitRoot).toString(16).padStart(64, '0')}`;
     return ethers.utils.solidityKeccak256(
-        ['bytes', 'bytes32', 'uint256', 'address', 'uint32'],
+        ['bytes', 'bytes32', 'uint64', 'address', 'uint64', 'uint64'],
         [
             transactions,
             globalExitRootHex,
             timestamp,
             sequencerAddress,
             batchChainID,
+            numBatch
         ],
     );
 }

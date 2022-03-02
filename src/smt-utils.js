@@ -63,6 +63,35 @@ function fe2n(Fr, fe) {
     }
 }
 
+function h4toScalar(h4) {
+    return Scalar.add(
+        Scalar.add(
+            h4[0],
+            Scalar.shl(h4[1], 64)
+        ),
+        Scalar.add(
+            Scalar.shl(h4[2], 128),
+            Scalar.shl(h4[3], 192)
+        )
+    );
+}
+
+function h4toString(h4) {
+    const sc = h4toScalar(h4);
+    return "0x"+ Scalar.toString(sc, 16).padStart(64, '0');
+}
+
+function stringToH4(s) {
+    if (s.slice(0,2) !== "0x") throw new Error("Hexadecimal required");
+    if (s.length != 66) throw new Error("Hexadecimal all digits required");
+    const res = [];
+    res[3] = BigInt("0x" + s.slice(2, 18));
+    res[2] = BigInt("0x" + s.slice(18, 34));
+    res[1] = BigInt("0x" + s.slice(34, 50));
+    res[0] = BigInt("0x" + s.slice(50));
+    return res;
+}
+
 /**
  * Leaf type 0: H([ethAddr[0:8], ethAddr[8:16], ethAddr[16:24], 0, 0, ...])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
@@ -90,7 +119,7 @@ async function keyEthAddrBalance(_ethAddr) {
     const hk0 = poseidon(key0);
     const hk1 = poseidon(key1);
 
-    return poseidon(...hk0, ...hk1);
+    return h4toScalar(poseidon([...hk0, ...hk1]));
 }
 
 /**
@@ -120,7 +149,7 @@ async function keyEthAddrNonce(_ethAddr) {
     const hk0 = poseidon(key0);
     const hk1 = poseidon(key1);
 
-    return poseidon(...hk0, ...hk1);
+    return h4toScalar(poseidon([...hk0, ...hk1]));
 }
 
 /**
@@ -150,7 +179,7 @@ async function keyContractCode(_ethAddr) {
     const hk0 = poseidon(key0);
     const hk1 = poseidon(key1);
 
-    return poseidon(...hk0, ...hk1);
+    return h4toScalar(poseidon([...hk0, ...hk1]));
 }
 
 /**
@@ -184,16 +213,9 @@ async function keyContractStorage(_ethAddr, _storagePos) {
     const hk0 = poseidon(key0);
     const hk1 = poseidon(storagePosArray);
 
-    return poseidon(...hk0, ...hk1);
+    return h4toScalar(poseidon([...hk0, ...hk1]));
 }
 
-function fa4ToString(Fr, n) {
-    return 
-        Fr.toString(n[0], 16).padStart(16)+
-        Fr.toString(n[1], 16).padStart(16)+
-        Fr.toString(n[2], 16).padStart(16)+
-        Fr.toString(n[3], 16).padStart(16);
-}
 
 /**
  * Fill the dbObject with all the childs recursively
@@ -206,7 +228,7 @@ function fa4ToString(Fr, n) {
 async function fillDBArray(node, db, dbObject, Fr) {
     const childArray = await db.getSmtNode(node);
     const childArrayHex = childArray.map((value) => Fr.toString(value, 16).padStart(16, '0'));
-    const nodeHex = fa4ToString(node);
+    const nodeHex = Scalar.toString(h4toScalar(node), 16);
     dbObject[nodeHex] = childArrayHex;
 
     if (Scalar.fromString(childArrayHex[0], 16) !== Scalar.e(1)) {
@@ -312,4 +334,7 @@ module.exports = {
     keyContractStorage,
     getCurrentDB,
     hashContractBytecode,
+    h4toScalar,
+    h4toString,
+    stringToH4,
 };
