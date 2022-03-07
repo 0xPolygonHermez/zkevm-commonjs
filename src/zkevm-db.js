@@ -14,34 +14,36 @@ const SMT = require('./smt');
 const {
     getState, setAccountState, setContractBytecode, setContractStorage,
 } = require('./state-utils');
+const { h4toString, stringToH4 } = require('./smt-utils');
 
 const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, arity, poseidon, vm, smt) {
+    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt) {
         this.db = db;
-        this.lastBatch = lastBatch || Scalar.e(0);
+        this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
         this.F = poseidon.F;
 
-        this.stateRoot = stateRoot || this.F.e(0);
-        this.localExitRoot = localExitRoot || this.F.e(0);
+        this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
 
-        this.arity = arity;
         this.smt = smt;
         this.vm = vm;
     }
 
     /**
      * Return a new Processor with the current RollupDb state
-     *      * @param {Number} timestamp - Timestamp of the batch
-     * @param {Scalar} maxNTx - Maximum number of transactions
+     * @param {Number} timestamp - Timestamp of the batch
+     * @param {String} sequencerAddress - ethereum address represented as hex
+     * @param {Number} seqChainID - sequencer chainID
+     * @param {Array[Field]} globalExitRoot - global exit root
+     * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      */
-    async buildBatch(timestamp, sequencerAddress, seqChainID, globalExitRoot, maxNTx = Constants.defaultMaxTx) {
+    async buildBatch(timestamp, sequencerAddress, seqChainID, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX) {
         return new Processor(
             this.db,
-            Scalar.add(this.lastBatch, 1),
-            this.arity,
+            this.lastBatch + 1,
             this.poseidon,
             maxNTx,
             seqChainID,
@@ -59,7 +61,7 @@ class ZkEVMDB {
      * @param {Object} processor - Processor object
      */
     async consolidate(processor) {
-        if (processor.batchNumber !== Scalar.add(this.lastBatch, 1)) {
+        if (processor.batchNumber !== this.lastBatch + 1) {
             throw new Error('Updating the wrong batch');
         }
 
@@ -73,19 +75,19 @@ class ZkEVMDB {
         // set state root
         await this.db.setValue(
             Scalar.add(Constants.DB_STATE_ROOT, processor.batchNumber),
-            this.F.toString(processor.currentStateRoot),
+            h4toString(processor.currentStateRoot),
         );
 
         // Set local exit root
         await this.db.setValue(
             Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, processor.batchNumber),
-            this.F.toString(processor.currentLocalExitRoot),
+            h4toString(processor.currentLocalExitRoot),
         );
 
         // Set last batch number
         await this.db.setValue(
             Constants.DB_LAST_BATCH,
-            processor.batchNumber,
+            Scalar.toNumber(processor.batchNumber),
         );
 
         // Update ZKEVMDB variables
@@ -105,7 +107,7 @@ class ZkEVMDB {
 
     /**
      * Get the current Batch number
-     * @returns {Scalar} batch Number
+     * @returns {Number} batch Number
      */
     getCurrentNumBatch() {
         return this.lastBatch;
@@ -113,7 +115,7 @@ class ZkEVMDB {
 
     /**
      * Get the current state root
-     * @returns {Uint8Array} state root
+     * @returns {Array[Field]} state root
      */
     getCurrentStateRoot() {
         return this.stateRoot;
@@ -130,27 +132,23 @@ class ZkEVMDB {
     /**
      * Create a new instance of the ZkEVMDB
      * @param {Object} db - Mem db object
-     * @param {Object} arity - arity
      * @param {Object} poseidon - Poseidon object
-     * @param {Uint8Array} stateRoot - state merkle root
-     * @param {Uint8Array} localExitRoot - exit merkle root
+     * @param {Array[Fields]} stateRoot - state merkle root
+     * @param {Array[Fields]} localExitRoot - exit merkle root
      * @param {Object} genesis - genesis block accounts (address, nonce, balance, deployedBytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, arity, poseidon, stateRoot, localExitRoot, genesis, vm, smt) {
+    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt) {
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
-            const setArity = arity || Constants.DEFAULT_ARITY;
             const newVm = new VM({ common });
-            const newSmt = new SMT(db, arity, poseidon, poseidon.F);
+            const newSmt = new SMT(db, poseidon, poseidon.F);
             let newStateRoot = stateRoot;
 
-            await db.setValue(Constants.DB_ARITY, setArity);
             // Add genesis to the vm
-
             // Add contracts to genesis
             for (let j = 0; j < genesis.length; j++) {
                 const {
@@ -200,10 +198,9 @@ class ZkEVMDB {
 
             return new ZkEVMDB(
                 db,
-                Scalar.e(0),
+                0,
                 newStateRoot,
                 localExitRoot,
-                setArity,
                 poseidon,
                 newVm,
                 newSmt,
@@ -213,14 +210,12 @@ class ZkEVMDB {
         // Update current zkevm instance
         const DBStateRoot = await db.getValue(Scalar.add(Constants.DB_STATE_ROOT, lastBatch));
         const DBLocalExitRoot = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatch));
-        const dBArity = Scalar.toNumber(await db.getValue(Constants.DB_ARITY));
 
         return new ZkEVMDB(
             db,
             lastBatch,
-            DBStateRoot,
-            DBLocalExitRoot,
-            dBArity,
+            stringToH4(DBStateRoot),
+            stringToH4(DBLocalExitRoot),
             poseidon,
             vm,
             smt,

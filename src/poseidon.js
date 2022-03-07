@@ -1,25 +1,14 @@
-const F1Field = require("ffjavascript").F1Field;
+const { F1Field } = require('ffjavascript');
 
 let poseidon;
-let isBulded = false;
+let isBuilded = false;
 
 /**
- * singleton to build poseidon once
- * @returns {Object} - poseidon hash function
+ * Build poseidon hash function with golden prime
+ * @returns {Object} poseidon function
  */
-async function getPoseidon() {
-    if (isBuild === false) {
-        poseidon = await buildPoseidon();
-        isBuild = true;
-    }
-
-    return poseidon;
-}
-
 async function buildPoseidon() {
-    if (isBulded) return poseidon;
-
-    const goldenPrime = ( 1n << 64n) - (1n << 32n) + 1n;
+    const goldenPrime = (1n << 64n) - (1n << 32n) + 1n;
     const F = new F1Field(goldenPrime);
 
     const t = 12;
@@ -116,61 +105,74 @@ async function buildPoseidon() {
         0x80cefd2b7d99ff83n, 0xbb9879c6e61fd62an, 0x6e7c8f1a84265034n, 0x164bb2de1bbeddc8n,
         0xf3c12fe54d5c653bn, 0x40b9e922ed9771e2n, 0x551f5b0fbe7b1840n, 0x25032aa7c4cb1811n,
         0xaaed34074b164346n, 0x8ffd96bbf9c9c81dn, 0x70fc91eb5937085cn, 0x7f795e2a5f915440n,
-        0x4543d9df5476d3cbn, 0xf172d73e004fc90dn, 0xdfd1c4febcc81238n, 0xbc8dfb627fe558fcn
+        0x4543d9df5476d3cbn, 0xf172d73e004fc90dn, 0xdfd1c4febcc81238n, 0xbc8dfb627fe558fcn,
     ];
 
-    for (let i=0; i<C.length; i++) C[i] = F.e(C[i]);
+    for (let i = 0; i < C.length; i++) C[i] = F.e(C[i]);
 
     const MCIRC = [17n, 15n, 41n, 16n, 2n, 28n, 13n, 13n, 39n, 18n, 34n, 20n];
     const MDIAG = [8n, 0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n];
 
     const M = [];
-    for (let i=0; i<12; i++) {
+    for (let i = 0; i < 12; i++) {
         M[i] = [];
-        for (let j=0; j<12; j++) {
-            M[i][j] = F.e(MCIRC[(-i + j + 12)%12]);
-            if (i==j) M[i][j] = F.add(M[i][j], MDIAG[i]);
+        for (let j = 0; j < 12; j++) {
+            M[i][j] = F.e(MCIRC[(-i + j + 12) % 12]);
+            if (i === j) M[i][j] = F.add(M[i][j], MDIAG[i]);
         }
     }
 
-    const pow7 = a => {
+    const pow7 = (a) => {
         const a2 = F.square(a);
         const a4 = F.square(a2);
         const a3 = F.mul(a, a2);
-        return F.mul(a3, a4);
-    }
 
+        return F.mul(a3, a4);
+    };
 
     poseidon = function (inputs, capacity) {
-        if (inputs.length != 8) throw new Error("Invalid Input size (must be 8)");
+        if (inputs.length !== 8) throw new Error('Invalid Input size (must be 8)');
 
         let state;
 
         if (capacity) {
-            if (capacity.length != 4) throw new Error("Invalid Capacity size (must be 4)");
-            state = [ ...inputs.map(a => F.e(a)), ...capacity.map(a => F.e(a))]
+            if (capacity.length !== 4) throw new Error('Invalid Capacity size (must be 4)');
+            state = [...inputs.map((a) => F.e(a)), ...capacity.map((a) => F.e(a))];
         } else {
-            state = [ ...inputs.map(a => F.e(a)), F.zero, F.zero, F.zero, F.zero];
+            state = [...inputs.map((a) => F.e(a)), F.zero, F.zero, F.zero, F.zero];
         }
         for (let r = 0; r < nRoundsF + nRoundsP; r++) {
             state = state.map((a, i) => F.add(a, C[r * t + i]));
 
             if (r < nRoundsF / 2 || r >= nRoundsF / 2 + nRoundsP) {
-                state = state.map(a => pow7(a));
+                state = state.map((a) => pow7(a));
             } else {
                 state[0] = pow7(state[0]);
             }
 
-            state = state.map((_, i) =>
-                state.reduce((acc, a, j) => F.add(acc, F.mul(M[i][j], a)), F.zero)
-            );
+            // eslint-disable-next-line no-loop-func
+            state = state.map((_, i) => state.reduce((acc, a, j) => F.add(acc, F.mul(M[i][j], a)), F.zero));
         }
+
         return [state[0], state[1], state[2], state[3]];
-    }
+    };
 
     poseidon.F = F;
+
     return poseidon;
 }
 
+/**
+ * singleton to build poseidon once
+ * @returns {Object} - poseidon hash function
+ */
+async function getPoseidon() {
+    if (isBuilded === false) {
+        poseidon = await buildPoseidon();
+        isBuilded = true;
+    }
 
-module.exports = buildPoseidon;
+    return poseidon;
+}
+
+module.exports = getPoseidon;

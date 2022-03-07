@@ -14,7 +14,7 @@ const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
-const { calculateCircuitInput, calculateBatchHashData } = require('./contract-utils');
+const { calculateStarkInput, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
 const { decodeCustomRawTxProverMethod } = require('./processor-utils');
 
 module.exports = class Processor {
@@ -22,21 +22,19 @@ module.exports = class Processor {
      * constructor Processor class
      * @param {Object} db - database
      * @param {Number} batchNumber - batch number
-     * @param {Number} arity - arity
      * @param {Object} poseidon - hash function
      * @param {Number} maxNTx - maximum number of transaction allowed
      * @param {Number} seqChainID - sequencer own chain ID
-     * @param {Field} root - state root
+     * @param {Array[Field]} root - state root
      * @param {String} sequencerAddress . sequencer address
-     * @param {Field} oldLocalExitRoot - local exit root
-     * @param {Field} globalExitRoot - global exit root
+     * @param {Array[Field]} localExitRoot - local exit root
+     * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Object} vm - vm instance
      */
     constructor(
         db,
         batchNumber,
-        arity,
         poseidon,
         maxNTx,
         seqChainID,
@@ -49,18 +47,17 @@ module.exports = class Processor {
     ) {
         this.db = db;
         this.batchNumber = batchNumber;
-        this.arity = arity;
         this.poseidon = poseidon;
         this.maxNTx = maxNTx;
         this.seqChainID = seqChainID;
         this.F = poseidon.F;
         this.tmpSmtDB = new TmpSmtDB(db);
-        this.smt = new SMT(this.tmpSmtDB, arity, poseidon, poseidon.F);
+        this.smt = new SMT(this.tmpSmtDB, poseidon, poseidon.F);
 
         this.rawTxs = [];
         this.decodedTxs = [];
         this.builded = false;
-        this.circuitInput = {};
+        this.starkInput = {};
         this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;
@@ -96,8 +93,9 @@ module.exports = class Processor {
         // Process transactions and update the state
         await this._processTx();
 
-        // Calculate Circuit input
-        await this._computeCircuitInput();
+        // Calculate stark and snark input
+        await this._computeStarkInput();
+        await this._computeSnarkInput();
 
         this.builded = true;
     }
@@ -301,15 +299,15 @@ module.exports = class Processor {
     }
 
     /**
-     * Compute circuit input
+     * Compute stark input
      */
-    async _computeCircuitInput() {
+    async _computeStarkInput() {
         // compute circuit inputs
-        const oldStateRoot = `0x${this.F.toString(this.oldStateRoot, 16).padStart(64, '0')}`;
-        const newStateRoot = `0x${this.F.toString(this.currentStateRoot, 16).padStart(64, '0')}`;
-        const oldLocalExitRoot = `0x${this.F.toString(this.oldLocalExitRoot, 16).padStart(64, '0')}`;
-        const newLocalExitRoot = `0x${this.F.toString(this.currentLocalExitRoot, 16).padStart(64, '0')}`;
-        const globalExitRoot = `0x${this.F.toString(this.globalExitRoot, 16).padStart(64, '0')}`;
+        const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
+        const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
+        const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
+        const newLocalExitRoot = smtUtils.h4toString(this.currentLocalExitRoot);
+        const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
 
         const batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
@@ -319,14 +317,16 @@ module.exports = class Processor {
             this.seqChainID,
             this.batchNumber,
         );
-        const inputHash = calculateCircuitInput(
+
+        const inputHash = calculateStarkInput(
             oldStateRoot,
             oldLocalExitRoot,
             newStateRoot,
             newLocalExitRoot, // should be the new exit root, but it's not modified in this version
             batchHashData,
         );
-        this.circuitInput = {
+
+        this.starkInput = {
             oldStateRoot,
             chainId: this.seqChainID,
             db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
@@ -338,10 +338,39 @@ module.exports = class Processor {
             globalExitRoot,
             batchHashData,
             inputHash,
-            numBatch: Scalar.toNumber(this.batchNumber),
+            numBatch: this.batchNumber,
             timestamp: this.timestamp,
             contractsBytecode: this.contractsBytecode,
         };
+    }
+
+    /**
+     * Compute stark input
+     */
+    _computeSnarkInput() {
+        // compute circuit inputs
+        const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
+        const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
+        const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
+        const newLocalExitRoot = smtUtils.h4toString(this.currentLocalExitRoot);
+        const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
+
+        const batchHashData = calculateBatchHashData(
+            this.getBatchL2Data(),
+            globalExitRoot,
+            this.timestamp,
+            this.sequencerAddress,
+            this.seqChainID,
+            this.batchNumber,
+        );
+
+        this.snarkInput = calculateSnarkInput(
+            oldStateRoot,
+            oldLocalExitRoot,
+            newStateRoot,
+            newLocalExitRoot,
+            batchHashData,
+        );
     }
 
     /**
@@ -352,12 +381,21 @@ module.exports = class Processor {
     }
 
     /**
-     * Return circuit input
+     * Return stark input
      */
-    getCircuitInput() {
+    getStarkInput() {
         this._isBuilded();
 
-        return this.circuitInput;
+        return this.starkInput;
+    }
+
+    /**
+     * Return snark input
+     */
+    getSnarkInput() {
+        this._isBuilded();
+
+        return this.snarkInput;
     }
 
     /**

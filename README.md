@@ -10,6 +10,7 @@ You will find the following modules inside the package:
 - `Constants`: zkevm global constants
 - `contractUtils`: zkevm smart contract utils
 - `Processor`: class to add transactions and process them
+- `processorUtils`: utils used in processor
 - `MemDb`: class implementing memory database
 - `smtUtils`: sparse-merkle-tree utils
 - `SMT`: class implementing the zkevm sparse-merkle-tree

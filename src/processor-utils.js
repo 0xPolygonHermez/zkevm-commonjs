@@ -1,6 +1,7 @@
 const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
 const Constants = require('./constants');
+
 /**
  * Extract an integer from a byte array
  * @param {Uint8Array} data - Byte array

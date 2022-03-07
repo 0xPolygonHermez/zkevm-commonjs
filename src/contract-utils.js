@@ -1,9 +1,9 @@
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
-const { Fr } = require('./constants');
+const { FrSNARK } = require('./constants');
 
 /**
- * Compute globalHash
+ * Compute globalHash for STARK circuit
  * @param {String} currentStateRoot - Current state Root
  * @param {String} currentLocalExitRoot - Current local exit root
  * @param {String} newStateRoot - New State root once the batch is processed
@@ -11,7 +11,7 @@ const { Fr } = require('./constants');
  * @param {String} batchHashData - Batch hash data
  * @returns {String} - global hash in hex encoding
  */
-function calculateCircuitInput(
+function calculateStarkInput(
     currentStateRoot,
     currentLocalExitRoot,
     newStateRoot,
@@ -35,6 +35,33 @@ function calculateCircuitInput(
     );
 
     return hashKeccak;
+}
+
+/**
+ * Compute globalHash for SNARK circuit
+ * @param {String} currentStateRoot - Current state Root
+ * @param {String} currentLocalExitRoot - Current local exit root
+ * @param {String} newStateRoot - New State root once the batch is processed
+ * @param {String} newLocalExitRoot - New local exit root once the batch is processed
+ * @param {String} batchHashData - Batch hash data
+ * @returns {String} - global hash % FrSNARK in hex encoding
+ */
+function calculateSnarkInput(
+    currentStateRoot,
+    currentLocalExitRoot,
+    newStateRoot,
+    newLocalExitRoot,
+    batchHashData,
+) {
+    const hashKeccak = calculateStarkInput(
+        currentStateRoot,
+        currentLocalExitRoot,
+        newStateRoot,
+        newLocalExitRoot,
+        batchHashData,
+    );
+
+    return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), FrSNARK).toString(16).padStart(64, '0')}`;
 }
 
 /**
@@ -104,7 +131,8 @@ function generateSolidityInputs(
 }
 
 module.exports = {
-    calculateCircuitInput,
+    calculateStarkInput,
+    calculateSnarkInput,
     calculateBatchHashData,
     generateSolidityInputs,
 };

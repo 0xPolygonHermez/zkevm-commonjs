@@ -2,7 +2,6 @@
 const { expect } = require('chai');
 const { performance } = require('perf_hooks');
 
-const { buildPoseidon } = require('circomlibjs');
 const {
     getPoseidon,
 } = require('../index');
@@ -13,7 +12,7 @@ describe('getPoseidon', async function () {
     let firstTime;
     let secondTime;
 
-    it('get 10 times poseidon from singleton', async () => {
+    it('get one time poseidon', async () => {
         const startTime = performance.now();
         for (let i = 0; i < numtimes; i++) {
             await getPoseidon();
@@ -22,16 +21,16 @@ describe('getPoseidon', async function () {
         firstTime = stopTime - startTime;
     });
 
-    it('get 10 times poseidon without singleton', async () => {
+    it('get 10 times poseidon', async () => {
         const startTime = performance.now();
         for (let i = 0; i < numtimes; i++) {
-            await buildPoseidon();
+            await getPoseidon();
         }
         const stopTime = performance.now();
         secondTime = stopTime - startTime;
     });
 
     it('check times', async () => {
-        expect(secondTime).to.be.greaterThan(firstTime);
+        expect(10 * firstTime).to.be.greaterThan(firstTime + 9 * secondTime);
     });
 });

@@ -20,7 +20,7 @@ describe('MemDB', () => {
     });
 
     it('getSmtNode: no value', async () => {
-        const key = F.e(1);
+        const key = [F.e(1), F.e(1), F.e(1), F.e(1)];
 
         // no value found
         const res = await db.getSmtNode(key);
@@ -46,8 +46,8 @@ describe('MemDB', () => {
     });
 
     it('setSmtNode & getSmtNode', async () => {
-        const key = F.e(1);
-        const value = [F.e(0), F.e(1), F.e(2), F.e(3)];
+        const key = [F.e(1), F.e(2), F.e(3), F.e(4)];
+        const value = [F.e(0), F.e(1), F.e(2), F.e(3), F.e(4), F.e(5), F.e(6), F.e(7)];
 
         await db.setSmtNode(key, value);
         const res = await db.getSmtNode(key);

@@ -2,7 +2,9 @@
 const { Scalar } = require('ffjavascript');
 const { assert } = require('chai');
 
-const { SMT, MemDB, getPoseidon } = require('../index');
+const {
+    SMT, MemDB, getPoseidon,
+} = require('../index');
 
 describe('SMT', async function () {
     let poseidon;
@@ -34,7 +36,6 @@ describe('SMT', async function () {
 
         assert(smt.nodeIsEq(r1.newRoot, r3.newRoot));
     });
-
 
     it('It should add a shared element 2', async () => {
         const db = new MemDB(F);
@@ -95,7 +96,7 @@ describe('SMT', async function () {
     });
 
     it('Should read random', async () => {
-//        const N = 64;
+        //        const N = 64;
         const N = 3;
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
@@ -109,10 +110,12 @@ describe('SMT', async function () {
         let rr;
 
         for (let i = 0; i < N; i++) {
-//            const key = Math.floor(Math.random() * 64);
-//            const val = Math.floor(Math.random() * 2);
-            const key=i;
-            const val=i;
+            /*
+             *            const key = Math.floor(Math.random() * 64);
+             *            const val = Math.floor(Math.random() * 2);
+             */
+            const key = i;
+            const val = i;
             vals[key] = val;
             r = await smt.set(r.newRoot, Scalar.e(key), Scalar.e(val));
         }
@@ -129,7 +132,7 @@ describe('SMT', async function () {
         const smt = new SMT(db, poseidon, poseidon.F);
 
         const expectedRoot = [
-            1361534377311549574n, 6844553382454206922n, 8910524568890641498n, 5635536814180020910n
+            1361534377311549574n, 6844553382454206922n, 8910524568890641498n, 5635536814180020910n,
         ];
 
         const r0 = await smt.set(smt.empty, Scalar.e(0), Scalar.e(2)); // 0x00
@@ -139,4 +142,47 @@ describe('SMT', async function () {
         assert(smt.nodeIsEq(expectedRoot, r2.newRoot));
     });
 
+    it('It should update leaf with more than one level depth', async () => {
+        const db = new MemDB(F);
+        const smt = new SMT(db, poseidon, poseidon.F);
+
+        const expectedRoot = [
+            3334882532704216805n,
+            16915253152413162423n,
+            11172331835855761752n,
+            13483617693646990367n,
+        ];
+
+        const r0 = await smt.set(
+            smt.empty,
+            Scalar.e('56714103185361745016746792718676985000067748055642999311525839752090945477479'),
+            Scalar.e('8163644824788514136399898658176031121905718480550577527648513153802600646339'),
+        );
+
+        const r1 = await smt.set(
+            r0.newRoot,
+            Scalar.e('980275562601266368747428591417466442501663392777380336768719359283138048405'),
+            Scalar.e('115792089237316195423570985008687907853269984665640564039457584007913129639934'),
+        );
+
+        const r2 = await smt.set(
+            r1.newRoot,
+            Scalar.e('53001048207672216258532366725645107222481888169041567493527872624420899640125'),
+            Scalar.e('115792089237316195423570985008687907853269984665640564039457584007913129639935'),
+        );
+
+        const r3 = await smt.set(
+            r2.newRoot,
+            Scalar.e('60338373645545410525187552446039797737650319331856456703054942630761553352879'),
+            Scalar.e('7943875943875408'),
+        );
+
+        const r4 = await smt.set(
+            r3.newRoot,
+            Scalar.e('56714103185361745016746792718676985000067748055642999311525839752090945477479'),
+            Scalar.e('35179347944617143021579132182092200136526168785636368258055676929581544372820'),
+        );
+
+        assert(smt.nodeIsEq(expectedRoot, r4.newRoot));
+    });
 });

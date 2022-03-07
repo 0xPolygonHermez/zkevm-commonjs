@@ -8,6 +8,7 @@
 
 const { Scalar } = require('ffjavascript');
 const fs = require('fs');
+const { argv } = require('yargs');
 
 const ethers = require('ethers');
 const { expect } = require('chai');
@@ -20,28 +21,29 @@ const path = require('path');
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
 const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils,
+    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
 } = require('../index');
-const testVectors = require('./helpers/processor-tests.json');
-const newTestVectors = require('./helpers/processor-tests.json');
-
-const replace = false;
+const testVectors = require('./helpers/test-vectors/processor/state-transition.json');
+const newTestVectors = require('./helpers/test-vectors/processor/state-transition.json');
 
 describe('Processor', async function () {
     this.timeout(100000);
+
+    let update;
     let poseidon;
     let F;
 
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
+
+        update = argv.update === true;
     });
 
     it('Check test vectors', async () => {
         for (let i = 0; i < testVectors.length; i++) {
             const {
                 id,
-                arity,
                 genesis,
                 expectedOldRoot,
                 txs,
@@ -62,10 +64,9 @@ describe('Processor', async function () {
             // create a zkEVMDB to compile the sc
             const zkEVMDB = await ZkEVMDB.newZkEVM(
                 db,
-                arity,
                 poseidon,
-                F.zero,
-                F.e(Scalar.e(localExitRoot)),
+                [F.zero, F.zero, F.zero, F.zero],
+                smtUtils.stringToH4(localExitRoot),
                 genesis,
             );
 
@@ -89,11 +90,13 @@ describe('Processor', async function () {
                     }
                 }
             }
-            if (!replace) {
-                expect(`0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
+
+            if (!update) {
+                expect(smtUtils.h4toString(zkEVMDB.stateRoot)).to.be.equal(expectedOldRoot);
             } else {
-                newTestVectors[i].expectedOldRoot = `0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`;
+                newTestVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
             }
+
             /*
              * build, sign transaction and generate rawTxs
              * rawTxs would be the calldata inserted in the contract
@@ -182,7 +185,7 @@ describe('Processor', async function () {
                 txProcessed.push(txData);
             }
 
-            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
+            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, smtUtils.stringToH4(globalExitRoot));
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }
@@ -193,7 +196,11 @@ describe('Processor', async function () {
             await zkEVMDB.consolidate(batch);
 
             const newRoot = batch.currentStateRoot;
-            expect(`0x${Scalar.e(F.toString(newRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedNewRoot);
+            if (!update) {
+                expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
+            } else {
+                newTestVectors[i].expectedNewRoot = smtUtils.h4toString(newRoot);
+            }
 
             // Check errors on decode transactions
             const decodedTx = await batch.getDecodedTxs();
@@ -222,10 +229,10 @@ describe('Processor', async function () {
             }
 
             // Check the circuit input
-            const circuitInput = await batch.getCircuitInput();
+            const circuitInput = await batch.getStarkInput();
 
             // Check the encode transaction match with the vector test
-            if (!replace) {
+            if (!update) {
                 expect(batchL2Data).to.be.equal(batch.getBatchL2Data());
                 // Check the batchHashData and the input hash
                 expect(batchHashData).to.be.equal(circuitInput.batchHashData);
@@ -239,7 +246,7 @@ describe('Processor', async function () {
 
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
         }
-        if (replace) {
+        if (update) {
             await fs.writeFileSync(path.join(__dirname, './helpers/processor-tests.json'), JSON.stringify(newTestVectors, null, 2));
         }
     });

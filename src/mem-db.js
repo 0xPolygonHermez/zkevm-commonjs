@@ -1,5 +1,4 @@
 const { Scalar } = require('ffjavascript');
-const { stringifyBigInts, unstringifyBigInts } = require('ffjavascript').utils;
 
 class MemDB {
     /**
@@ -18,11 +17,15 @@ class MemDB {
 
     /**
      * Get merkle-tree node value
-     * @param {Field} key - key in Field representation
+     * @param {Array[Field]} key - key in Array Field representation
      * @returns {Array[Fields] | null} Node childs if found, otherwise return null
      */
     async getSmtNode(key) {
-        const keyS = this.key2Str(key);
+        if (typeof key.length === 'undefined' || key.length !== 4) {
+            throw Error('SMT key must be an array of 4 Fields');
+        }
+
+        const keyS = this._key2Str(key);
         const res = [];
 
         if (typeof this.db[keyS] === 'undefined') {
@@ -40,21 +43,31 @@ class MemDB {
         return res;
     }
 
-    key2Str(key) {
-        let keyS="";
-        for (let i=0; i<4; i++) {
-            keyS = keyS + this.F.toString(key[i], 16).padStart(16, '0');
+    /**
+     * Convert 4 fields into an hex string
+     * @param {Array[Field]} key - key in Array Field representation
+     * @returns {String} hex string
+     */
+    _key2Str(key) {
+        let keyS = '';
+        for (let i = 0; i < 4; i++) {
+            keyS += this.F.toString(key[i], 16).padStart(16, '0');
         }
+
         return keyS;
     }
 
     /**
      * Set merkle-tree node
-     * @param {Field} key - key in Field representation
+     * @param {Array[Field]} key - key in Field representation
      * @param {Array[Field]} value - child array
      */
     async setSmtNode(key, value) {
-        const keyS = this.key2Str(key);
+        if (typeof key.length === 'undefined' || key.length !== 4) {
+            throw Error('SMT key must be an array of 4 Fields');
+        }
+
+        const keyS = this._key2Str(key);
         this.db[keyS] = [];
 
         for (let i = 0; i < value.length; i++) {
@@ -68,12 +81,8 @@ class MemDB {
      * @param {Any} value - value to insert into the DB (JSON valid format)
      */
     async setValue(key, value) {
-        const keyS = this.key2Str(key);
-        this.db[keyS] = [];
-        
-        for (let i = 0; i < value.length; i++) {
-            this.db[keyS].push(this.F.toString(value[i], 16).padStart(16, '0'));
-        }
+        const keyS = Scalar.e(key).toString(16).padStart(64, '0');
+        this.db[keyS] = JSON.stringify(value);
     }
 
     /**
@@ -82,18 +91,13 @@ class MemDB {
      * @returns {Any} - value retirved from database
      */
     async getValue(key) {
-        const keyS = this.key2Str(key);
+        const keyS = Scalar.e(key).toString(16).padStart(64, '0');
 
         if (typeof this.db[keyS] === 'undefined') {
             return null;
         }
 
-        const res = [];
-        for (let i = 0; i < 8; i++) {
-            res[i] = this.F.e("0x"+this.db[keyS][i]);
-        }
-
-        return res;
+        return JSON.parse(this.db[keyS]);
     }
 
     startCapture() {
