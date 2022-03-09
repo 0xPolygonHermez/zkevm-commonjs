@@ -16,18 +16,6 @@ describe('TmpSmtDB', () => {
         F = poseidon.F;
     });
 
-    it('str2Key - key2Str', async () => {
-        const key = [F.e(1), F.e(2), F.e(3), F.e(4)];
-
-        const db = new MemDB(F);
-        const tmpDB = new TmpSmtDB(db);
-
-        const keyStr = tmpDB._key2Str(key);
-        const keyArr = tmpDB._str2Key(keyStr);
-
-        expect(lodash.isEqual(keyArr, key)).to.be.equal(true);
-    });
-
     it('Check that tmpDB gets the state from srcDb', async () => {
         const address = '0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D';
         const balance = Scalar.e(ethers.utils.parseEther('100'));

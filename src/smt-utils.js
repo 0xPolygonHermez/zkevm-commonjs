@@ -86,7 +86,7 @@ function h4toScalar(h4) {
 /**
  * Convert array of 4 Scalars of 64 bits into an hex string
  * @param {Array[Scalar]} h4 - Array of 4 Scalars of 64 bits
- * @returns {String} 256 bit number representes as hex string
+ * @returns {String} 256 bit number represented as hex string
  */
 function h4toString(h4) {
     const sc = h4toScalar(h4);
@@ -255,7 +255,7 @@ async function keyContractStorage(_ethAddr, _storagePos) {
 async function fillDBArray(node, db, dbObject, Fr) {
     const childArray = await db.getSmtNode(node);
     const childArrayHex = childArray.map((value) => Fr.toString(value, 16).padStart(16, '0'));
-    const nodeHex = Scalar.toString(h4toScalar(node), 16);
+    const nodeHex = Scalar.toString(h4toString(node), 16);
 
     dbObject[nodeHex] = childArrayHex;
 
@@ -274,6 +274,26 @@ async function fillDBArray(node, db, dbObject, Fr) {
                 );
             }
         }
+    } else { // final node: Hvalue --> key prime | value
+        const nodeFinal = [childArray[4], childArray[5], childArray[6], childArray[7]];
+        const hashV = await db.getSmtNode(nodeFinal);
+        const hashVHex = hashV.map((value) => Fr.toString(value, 16).padStart(16, '0'));
+        const nodeFinalHex = Scalar.toString(h4toString(nodeFinal), 16);
+        dbObject[nodeFinalHex] = hashVHex;
+
+        // keyPrime
+        const nodeKeyPrime = [hashV[0], hashV[1], hashV[2], hashV[3]];
+        const valueKeyPrime = await db.getSmtNode(nodeKeyPrime);
+        const valueKeyPrimeHex = valueKeyPrime.map((value) => Fr.toString(value, 16).padStart(16, '0'));
+        const nodeKeyPrimeHex = Scalar.toString(h4toString(nodeKeyPrime), 16);
+        dbObject[nodeKeyPrimeHex] = valueKeyPrimeHex;
+
+        // Value
+        const nodeValue = [hashV[4], hashV[5], hashV[6], hashV[7]];
+        const valueFinal = await db.getSmtNode(nodeValue);
+        const valueHex = valueFinal.map((value) => Fr.toString(value, 16).padStart(16, '0'));
+        const nodeValueHex = Scalar.toString(h4toString(nodeValue), 16);
+        dbObject[valueHex] = nodeValueHex;
     }
 }
 

@@ -1,4 +1,5 @@
 const { Scalar } = require('ffjavascript');
+const { h4toString } = require('./smt-utils');
 
 class MemDB {
     /**
@@ -25,7 +26,7 @@ class MemDB {
             throw Error('SMT key must be an array of 4 Fields');
         }
 
-        const keyS = this._key2Str(key);
+        const keyS = h4toString(key);
         const res = [];
 
         if (typeof this.db[keyS] === 'undefined') {
@@ -44,20 +45,6 @@ class MemDB {
     }
 
     /**
-     * Convert 4 fields into an hex string
-     * @param {Array[Field]} key - key in Array Field representation
-     * @returns {String} hex string
-     */
-    _key2Str(key) {
-        let keyS = '';
-        for (let i = 0; i < 4; i++) {
-            keyS += this.F.toString(key[i], 16).padStart(16, '0');
-        }
-
-        return keyS;
-    }
-
-    /**
      * Set merkle-tree node
      * @param {Array[Field]} key - key in Field representation
      * @param {Array[Field]} value - child array
@@ -67,7 +54,7 @@ class MemDB {
             throw Error('SMT key must be an array of 4 Fields');
         }
 
-        const keyS = this._key2Str(key);
+        const keyS = h4toString(key);
         this.db[keyS] = [];
 
         for (let i = 0; i < value.length; i++) {
