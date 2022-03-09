@@ -198,7 +198,7 @@ describe('smtUtils', async function () {
 
         const fullDB = await smtUtils.getCurrentDB(r5.newRoot, db, F);
 
-        const expectedNodes = 23;
+        const expectedNodes = 22;
         expect(expectedNodes).to.be.equal(Object.keys(fullDB).length);
     });
 

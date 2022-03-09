@@ -279,6 +279,7 @@ async function fillDBArray(node, db, dbObject, Fr) {
         const hashV = await db.getSmtNode(nodeFinal);
         const hashVHex = hashV.map((value) => Fr.toString(value, 16).padStart(16, '0'));
         const nodeFinalHex = Scalar.toString(h4toString(nodeFinal), 16);
+
         dbObject[nodeFinalHex] = hashVHex;
 
         // keyPrime
@@ -286,6 +287,7 @@ async function fillDBArray(node, db, dbObject, Fr) {
         const valueKeyPrime = await db.getSmtNode(nodeKeyPrime);
         const valueKeyPrimeHex = valueKeyPrime.map((value) => Fr.toString(value, 16).padStart(16, '0'));
         const nodeKeyPrimeHex = Scalar.toString(h4toString(nodeKeyPrime), 16);
+
         dbObject[nodeKeyPrimeHex] = valueKeyPrimeHex;
 
         // Value
@@ -293,7 +295,8 @@ async function fillDBArray(node, db, dbObject, Fr) {
         const valueFinal = await db.getSmtNode(nodeValue);
         const valueHex = valueFinal.map((value) => Fr.toString(value, 16).padStart(16, '0'));
         const nodeValueHex = Scalar.toString(h4toString(nodeValue), 16);
-        dbObject[valueHex] = nodeValueHex;
+
+        dbObject[nodeValueHex] = valueHex;
     }
 }
 

@@ -22,7 +22,7 @@ class MemDB {
      * @returns {Array[Fields] | null} Node childs if found, otherwise return null
      */
     async getSmtNode(key) {
-        if (typeof key.length === 'undefined' || key.length !== 4) {
+        if (key.length !== 4) {
             throw Error('SMT key must be an array of 4 Fields');
         }
 
@@ -50,7 +50,7 @@ class MemDB {
      * @param {Array[Field]} value - child array
      */
     async setSmtNode(key, value) {
-        if (typeof key.length === 'undefined' || key.length !== 4) {
+        if (key.length !== 4) {
             throw Error('SMT key must be an array of 4 Fields');
         }
 

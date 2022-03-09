@@ -19,7 +19,7 @@ class TmpSmtDB {
      * @returns {Array[String]} Array of hex values
      */
     async getSmtNode(key) {
-        if (typeof key.length === 'undefined' || key.length !== 4) {
+        if (key.length !== 4) {
             throw Error('SMT key must be an array of 4 Fields');
         }
 
@@ -44,7 +44,7 @@ class TmpSmtDB {
      * @param {Array[Fields]} value - Value
      */
     async setSmtNode(key, value) {
-        if (typeof key.length === 'undefined' || key.length !== 4) {
+        if (key.length !== 4) {
             throw Error('SMT key must be an array of 4 Fields');
         }
 

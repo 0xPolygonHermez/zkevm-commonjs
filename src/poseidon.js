@@ -1,7 +1,7 @@
 const { F1Field } = require('ffjavascript');
 
 let poseidon;
-let isBuilded = false;
+let isBuilt = false;
 
 /**
  * Build poseidon hash function with golden prime
@@ -167,9 +167,9 @@ async function buildPoseidon() {
  * @returns {Object} - poseidon hash function
  */
 async function getPoseidon() {
-    if (isBuilded === false) {
+    if (isBuilt === false) {
         poseidon = await buildPoseidon();
-        isBuilded = true;
+        isBuilt = true;
     }
 
     return poseidon;

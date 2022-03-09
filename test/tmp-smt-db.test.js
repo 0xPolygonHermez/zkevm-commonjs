@@ -1,7 +1,6 @@
 const { Scalar } = require('ffjavascript');
 const { expect } = require('chai');
 const ethers = require('ethers');
-const lodash = require('lodash');
 
 const {
     MemDB, SMT, smtUtils, TmpSmtDB, getPoseidon,
