@@ -142,7 +142,7 @@ async function keyEthAddrBalance(_ethAddr) {
     const hk0 = poseidon(key0);
     const hk1 = poseidon(key1);
 
-    return h4toScalar(poseidon([...hk0, ...hk1]));
+    return poseidon([...hk0, ...hk1]);
 }
 
 /**
@@ -174,7 +174,7 @@ async function keyEthAddrNonce(_ethAddr) {
     const hk0 = poseidon(key0);
     const hk1 = poseidon(key1);
 
-    return h4toScalar(poseidon([...hk0, ...hk1]));
+    return poseidon([...hk0, ...hk1]);
 }
 
 /**
@@ -206,7 +206,7 @@ async function keyContractCode(_ethAddr) {
     const hk0 = poseidon(key0);
     const hk1 = poseidon(key1);
 
-    return h4toScalar(poseidon([...hk0, ...hk1]));
+    return poseidon([...hk0, ...hk1]);
 }
 
 /**
@@ -241,7 +241,7 @@ async function keyContractStorage(_ethAddr, _storagePos) {
     const hk0 = poseidon(key0);
     const hk1 = poseidon(storagePosArray);
 
-    return h4toScalar(poseidon([...hk0, ...hk1]));
+    return poseidon([...hk0, ...hk1]);
 }
 
 /**
