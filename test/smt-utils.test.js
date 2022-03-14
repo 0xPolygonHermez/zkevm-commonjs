@@ -9,6 +9,7 @@ const {
     smtUtils, getPoseidon, Constants, SMT, MemDB,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
+const { h4toScalar } = require('../src/smt-utils');
 
 // eslint-disable-next-line prefer-arrow-callback
 describe('smtUtils', async function () {
@@ -91,7 +92,7 @@ describe('smtUtils', async function () {
         expect(res).to.be.equal(number);
     });
 
-    it('h4toScalar, h4toString & stringToH4', async () => {
+    it('h4toScalar, scalar2h4, h4toString & stringToH4', async () => {
         const input = [Scalar.e(0), Scalar.e(1), Scalar.e(2), Scalar.e(3)];
 
         const resScalar = smtUtils.h4toScalar(input);
@@ -100,6 +101,9 @@ describe('smtUtils', async function () {
 
         const resTest = smtUtils.stringToH4(resString);
         expect(lodash.isEqual(resTest, input)).to.be.equal(true);
+
+        const init = smtUtils.scalar2h4(resScalar);
+        expect(lodash.isEqual(init, input)).to.be.equal(true);
     });
 
     it('keyEthAddrBalance', async () => {
@@ -111,9 +115,9 @@ describe('smtUtils', async function () {
             const res = await smtUtils.keyEthAddrBalance(ethAddr);
 
             if (update) {
-                testVectorsKeysBalance[i].expectedKey = res.toString();
+                testVectorsKeysBalance[i].expectedKey = h4toScalar(res).toString();
             } else {
-                expect(res.toString()).to.be.equal(expectedKey);
+                expect(h4toScalar(res).toString()).to.be.equal(expectedKey);
                 expect(leafType).to.be.equal(Constants.SMT_KEY_BALANCE);
             }
         }
@@ -132,9 +136,9 @@ describe('smtUtils', async function () {
             const res = await smtUtils.keyEthAddrNonce(ethAddr);
 
             if (update) {
-                testVectorsKeysNonce[i].expectedKey = res.toString();
+                testVectorsKeysNonce[i].expectedKey = h4toScalar(res).toString();
             } else {
-                expect(res.toString()).to.be.equal(expectedKey);
+                expect(h4toScalar(res).toString()).to.be.equal(expectedKey);
                 expect(leafType).to.be.equal(Constants.SMT_KEY_NONCE);
             }
         }
@@ -153,9 +157,9 @@ describe('smtUtils', async function () {
             const res = await smtUtils.keyContractCode(ethAddr);
 
             if (update) {
-                testVectorsKeysContractCode[i].expectedKey = res.toString();
+                testVectorsKeysContractCode[i].expectedKey = h4toScalar(res).toString();
             } else {
-                expect(res.toString()).to.be.equal(expectedKey);
+                expect(h4toScalar(res).toString()).to.be.equal(expectedKey);
                 expect(leafType).to.be.equal(Constants.SMT_KEY_SC_CODE);
             }
         }
@@ -174,9 +178,9 @@ describe('smtUtils', async function () {
             const res = await smtUtils.keyContractStorage(ethAddr, storagePosition);
 
             if (update) {
-                testVectorsKeysContractStorage[i].expectedKey = res.toString();
+                testVectorsKeysContractStorage[i].expectedKey = h4toScalar(res).toString();
             } else {
-                expect(res.toString()).to.be.equal(expectedKey);
+                expect(h4toScalar(res).toString()).to.be.equal(expectedKey);
                 expect(leafType).to.be.equal(Constants.SMT_KEY_SC_STORAGE);
             }
         }
@@ -190,15 +194,15 @@ describe('smtUtils', async function () {
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
 
-        const r1 = await smt.set(smt.empty, Scalar.e(1), Scalar.e(1));
-        const r2 = await smt.set(r1.newRoot, Scalar.e(2), Scalar.e(2));
-        const r3 = await smt.set(r2.newRoot, Scalar.e(3), Scalar.e(3));
-        const r4 = await smt.set(r3.newRoot, Scalar.e(4), Scalar.e(4));
-        const r5 = await smt.set(r4.newRoot, Scalar.e(17), Scalar.e(5));
+        const r1 = await smt.set(smt.empty, smt.scalar2key(1), Scalar.e(1));
+        const r2 = await smt.set(r1.newRoot, smt.scalar2key(2), Scalar.e(2));
+        const r3 = await smt.set(r2.newRoot, smt.scalar2key(3), Scalar.e(3));
+        const r4 = await smt.set(r3.newRoot, smt.scalar2key(4), Scalar.e(4));
+        const r5 = await smt.set(r4.newRoot, smt.scalar2key(17), Scalar.e(5));
 
         const fullDB = await smtUtils.getCurrentDB(r5.newRoot, db, F);
 
-        const expectedNodes = 22;
+        const expectedNodes = 21;
         expect(expectedNodes).to.be.equal(Object.keys(fullDB).length);
     });
 

@@ -58,16 +58,6 @@ describe('TmpSmtDB', () => {
         const auxRes = await smtTmp.set(zeroRoot, keyBalance, balance);
         const genesisRoot = auxRes.newRoot;
 
-        /*
-         * const auxRes2 = await smt.set(zeroRoot, keyBalance, balance);
-         * const genesisRoot2 = auxRes2.newRoot;
-         */
-
-        /*
-         * console.log(genesisRoot);
-         * console.log(genesisRoot2);
-         */
-
         let resBalance;
         try {
             resBalance = await smt.get(genesisRoot, keyBalance);

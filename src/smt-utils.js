@@ -84,6 +84,22 @@ function h4toScalar(h4) {
 }
 
 /**
+ * Convert a unique 256 bit scalar into an array of 4 Scalars of 64 bits
+ * @param {Scalar} s - 256 bit number representation
+ * @returns {Array[Scalar]} Array of 4 Scalars of 64 bits
+ */
+function scalar2h4(s) {
+    const res = [];
+
+    res.push(Scalar.band(s, Scalar.e('0xFFFFFFFF')));
+    res.push(Scalar.band(Scalar.shr(s, 64), Scalar.e('0xFFFFFFFFFFFFFFFF')));
+    res.push(Scalar.band(Scalar.shr(s, 128), Scalar.e('0xFFFFFFFFFFFFFFFF')));
+    res.push(Scalar.band(Scalar.shr(s, 192), Scalar.e('0xFFFFFFFFFFFFFFFF')));
+
+    return res;
+}
+
+/**
  * Convert array of 4 Scalars of 64 bits into an hex string
  * @param {Array[Scalar]} h4 - Array of 4 Scalars of 64 bits
  * @returns {String} 256 bit number represented as hex string
@@ -282,14 +298,6 @@ async function fillDBArray(node, db, dbObject, Fr) {
 
         dbObject[nodeFinalHex] = hashVHex;
 
-        // keyPrime
-        const nodeKeyPrime = [hashV[0], hashV[1], hashV[2], hashV[3]];
-        const valueKeyPrime = await db.getSmtNode(nodeKeyPrime);
-        const valueKeyPrimeHex = valueKeyPrime.map((value) => Fr.toString(value, 16).padStart(16, '0'));
-        const nodeKeyPrimeHex = Scalar.toString(h4toString(nodeKeyPrime), 16);
-
-        dbObject[nodeKeyPrimeHex] = valueKeyPrimeHex;
-
         // Value
         const nodeValue = [hashV[4], hashV[5], hashV[6], hashV[7]];
         const valueFinal = await db.getSmtNode(nodeValue);
@@ -393,4 +401,5 @@ module.exports = {
     h4toScalar,
     h4toString,
     stringToH4,
+    scalar2h4,
 };

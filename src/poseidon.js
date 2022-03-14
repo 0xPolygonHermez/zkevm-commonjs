@@ -9,6 +9,7 @@ let isBuilt = false;
  */
 async function buildPoseidon() {
     const goldenPrime = (1n << 64n) - (1n << 32n) + 1n;
+
     const F = new F1Field(goldenPrime);
 
     const t = 12;

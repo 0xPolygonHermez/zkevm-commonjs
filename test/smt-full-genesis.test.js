@@ -4,7 +4,7 @@ const path = require('path');
 const { argv } = require('yargs');
 
 const {
-    MemDB, SMT, stateUtils, getPoseidon,
+    MemDB, SMT, stateUtils, getPoseidon, smtUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
@@ -28,7 +28,7 @@ describe('smt full-genesis', async function () {
 
     it('Should check test vectors', async () => {
         // build tree and check root
-        for (let i = 3; i < 4; i++) {
+        for (let i = 0; i < testVectors.length; i++) {
             const { addresses, expectedRoot } = testVectors[i];
 
             const db = new MemDB(F);
@@ -57,9 +57,9 @@ describe('smt full-genesis', async function () {
             }
 
             if (update) {
-                testVectors[i].expectedRoot = F.toString(tmpRoot);
+                testVectors[i].expectedRoot = (smtUtils.h4toScalar(tmpRoot)).toString();
             } else {
-                expect(F.toString(tmpRoot)).to.be.equal(expectedRoot);
+                expect((smtUtils.h4toScalar(tmpRoot)).toString()).to.be.equal(expectedRoot);
             }
         }
 

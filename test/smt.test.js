@@ -100,7 +100,6 @@ describe('SMT', async function () {
     });
 
     it('Should read random', async () => {
-        //        const N = 64;
         const N = 3;
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
@@ -114,10 +113,6 @@ describe('SMT', async function () {
         let rr;
 
         for (let i = 0; i < N; i++) {
-            /*
-             *            const key = Math.floor(Math.random() * 64);
-             *            const val = Math.floor(Math.random() * 2);
-             */
             const key = i;
             const val = i;
             vals[key] = val;
@@ -145,16 +140,16 @@ describe('SMT', async function () {
 
         assert(smt.nodeIsEq(expectedRoot, r2.newRoot));
     });
-/*
+
     it('It should update leaf with more than one level depth', async () => {
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
 
         const expectedRoot = [
-            3334882532704216805n,
-            16915253152413162423n,
-            11172331835855761752n,
-            13483617693646990367n,
+            17693738749818092805n,
+            10269674354167721031n,
+            7548535221641326179n,
+            14566249822942923801n,
         ];
 
         const r0 = await smt.set(
@@ -177,7 +172,7 @@ describe('SMT', async function () {
 
         const r3 = await smt.set(
             r2.newRoot,
-            Scalar.e('60338373645545410525187552446039797737650319331856456703054942630761553352879'),
+            smt.scalar2key('60338373645545410525187552446039797737650319331856456703054942630761553352879'),
             Scalar.e('7943875943875408'),
         );
 
@@ -189,5 +184,4 @@ describe('SMT', async function () {
 
         assert(smt.nodeIsEq(expectedRoot, r4.newRoot));
     });
-*/
 });

@@ -61,8 +61,7 @@ function calculateSnarkInput(
         batchHashData,
     );
 
-    // return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), FrSNARK).toString(16).padStart(64, '0')}`;
-    return `0x${Scalar.fromString(hashKeccak, 16).toString(16).padStart(64, '0')}`;
+    return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), FrSNARK).toString(16).padStart(64, '0')}`;
 }
 
 /**

@@ -23,19 +23,23 @@ const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
 } = require('../index');
-const testVectors = require('./helpers/test-vectors/processor/state-transition.json');
-const newTestVectors = require('./helpers/test-vectors/processor/state-transition.json');
+const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor', async function () {
     this.timeout(100000);
+
+    const pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
 
     let update;
     let poseidon;
     let F;
 
+    let testVectors;
+
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
+        testVectors = JSON.parse(fs.readFileSync(pathProcessorTests));
 
         update = argv.update === true;
     });
@@ -94,7 +98,7 @@ describe('Processor', async function () {
             if (!update) {
                 expect(smtUtils.h4toString(zkEVMDB.stateRoot)).to.be.equal(expectedOldRoot);
             } else {
-                newTestVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
+                testVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
             }
 
             /*
@@ -199,7 +203,7 @@ describe('Processor', async function () {
             if (!update) {
                 expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
             } else {
-                newTestVectors[i].expectedNewRoot = smtUtils.h4toString(newRoot);
+                testVectors[i].expectedNewRoot = smtUtils.h4toString(newRoot);
             }
 
             // Check errors on decode transactions
@@ -238,16 +242,16 @@ describe('Processor', async function () {
                 expect(batchHashData).to.be.equal(circuitInput.batchHashData);
                 expect(inputHash).to.be.equal(circuitInput.inputHash);
             } else {
-                newTestVectors[i].batchL2Data = batch.getBatchL2Data();
-                newTestVectors[i].batchHashData = circuitInput.batchHashData;
-                newTestVectors[i].inputHash = circuitInput.inputHash;
-                delete newTestVectors[i].contractInterface;
+                testVectors[i].batchL2Data = batch.getBatchL2Data();
+                testVectors[i].batchHashData = circuitInput.batchHashData;
+                testVectors[i].inputHash = circuitInput.inputHash;
+                delete testVectors[i].contractInterface;
             }
 
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
         }
         if (update) {
-            await fs.writeFileSync(path.join(__dirname, './helpers/processor-tests.json'), JSON.stringify(newTestVectors, null, 2));
+            await fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
         }
     });
 });

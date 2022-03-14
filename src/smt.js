@@ -42,7 +42,7 @@ class SMT {
     /**
      * Insert node into the merkle-tree
      * @param {Array[Field]} oldRoot - previous root
-     * @param {Scalar} key - path merkle-tree to insert the value
+     * @param {Array[Field]} key - path merkle-tree to insert the value
      * @param {Scalar} value - value to insert
      * @returns {Object} Information about the tree insertion
      *      {Array[Field]} oldRoot: previous root,
@@ -282,7 +282,7 @@ class SMT {
     /**
      * Get value merkle-tree
      * @param {Array[Field]} root - merkle-tree root
-     * @param {Scalar} key - path to retoreve the value
+     * @param {Array[Field]} key - path to retoreve the value
      * @returns {Object} Information about the value to retrieve
      *      {Array[Field]} root: merkle-tree root,
      *      {Scalar} key: key to look for,
