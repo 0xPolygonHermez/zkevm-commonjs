@@ -2,16 +2,26 @@ const fs = require('fs');
 const path = require('path');
 const { Scalar } = require('ffjavascript');
 const { expect } = require('chai');
+const lodash = require('lodash');
+const { argv } = require('yargs');
 
 const {
     smtUtils, getPoseidon, Constants, SMT, MemDB,
 } = require('../index');
-const { pathTestVectors } = require('./helpers/test-utils');
+const { pathTestVectors, scalar2key } = require('./helpers/test-utils');
+const { h4toScalar } = require('../src/smt-utils');
 
 // eslint-disable-next-line prefer-arrow-callback
 describe('smtUtils', async function () {
     this.timeout(60000);
 
+    const pathKeysBalance = path.join(pathTestVectors, 'merkle-tree/smt-key-eth-balance.json');
+    const pathKeysNonce = path.join(pathTestVectors, 'merkle-tree/smt-key-eth-nonce.json');
+    const pathKeysContractCode = path.join(pathTestVectors, 'merkle-tree/smt-key-contract-code.json');
+    const pathKeysContractStorage = path.join(pathTestVectors, 'merkle-tree/smt-key-contract-storage.json');
+    const pathHashBytecode = path.join(pathTestVectors, 'merkle-tree/smt-hash-bytecode.json');
+
+    let update;
     let poseidon;
     let F;
     let testVectorsKeysBalance;
@@ -23,11 +33,13 @@ describe('smtUtils', async function () {
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
-        testVectorsKeysBalance = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-key-eth-balance.json')));
-        testVectorsKeysNonce = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-key-eth-nonce.json')));
-        testVectorsKeysContractCode = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-key-contract-code.json')));
-        testVectorsKeysContractStorage = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-key-contract-storage.json')));
-        testVectorsHashBytecode = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'merkle-tree/smt-hash-bytecode.json')));
+        testVectorsKeysBalance = JSON.parse(fs.readFileSync(pathKeysBalance));
+        testVectorsKeysNonce = JSON.parse(fs.readFileSync(pathKeysNonce));
+        testVectorsKeysContractCode = JSON.parse(fs.readFileSync(pathKeysContractCode));
+        testVectorsKeysContractStorage = JSON.parse(fs.readFileSync(pathKeysContractStorage));
+        testVectorsHashBytecode = JSON.parse(fs.readFileSync(pathHashBytecode));
+
+        update = argv.update === true;
     });
 
     it('scalar2fea & fea2scalar', async () => {
@@ -80,65 +92,117 @@ describe('smtUtils', async function () {
         expect(res).to.be.equal(number);
     });
 
+    it('h4toScalar, scalar2h4, h4toString & stringToH4', async () => {
+        const input = [Scalar.e(0), Scalar.e(1), Scalar.e(2), Scalar.e(3)];
+
+        const resScalar = smtUtils.h4toScalar(input);
+        const resString = smtUtils.h4toString(input);
+        expect(resString).to.be.equal(`0x${Scalar.toString(resScalar, 16).padStart(64, '0')}`);
+
+        const resTest = smtUtils.stringToH4(resString);
+        expect(lodash.isEqual(resTest, input)).to.be.equal(true);
+
+        const init = smtUtils.scalar2h4(resScalar);
+        expect(lodash.isEqual(init, input)).to.be.equal(true);
+    });
+
     it('keyEthAddrBalance', async () => {
         for (let i = 0; i < testVectorsKeysBalance.length; i++) {
-            const dataTest = testVectorsKeysBalance[i];
-            const { leafType, arity, ethAddr } = dataTest;
+            const {
+                leafType, ethAddr, expectedKey,
+            } = testVectorsKeysBalance[i];
 
-            const res = await smtUtils.keyEthAddrBalance(ethAddr, arity);
-            expect(F.toString(res)).to.be.equal(dataTest.expectedKey);
-            expect(leafType).to.be.equal(Constants.SMT_KEY_BALANCE);
+            const res = await smtUtils.keyEthAddrBalance(ethAddr);
+
+            if (update) {
+                testVectorsKeysBalance[i].expectedKey = h4toScalar(res).toString();
+            } else {
+                expect(h4toScalar(res).toString()).to.be.equal(expectedKey);
+                expect(leafType).to.be.equal(Constants.SMT_KEY_BALANCE);
+            }
+        }
+
+        if (update) {
+            fs.writeFileSync(pathKeysBalance, JSON.stringify(testVectorsKeysBalance, null, 2));
         }
     });
 
     it('keyEthAddrNonce', async () => {
         for (let i = 0; i < testVectorsKeysNonce.length; i++) {
-            const dataTest = testVectorsKeysNonce[i];
-            const { leafType, arity, ethAddr } = dataTest;
+            const {
+                leafType, ethAddr, expectedKey,
+            } = testVectorsKeysNonce[i];
 
-            const res = await smtUtils.keyEthAddrNonce(ethAddr, arity);
-            expect(F.toString(res)).to.be.equal(dataTest.expectedKey);
-            expect(leafType).to.be.equal(Constants.SMT_KEY_NONCE);
+            const res = await smtUtils.keyEthAddrNonce(ethAddr);
+
+            if (update) {
+                testVectorsKeysNonce[i].expectedKey = h4toScalar(res).toString();
+            } else {
+                expect(h4toScalar(res).toString()).to.be.equal(expectedKey);
+                expect(leafType).to.be.equal(Constants.SMT_KEY_NONCE);
+            }
+        }
+
+        if (update) {
+            fs.writeFileSync(pathKeysNonce, JSON.stringify(testVectorsKeysNonce, null, 2));
         }
     });
 
     it('keyContractCode', async () => {
         for (let i = 0; i < testVectorsKeysContractCode.length; i++) {
-            const dataTest = testVectorsKeysContractCode[i];
-            const { leafType, arity, ethAddr } = dataTest;
+            const {
+                leafType, ethAddr, expectedKey,
+            } = testVectorsKeysContractCode[i];
 
-            const res = await smtUtils.keyContractCode(ethAddr, arity);
-            expect(F.toString(res)).to.be.equal(dataTest.expectedKey);
-            expect(leafType).to.be.equal(Constants.SMT_KEY_SC_CODE);
+            const res = await smtUtils.keyContractCode(ethAddr);
+
+            if (update) {
+                testVectorsKeysContractCode[i].expectedKey = h4toScalar(res).toString();
+            } else {
+                expect(h4toScalar(res).toString()).to.be.equal(expectedKey);
+                expect(leafType).to.be.equal(Constants.SMT_KEY_SC_CODE);
+            }
+        }
+
+        if (update) {
+            fs.writeFileSync(pathKeysContractCode, JSON.stringify(testVectorsKeysContractCode, null, 2));
         }
     });
 
     it('keyContractStorage', async () => {
         for (let i = 0; i < testVectorsKeysContractStorage.length; i++) {
-            const dataTest = testVectorsKeysContractStorage[i];
             const {
-                leafType, arity, ethAddr, storagePosition,
-            } = dataTest;
+                leafType, ethAddr, storagePosition, expectedKey,
+            } = testVectorsKeysContractStorage[i];
 
-            const res = await smtUtils.keyContractStorage(ethAddr, storagePosition, arity);
-            expect(F.toString(res)).to.be.equal(dataTest.expectedKey);
-            expect(leafType).to.be.equal(Constants.SMT_KEY_SC_STORAGE);
+            const res = await smtUtils.keyContractStorage(ethAddr, storagePosition);
+
+            if (update) {
+                testVectorsKeysContractStorage[i].expectedKey = h4toScalar(res).toString();
+            } else {
+                expect(h4toScalar(res).toString()).to.be.equal(expectedKey);
+                expect(leafType).to.be.equal(Constants.SMT_KEY_SC_STORAGE);
+            }
+        }
+
+        if (update) {
+            fs.writeFileSync(pathKeysContractStorage, JSON.stringify(testVectorsKeysContractStorage, null, 2));
         }
     });
 
     it('getCurrentDB', async () => {
         const db = new MemDB(F);
-        const smt = new SMT(db, 4, poseidon, poseidon.F);
+        const smt = new SMT(db, poseidon, poseidon.F);
 
-        const r1 = await smt.set(F.zero, F.e(1), Scalar.e(1));
-        const r2 = await smt.set(r1.newRoot, F.e(2), Scalar.e(2));
-        const r3 = await smt.set(r2.newRoot, F.e(3), Scalar.e(3));
-        const r4 = await smt.set(r3.newRoot, F.e(4), Scalar.e(4));
-        const r5 = await smt.set(r4.newRoot, F.e(17), Scalar.e(5));
+        const r1 = await smt.set(smt.empty, scalar2key(1, F), Scalar.e(1));
+        const r2 = await smt.set(r1.newRoot, scalar2key(2, F), Scalar.e(2));
+        const r3 = await smt.set(r2.newRoot, scalar2key(3, F), Scalar.e(3));
+        const r4 = await smt.set(r3.newRoot, scalar2key(4, F), Scalar.e(4));
+        const r5 = await smt.set(r4.newRoot, scalar2key(17, F), Scalar.e(5));
 
         const fullDB = await smtUtils.getCurrentDB(r5.newRoot, db, F);
 
-        const expectedNodes = 7;
+        const expectedNodes = 21;
         expect(expectedNodes).to.be.equal(Object.keys(fullDB).length);
     });
 
@@ -146,8 +210,15 @@ describe('smtUtils', async function () {
         for (let i = 0; i < testVectorsHashBytecode.length; i++) {
             const { bytecode, expectedHash } = testVectorsHashBytecode[i];
             const hashBytecode = await smtUtils.hashContractBytecode(bytecode);
+            if (update) {
+                testVectorsHashBytecode[i].expectedHash = hashBytecode;
+            } else {
+                expect(hashBytecode).to.be.equal(expectedHash);
+            }
+        }
 
-            expect(hashBytecode).to.be.equal(expectedHash);
+        if (update) {
+            fs.writeFileSync(pathHashBytecode, JSON.stringify(testVectorsHashBytecode, null, 2));
         }
     });
 });

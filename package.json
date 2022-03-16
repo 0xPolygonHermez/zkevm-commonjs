@@ -1,11 +1,11 @@
 {
   "name": "@polygon-hermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
-    "test": "npx mocha ./test/*.test.js",
+    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js",
     "eslint": "npx eslint src/** test/*.test.js",
     "eslint:fix": "npx eslint src/** test/*.test.js --fix"
   },
@@ -39,15 +39,16 @@
   "dependencies": {
     "@ethereumjs/common": "^2.6.0",
     "@ethereumjs/tx": "^3.4.0",
-    "@polygon-hermez/vm": "^5.7.2",
     "@ethersproject/abi": "^5.5.0",
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
+    "@polygon-hermez/vm": "^5.7.2",
     "chai": "^4.3.4",
     "circomlibjs": "^0.1.1",
     "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.46",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "yargs": "^16.2.0"
   }
 }

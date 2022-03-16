@@ -4,40 +4,48 @@ const constants = require('./constants');
 const getPoseidon = require('./poseidon');
 
 /**
- * Converts a Scalar into an array of 4 elements encoded as Fields elements where each one represents 64 bits
- * result = [Scalar[0:64], scalar[64:128], scalar[128:192], scalar[192:256]]
- * @param {Field} Fr - field element
+ * Converts a Scalar into an array of 8 elements encoded as Fields elements where each one represents 32 bits
+ * result = [Scalar[0:31], scalar[32:63], scalar[64:95], scalar[96:127], scalar[128:159], scalar[160:191], scalar[192:224], scalar[224:255]]
+ * @param {Field} Fr - field
  * @param {Scalar} scalar - value to convert
  * @returns {Array[Field]} array of fields
  */
 function scalar2fea(Fr, scalar) {
     scalar = Scalar.e(scalar);
-    const r0 = Scalar.band(scalar, Scalar.e('0xFFFFFFFFFFFFFFFF'));
-    const r1 = Scalar.band(Scalar.shr(scalar, 64), Scalar.e('0xFFFFFFFFFFFFFFFF'));
-    const r2 = Scalar.band(Scalar.shr(scalar, 128), Scalar.e('0xFFFFFFFFFFFFFFFF'));
-    const r3 = Scalar.band(Scalar.shr(scalar, 192), Scalar.e('0xFFFFFFFFFFFFFFFF'));
+    const r0 = Scalar.band(scalar, Scalar.e('0xFFFFFFFF'));
+    const r1 = Scalar.band(Scalar.shr(scalar, 32), Scalar.e('0xFFFFFFFF'));
+    const r2 = Scalar.band(Scalar.shr(scalar, 64), Scalar.e('0xFFFFFFFF'));
+    const r3 = Scalar.band(Scalar.shr(scalar, 96), Scalar.e('0xFFFFFFFF'));
+    const r4 = Scalar.band(Scalar.shr(scalar, 128), Scalar.e('0xFFFFFFFF'));
+    const r5 = Scalar.band(Scalar.shr(scalar, 160), Scalar.e('0xFFFFFFFF'));
+    const r6 = Scalar.band(Scalar.shr(scalar, 192), Scalar.e('0xFFFFFFFF'));
+    const r7 = Scalar.band(Scalar.shr(scalar, 224), Scalar.e('0xFFFFFFFF'));
 
-    return [Fr.e(r0), Fr.e(r1), Fr.e(r2), Fr.e(r3)];
+    return [Fr.e(r0), Fr.e(r1), Fr.e(r2), Fr.e(r3), Fr.e(r4), Fr.e(r5), Fr.e(r6), Fr.e(r7)];
 }
 
 /**
  * Field elemetn array to Scalar
- * result = arr[0] + arr[1]*(2^64) + arr[2]*(2^128) + + arr[3]*(2^192)
+ * result = arr[0] + arr[1]*(2^32) + arr[2]*(2^64) + arr[3]*(2^96) + arr[3]*(2^128) + arr[3]*(2^160) + arr[3]*(2^192) + arr[3]*(2^224)
  * @param {Field} F - field element
  * @param {Array[Field]} arr - array of fields elements
  * @returns {Scalar}
  */
 function fea2scalar(Fr, arr) {
     let res = Fr.toObject(arr[0]);
-    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[1]), 64));
-    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[2]), 128));
-    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[3]), 192));
+    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[1]), 32));
+    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[2]), 64));
+    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[3]), 96));
+    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[4]), 128));
+    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[5]), 160));
+    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[6]), 192));
+    res = Scalar.add(res, Scalar.shl(Fr.toObject(arr[7]), 224));
 
     return res;
 }
 
 /**
- * Field elenent to 32bit number
+ * Field element to 32bit number
  * @param {Field} Fr - field element
  * @param {Field} fe - field to convert
  * @returns {Number}
@@ -58,12 +66,119 @@ function fe2n(Fr, fe) {
 }
 
 /**
- * Leaf type 0: H([ethAddr[0:8], ethAddr[8:16], ethAddr[16:24], 0, 0, ...])
+ * Convert array of 4 Scalars of 64 bits into a unique 256 bits scalar
+ * @param {Array[Scalar]} h4 - Array of 4 Scalars of 64 bits
+ * @returns {Scalar} 256 bit number representation
+ */
+function h4toScalar(h4) {
+    return Scalar.add(
+        Scalar.add(
+            h4[0],
+            Scalar.shl(h4[1], 64),
+        ),
+        Scalar.add(
+            Scalar.shl(h4[2], 128),
+            Scalar.shl(h4[3], 192),
+        ),
+    );
+}
+
+/**
+ * Convert a unique 256 bit scalar into an array of 4 Scalars of 64 bits
+ * @param {Scalar} s - 256 bit number representation
+ * @returns {Array[Scalar]} Array of 4 Scalars of 64 bits
+ */
+function scalar2h4(s) {
+    const res = [];
+
+    res.push(Scalar.band(s, Scalar.e('0xFFFFFFFF')));
+    res.push(Scalar.band(Scalar.shr(s, 64), Scalar.e('0xFFFFFFFFFFFFFFFF')));
+    res.push(Scalar.band(Scalar.shr(s, 128), Scalar.e('0xFFFFFFFFFFFFFFFF')));
+    res.push(Scalar.band(Scalar.shr(s, 192), Scalar.e('0xFFFFFFFFFFFFFFFF')));
+
+    return res;
+}
+
+/**
+ * Convert array of 4 Scalars of 64 bits into an hex string
+ * @param {Array[Scalar]} h4 - Array of 4 Scalars of 64 bits
+ * @returns {String} 256 bit number represented as hex string
+ */
+function h4toString(h4) {
+    const sc = h4toScalar(h4);
+
+    return `0x${Scalar.toString(sc, 16).padStart(64, '0')}`;
+}
+
+/**
+ * Convert string into an array of scalars
+ * @param {String} s - 256 bit number represented as hex string
+ * @returns {Array[Scalar]} - Array of Scalars of 64 bits
+ */
+function stringToH4(s) {
+    if (s.slice(0, 2) !== '0x') throw new Error('Hexadecimal required');
+    if (s.length !== 66) throw new Error('Hexadecimal all digits required');
+
+    const res = [];
+
+    res[3] = Scalar.e(`0x${s.slice(2, 18)}`);
+    res[2] = Scalar.e(`0x${s.slice(18, 34)}`);
+    res[1] = Scalar.e(`0x${s.slice(34, 50)}`);
+    res[0] = Scalar.e(`0x${s.slice(50)}`);
+
+    return res;
+}
+
+/**
+ * Check if an smt node is zero
+ * @param {Array[Field]} n - node
+ * @param {Object} F - Field
+ * @returns {Bool} true if all elements are zero, otherwise false
+ */
+function nodeIsZero(n, F) {
+    return (F.isZero(n[0])
+        && F.isZero(n[1])
+        && F.isZero(n[2])
+        && F.isZero(n[3]));
+}
+
+/**
+ * Check equality between two nodes
+ * @param {Array[Field]} n1 - node
+ * @param {Array[Field]} n2 - node
+ * @param {Object} F - Field
+ * @returns {Bool} true if equal, otherwise false
+ */
+function nodeIsEq(n1, n2, F) {
+    return (F.eq(n1[0], n2[0])
+        && F.eq(n1[1], n2[1])
+        && F.eq(n1[2], n2[2])
+        && F.eq(n1[3], n2[3]));
+}
+
+/**
+ * Check if a node is a final node
+ * final node: [1, 0, 0, 0]
+ * @param {Array[Field]} n - node
+ * @param {Object} F - Field
+ * @returns {Bool} true if node is final otherwise false
+ */
+function isOneSiblings(n, F) {
+    return (F.eq(n[0], F.one)
+        && F.isZero(n[1])
+        && F.isZero(n[2])
+        && F.isZero(n[3]));
+}
+
+/**
+ * Leaf type 0:
+ *   hk0: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 0, 0])
+ *   hk1: H([0, 0, 0, 0, 0, 0, 0, 0])
+ *   key = H([...hk0, ...hk1])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
- * @param {Number} arity - merkle tree bits per level. p.e: 4 is 2**4 levels each tree layer
  * @returns {Scalar} - key computed
  */
-async function keyEthAddrBalance(_ethAddr, arity = 4) {
+async function keyEthAddrBalance(_ethAddr) {
     const poseidon = await getPoseidon();
     const { F } = poseidon;
 
@@ -78,23 +193,24 @@ async function keyEthAddrBalance(_ethAddr, arity = 4) {
 
     const ethAddrArr = scalar2fea(F, ethAddr);
 
-    const key = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], constant];
+    const key0 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1 = [F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero];
 
-    // fill zeros until 2**arity
-    for (let i = key.length; i < (1 << arity); i++) {
-        key.push(F.zero);
-    }
+    const hk0 = poseidon(key0);
+    const hk1 = poseidon(key1);
 
-    return poseidon(key);
+    return poseidon([...hk0, ...hk1]);
 }
 
 /**
- * Leaf type 1: H([ethAddr[0:8], ethAddr[8:16], ethAddr[16:24], 1, 0, ...])
+ * Leaf type 1:
+ *   hk0: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 1, 0])
+ *   hk1: H([0, 0, 0, 0, 0, 0, 0, 0])
+ *   key = H([...hk0, ...hk1])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
- * @param {Number} arity - merkle tree bits per level. p.e: 4 is 2**4 levels each tree layer
- * @returns {Scalar} - key computed
+ * @returns {Array[Field]} - key computed
  */
-async function keyEthAddrNonce(_ethAddr, arity = 4) {
+async function keyEthAddrNonce(_ethAddr) {
     const poseidon = await getPoseidon();
     const { F } = poseidon;
 
@@ -109,23 +225,24 @@ async function keyEthAddrNonce(_ethAddr, arity = 4) {
 
     const ethAddrArr = scalar2fea(F, ethAddr);
 
-    const key = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], constant];
+    const key0 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1 = [F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero];
 
-    // fill zeros until 2**arity
-    for (let i = key.length; i < (1 << arity); i++) {
-        key.push(F.zero);
-    }
+    const hk0 = poseidon(key0);
+    const hk1 = poseidon(key1);
 
-    return poseidon(key);
+    return poseidon([...hk0, ...hk1]);
 }
 
 /**
- * Leaf type 2: H([ethAddr[0:8], ethAddr[8:16], ethAddr[16:24], 2, 0, ...])
+ * Leaf type 1:
+ *   hk0: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 2, 0])
+ *   hk1: H([0, 0, 0, 0, 0, 0, 0, 0])
+ *   key = H([...hk0, ...hk1])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
- * @param {Number} arity - merkle tree bits per level. p.e: 4 is 2**4 levels each tree layer
- * @returns {Scalar} - key computed
+ * @returns {Array[Field]} - key computed
  */
-async function keyContractCode(_ethAddr, arity = 4) {
+async function keyContractCode(_ethAddr) {
     const poseidon = await getPoseidon();
     const { F } = poseidon;
 
@@ -140,25 +257,25 @@ async function keyContractCode(_ethAddr, arity = 4) {
 
     const ethAddrArr = scalar2fea(F, ethAddr);
 
-    const key = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], constant];
+    const key0 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1 = [F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero];
 
-    // fill zeros until 2**arity
-    for (let i = key.length; i < (1 << arity); i++) {
-        key.push(F.zero);
-    }
+    const hk0 = poseidon(key0);
+    const hk1 = poseidon(key1);
 
-    return poseidon(key);
+    return poseidon([...hk0, ...hk1]);
 }
 
 /**
- * Leaf type 3: H([ethAddr[0:8], ethAddr[8:16], ethAddr[16:24], 3, 0,
- *      stoPos[0:8], stoPos[8:16], stoPos[16:24], stoPos[24:32], ...])
+ * Leaf type 3:
+ *   hk0: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 3, 0])
+ *   hk1: H([stoPos[0:4], stoPos[4:8], stoPos[8:12], stoPos[12:16], stoPos[16:20], stoPos[20:24], stoPos[24:28], stoPos[28:32])
+ *   key = H([...hk0, ...hk1])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
  * @param {Number | Scalar} _storagePos - smart contract storage position
- * @param {Number} arity - merkle tree bits per level. p.e: 4 is 2**4 levels each tree layer
- * @returns {Scalar} - key computed
+ * @returns {Array[Field]} - key computed
  */
-async function keyContractStorage(_ethAddr, _storagePos, arity = 4) {
+async function keyContractStorage(_ethAddr, _storagePos) {
     const poseidon = await getPoseidon();
     const { F } = poseidon;
 
@@ -176,20 +293,17 @@ async function keyContractStorage(_ethAddr, _storagePos, arity = 4) {
     const storagePos = Scalar.e(_storagePos);
     const storagePosArray = scalar2fea(F, storagePos);
 
-    const key = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], constant,
-        storagePosArray[0], storagePosArray[1], storagePosArray[2], storagePosArray[3]];
+    const key0 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
 
-    // fill zeros until 2**arity
-    for (let i = key.length; i < (1 << arity); i++) {
-        key.push(F.zero);
-    }
+    const hk0 = poseidon(key0);
+    const hk1 = poseidon(storagePosArray);
 
-    return poseidon(key);
+    return poseidon([...hk0, ...hk1]);
 }
 
 /**
  * Fill the dbObject with all the childs recursively
- * @param {Uint8Array} node merkle node
+ * @param {Array[Field]} node merkle node
  * @param {Object} db Mem DB
  * @param {Object} dbObject Object that will be fullfilled
  * @param {Object} Fr - poseidon F
@@ -197,29 +311,53 @@ async function keyContractStorage(_ethAddr, _storagePos, arity = 4) {
  */
 async function fillDBArray(node, db, dbObject, Fr) {
     const childArray = await db.getSmtNode(node);
-    const childArrayHex = childArray.map((value) => Fr.toString(value, 16).padStart(64, '0'));
-    const nodeHex = Fr.toString(node, 16).padStart(64, '0');
+    const childArrayHex = childArray.map((value) => Fr.toString(value, 16).padStart(16, '0'));
+    const nodeHex = Scalar.toString(h4toString(node), 16);
+
     dbObject[nodeHex] = childArrayHex;
 
     if (Scalar.fromString(childArrayHex[0], 16) !== Scalar.e(1)) {
-        for (let i = 0; i < childArrayHex.length; i++) {
-            if (Scalar.fromString(childArrayHex[i], 16) !== Scalar.e(0)) {
-                await fillDBArray(Fr.e(`0x${childArrayHex[i]}`), db, dbObject, Fr);
+        for (let i = 0; i < childArray.length; i += 4) {
+            if (!nodeIsZero(childArray.slice(i, i + 4), Fr)) {
+                await fillDBArray(
+                    [childArray[i],
+                        childArray[i + 1],
+                        childArray[i + 2],
+                        childArray[i + 3]],
+                    db,
+                    dbObject,
+                    Fr,
+                );
             }
         }
+    } else { // final node: Hvalue --> key prime | value
+        const nodeFinal = [childArray[4], childArray[5], childArray[6], childArray[7]];
+        const hashV = await db.getSmtNode(nodeFinal);
+        const hashVHex = hashV.map((value) => Fr.toString(value, 16).padStart(16, '0'));
+        const nodeFinalHex = Scalar.toString(h4toString(nodeFinal), 16);
+
+        dbObject[nodeFinalHex] = hashVHex;
+
+        // Value
+        const nodeValue = [hashV[4], hashV[5], hashV[6], hashV[7]];
+        const valueFinal = await db.getSmtNode(nodeValue);
+        const valueHex = valueFinal.map((value) => Fr.toString(value, 16).padStart(16, '0'));
+        const nodeValueHex = Scalar.toString(h4toString(nodeValue), 16);
+
+        dbObject[nodeValueHex] = valueHex;
     }
 }
 
 /**
  * Return all merkle tree nodes and leafs in an Object
- * @param {Uint8Array} root merkle root
+ * @param {Array[Scalar]} root merkle root
  * @param {Object} db Mem DB
  * @param {Object} Fr - poseidon F
  * @returns {Object} merkle tree
  */
 async function getCurrentDB(root, db, Fr) {
     const dbObject = {};
-    if (Scalar.eq(Scalar.e(Fr.toString(root)), Scalar.e(0))) {
+    if (nodeIsZero(root, Fr)) {
         return null;
     }
     await fillDBArray(root, db, dbObject, Fr);
@@ -229,7 +367,7 @@ async function getCurrentDB(root, db, Fr) {
 
 /**
  * Computes the bytecode hash in order to add it to the state-tree
- * @param {String} bytecode - smart contract bytecode representes as hex string
+ * @param {String} bytecode - smart contract bytecode represented as hex string
  * @returns {String} bytecode hash represented as hex string
  */
 async function hashContractBytecode(_bytecode) {
@@ -240,24 +378,24 @@ async function hashContractBytecode(_bytecode) {
 
     const numBytes = bytecode.length / 2;
 
-    let numHashes;
-    if (numBytes < constants.BYTECODE_CHUNKS * 31) {
-        numHashes = 1;
-    } else {
-        const remainingBytes = numBytes - constants.BYTECODE_CHUNKS * 31;
-        numHashes = 1 + Math.ceil(remainingBytes / ((constants.BYTECODE_CHUNKS - 1) * 31));
-    }
+    const numHashes = Math.ceil(numBytes / (constants.BYTECODE_ELEMENTS_HASH * constants.BYTECODE_BYTES_ELEMENT));
 
     let tmpHash;
     let bytesPointer = 0;
 
     for (let i = 0; i < numHashes; i++) {
-        const maxBytesToAdd = (i === 0) ? (constants.BYTECODE_CHUNKS) * 31 : (constants.BYTECODE_CHUNKS - 1) * 31;
+        const maxBytesToAdd = constants.BYTECODE_ELEMENTS_HASH * constants.BYTECODE_BYTES_ELEMENT;
         const elementsToHash = [];
 
         if (i !== 0) {
-            elementsToHash.push(tmpHash);
+            elementsToHash.push(...tmpHash);
+        } else {
+            elementsToHash.push(F.zero);
+            elementsToHash.push(F.zero);
+            elementsToHash.push(F.zero);
+            elementsToHash.push(F.zero);
         }
+
         const subsetBytecode = bytecode.slice(bytesPointer, bytesPointer + maxBytesToAdd * 2);
         bytesPointer += maxBytesToAdd * 2;
 
@@ -273,16 +411,17 @@ async function hashContractBytecode(_bytecode) {
             tmpElem = tmpElem.concat(byteToAdd);
             counter += 1;
 
-            if (counter === 31) {
+            if (counter === constants.BYTECODE_BYTES_ELEMENT) {
                 elementsToHash.push(F.e(Scalar.fromString(tmpElem, 16)));
                 tmpElem = '';
                 counter = 0;
             }
         }
+
         tmpHash = poseidon(elementsToHash);
     }
 
-    return F.toString(tmpHash, 16).padStart(64, '0');
+    return h4toString(tmpHash);
 }
 
 module.exports = {
@@ -295,4 +434,11 @@ module.exports = {
     keyContractStorage,
     getCurrentDB,
     hashContractBytecode,
+    h4toScalar,
+    h4toString,
+    stringToH4,
+    scalar2h4,
+    nodeIsZero,
+    nodeIsEq,
+    isOneSiblings,
 };

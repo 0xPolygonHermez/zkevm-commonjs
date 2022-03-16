@@ -5,7 +5,7 @@ const {
     verifyMerkleProof,
 } = require('../index').mtBridgeUtils;
 
-describe('Merkle Test', () => {
+describe('Merkle Bridge', () => {
     it('Check merkle tree', async () => {
         const height = 32;
         const merkleTree = new MTBridge(height);

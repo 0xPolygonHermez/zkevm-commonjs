@@ -9,11 +9,11 @@ const { Scalar } = require('ffjavascript');
 const { processorUtils } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
-describe('Encode and decode transactions in RLP', () => {
+describe('Processor utils', () => {
     let testVectors;
 
     before(async () => {
-        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'test-vector-data/state-transition.json')));
+        testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'zkevm-db/state-transition.json')));
     });
 
     it('Check encode and decode transactions', async () => {

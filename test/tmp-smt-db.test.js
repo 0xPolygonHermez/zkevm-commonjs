@@ -16,20 +16,19 @@ describe('TmpSmtDB', () => {
     });
 
     it('Check that tmpDB gets the state from srcDb', async () => {
-        const arity = 4;
         const address = '0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D';
         const balance = Scalar.e(ethers.utils.parseEther('100'));
 
         // memDB
         const db = new MemDB(F);
-        const smt = new SMT(db, arity, poseidon, poseidon.F);
+        const smt = new SMT(db, poseidon, poseidon.F);
 
         // create TmpSmtDB
         const tmpDB = new TmpSmtDB(db);
-        const smtTmp = new SMT(tmpDB, arity, poseidon, poseidon.F);
+        const smtTmp = new SMT(tmpDB, poseidon, poseidon.F);
 
-        const keyBalance = await smtUtils.keyEthAddrBalance(address, smt.arity);
-        const zeroRoot = F.zero;
+        const keyBalance = await smtUtils.keyEthAddrBalance(address);
+        const zeroRoot = smt.empty;
 
         const auxRes = await smt.set(zeroRoot, keyBalance, balance);
         const genesisRoot = auxRes.newRoot;
@@ -41,21 +40,20 @@ describe('TmpSmtDB', () => {
     });
 
     it('Update and populate memDB with tmpDb', async () => {
-        const arity = 4;
         const address = '0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D';
         const balance = Scalar.e(ethers.utils.parseEther('100'));
 
         const db = new MemDB(F);
-        const smt = new SMT(db, arity, poseidon, poseidon.F);
+        const smt = new SMT(db, poseidon, poseidon.F);
 
         // create TmpDB
         const tmpDB = new TmpSmtDB(db);
 
         // load smtTMp
-        const smtTmp = new SMT(tmpDB, arity, poseidon, poseidon.F);
+        const smtTmp = new SMT(tmpDB, poseidon, poseidon.F);
 
-        const keyBalance = await smtUtils.keyEthAddrBalance(address, smt.arity);
-        const zeroRoot = F.zero;
+        const keyBalance = await smtUtils.keyEthAddrBalance(address);
+        const zeroRoot = smt.empty;
 
         const auxRes = await smtTmp.set(zeroRoot, keyBalance, balance);
         const genesisRoot = auxRes.newRoot;

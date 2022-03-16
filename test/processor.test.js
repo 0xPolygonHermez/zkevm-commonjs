@@ -8,6 +8,7 @@
 
 const { Scalar } = require('ffjavascript');
 const fs = require('fs');
+const { argv } = require('yargs');
 
 const ethers = require('ethers');
 const { expect } = require('chai');
@@ -20,28 +21,33 @@ const path = require('path');
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
 const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils,
+    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
 } = require('../index');
-const testVectors = require('./helpers/processor-tests.json');
-const newTestVectors = require('./helpers/processor-tests.json');
-
-const replace = false;
+const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor', async function () {
     this.timeout(100000);
+
+    const pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
+
+    let update;
     let poseidon;
     let F;
+
+    let testVectors;
 
     before(async () => {
         poseidon = await getPoseidon();
         F = poseidon.F;
+        testVectors = JSON.parse(fs.readFileSync(pathProcessorTests));
+
+        update = argv.update === true;
     });
 
     it('Check test vectors', async () => {
         for (let i = 0; i < testVectors.length; i++) {
             const {
                 id,
-                arity,
                 genesis,
                 expectedOldRoot,
                 txs,
@@ -62,10 +68,9 @@ describe('Processor', async function () {
             // create a zkEVMDB to compile the sc
             const zkEVMDB = await ZkEVMDB.newZkEVM(
                 db,
-                arity,
                 poseidon,
-                F.zero,
-                F.e(Scalar.e(localExitRoot)),
+                [F.zero, F.zero, F.zero, F.zero],
+                smtUtils.stringToH4(localExitRoot),
                 genesis,
             );
 
@@ -89,11 +94,13 @@ describe('Processor', async function () {
                     }
                 }
             }
-            if (!replace) {
-                expect(`0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedOldRoot);
+
+            if (!update) {
+                expect(smtUtils.h4toString(zkEVMDB.stateRoot)).to.be.equal(expectedOldRoot);
             } else {
-                newTestVectors[i].expectedOldRoot = `0x${Scalar.e(F.toString(zkEVMDB.stateRoot)).toString(16).padStart(64, '0')}`;
+                testVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
             }
+
             /*
              * build, sign transaction and generate rawTxs
              * rawTxs would be the calldata inserted in the contract
@@ -182,7 +189,7 @@ describe('Processor', async function () {
                 txProcessed.push(txData);
             }
 
-            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, F.e(Scalar.e(globalExitRoot)));
+            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, smtUtils.stringToH4(globalExitRoot));
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }
@@ -193,7 +200,11 @@ describe('Processor', async function () {
             await zkEVMDB.consolidate(batch);
 
             const newRoot = batch.currentStateRoot;
-            expect(`0x${Scalar.e(F.toString(newRoot)).toString(16).padStart(64, '0')}`).to.be.equal(expectedNewRoot);
+            if (!update) {
+                expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
+            } else {
+                testVectors[i].expectedNewRoot = smtUtils.h4toString(newRoot);
+            }
 
             // Check errors on decode transactions
             const decodedTx = await batch.getDecodedTxs();
@@ -222,25 +233,25 @@ describe('Processor', async function () {
             }
 
             // Check the circuit input
-            const circuitInput = await batch.getCircuitInput();
+            const circuitInput = await batch.getStarkInput();
 
             // Check the encode transaction match with the vector test
-            if (!replace) {
+            if (!update) {
                 expect(batchL2Data).to.be.equal(batch.getBatchL2Data());
                 // Check the batchHashData and the input hash
                 expect(batchHashData).to.be.equal(circuitInput.batchHashData);
                 expect(inputHash).to.be.equal(circuitInput.inputHash);
             } else {
-                newTestVectors[i].batchL2Data = batch.getBatchL2Data();
-                newTestVectors[i].batchHashData = circuitInput.batchHashData;
-                newTestVectors[i].inputHash = circuitInput.inputHash;
-                delete newTestVectors[i].contractInterface;
+                testVectors[i].batchL2Data = batch.getBatchL2Data();
+                testVectors[i].batchHashData = circuitInput.batchHashData;
+                testVectors[i].inputHash = circuitInput.inputHash;
+                delete testVectors[i].contractInterface;
             }
 
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
         }
-        if (replace) {
-            await fs.writeFileSync(path.join(__dirname, './helpers/processor-tests.json'), JSON.stringify(newTestVectors, null, 2));
+        if (update) {
+            await fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
         }
     });
 });

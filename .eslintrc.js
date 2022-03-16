@@ -28,4 +28,7 @@ module.exports = {
         'no-await-in-loop': 'off',
         'newline-before-return': 'error',
     },
+    parserOptions: {
+        ecmaVersion: 2020,
+    },
 };

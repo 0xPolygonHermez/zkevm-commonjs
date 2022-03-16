@@ -2,37 +2,35 @@
 
 const { Scalar } = require('ffjavascript');
 
-const { scalar2fea, fea2scalar } = require('./smt-utils');
+const {
+    scalar2fea, fea2scalar, nodeIsZero, nodeIsEq, isOneSiblings,
+} = require('./smt-utils');
 
 class SMT {
     /**
      * Constructor Sparse-merkle-tree
      * @param {Object} db - Database to use
-     * @param {Number} arity - Child for each merkle tree level: numChild = 2**arity
      * @param {Object} hash - hash function
      * @param {Field} F - Field element
      */
-    constructor(db, arity, hash, F) {
+    constructor(db, hash, F) {
         this.db = db;
-        this.arity = arity;
         this.hash = hash;
         this.F = F;
-        this.mask = Scalar.e((1 << this.arity) - 1);
-
-        this.maxLevels = 160 / this.arity;
+        this.empty = [F.zero, F.zero, F.zero, F.zero];
     }
 
     /**
      * Insert node into the merkle-tree
-     * @param {Field} oldRoot - previous root
-     * @param {Field} key - path merkle-tree to insert the value
+     * @param {Array[Field]} oldRoot - previous root
+     * @param {Array[Field]} key - path merkle-tree to insert the value
      * @param {Scalar} value - value to insert
      * @returns {Object} Information about the tree insertion
-     *      {Field} oldRoot: previous root,
-     *      {Field} newRoot: new root
+     *      {Array[Field]} oldRoot: previous root,
+     *      {Array[Field]} newRoot: new root
      *      {Field} key: key modified,
-     *      {Array[Fields]} siblings: array of siblings,
-     *      {Field} insKey: inserted key,
+     *      {Array[Field]} siblings: array of siblings,
+     *      {Scalar} insKey: inserted key,
      *      {Scalar} insValue: insefted value,
      *      {Bool} isOld0: is new insert or delete,
      *      {Scalar} oldValue: old leaf value,
@@ -47,10 +45,10 @@ class SMT {
         function getUniqueSibling(a) {
             let nFound = 0;
             let fnd;
-            for (let i = 0; i < a.length; i++) {
-                if (!F.isZero(a[i])) {
+            for (let i = 0; i < a.length; i += 4) {
+                if (!nodeIsZero(a.slice(i, i + 4), F)) {
                     nFound += 1;
-                    fnd = i;
+                    fnd = i / 4;
                 }
             }
             if (nFound === 1) return fnd;
@@ -68,56 +66,51 @@ class SMT {
         const keys = self.splitKey(key);
         let level = 0;
 
-        let accKey = Scalar.e(0);
-        let lastAccKey = Scalar.e(0);
+        const accKey = [];
         let foundKey;
         let siblings = [];
 
         let insKey;
         let insValue;
-        let oldValue = Scalar.e(0);
+        const oldValue = Scalar.e(0);
         let mode;
         let newRoot = oldRoot;
         let isOld0 = true;
+        let foundRKey;
+        let foundOldValH;
+        let foundVal;
 
-        while ((!F.isZero(r)) && (!foundKey)) {
+        while (!nodeIsZero(r, F) && (typeof (foundKey) === 'undefined')) {
             siblings[level] = await self.db.getSmtNode(r);
-            if (F.eq(siblings[level][0], F.one)) {
-                foundKey = F.add(
-                    F.e(accKey),
-                    F.mul(
-                        siblings[level][1],
-                        F.e(Scalar.shl(Scalar.e(1), level * self.arity)),
-                    ),
-                );
+            if (isOneSiblings(siblings[level], F)) {
+                const hKV = await self.db.getSmtNode(siblings[level].slice(4));
+                foundRKey = hKV.slice(0, 4);
+                foundOldValH = hKV.slice(4);
+                const foundValA = await self.db.getSmtNode(foundOldValH);
+                foundVal = fea2scalar(F, foundValA);
+                foundKey = this.joinKey(accKey, foundRKey);
             } else {
-                r = siblings[level][keys[level]];
-                lastAccKey = accKey;
-                accKey = Scalar.add(accKey, Scalar.shl(keys[level], level * self.arity));
+                r = siblings[level].slice(keys[level] * 4, keys[level] * 4 + 4);
+                accKey.push(keys[level]);
                 level += 1;
             }
         }
 
         level -= 1;
-        accKey = lastAccKey;
+        accKey.pop();
 
         if (!Scalar.isZero(value)) {
-            const v = scalar2fea(F, value);
-            if (foundKey) {
-                if (F.eq(key, foundKey)) { // Update
+            if (typeof (foundKey) !== 'undefined') {
+                if (nodeIsEq(key, foundKey, F)) { // Update
                     mode = 'update';
-                    const newLeaf = [];
-                    newLeaf[0] = F.one;
-                    newLeaf[1] = siblings[level + 1][1];
-                    oldValue = fea2scalar(F, siblings[level + 1].slice(2, 6));
-                    newLeaf[2] = v[0];
-                    newLeaf[3] = v[1];
-                    newLeaf[4] = v[2];
-                    newLeaf[5] = v[3];
-                    while (newLeaf.length < (1 << self.arity)) newLeaf.push(F.zero);
-                    const newLeafHash = await hashSave(newLeaf);
+
+                    const newValH = await hashSave(scalar2fea(F, value));
+                    const newKVH = await hashSave([...foundRKey, ...newValH]);
+                    const newLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...newKVH]);
                     if (level >= 0) {
-                        siblings[level][keys[level]] = newLeafHash;
+                        for (let j = 0; j < 4; j++) {
+                            siblings[level][keys[level] * 4 + j] = newLeafHash[j];
+                        }
                     } else {
                         newRoot = newLeafHash;
                     }
@@ -128,118 +121,114 @@ class SMT {
                     const foundKeys = self.splitKey(foundKey);
                     while (keys[level2] === foundKeys[level2]) level2 += 1;
 
-                    const oldLeaf = [];
-                    oldLeaf[0] = F.one;
-                    oldLeaf[1] = F.e(Scalar.shr(Scalar.e(F.toObject(foundKey)), (level2 + 1) * self.arity));
-                    oldLeaf[2] = siblings[level + 1][2];
-                    oldLeaf[3] = siblings[level + 1][3];
-                    oldLeaf[4] = siblings[level + 1][4];
-                    oldLeaf[5] = siblings[level + 1][5];
+                    const oldKey = this.removeKeyBits(foundKey, level2 + 1);
+                    const oldKVH = await hashSave([...oldKey, ...foundOldValH]);
+                    const oldLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...oldKVH]);
 
                     insKey = foundKey;
-                    insValue = fea2scalar(F, siblings[level + 1].slice(2, 6));
+                    insValue = foundVal;
                     isOld0 = false;
-                    while (oldLeaf.length < (1 << self.arity)) oldLeaf.push(F.zero);
-                    const oldLeafHash = await hashSave(oldLeaf);
 
-                    const newLeaf = [];
-                    newLeaf[0] = F.one;
-                    newLeaf[1] = F.e(Scalar.shr(Scalar.e(F.toObject(key)), (level2 + 1) * self.arity));
-                    newLeaf[2] = v[0];
-                    newLeaf[3] = v[1];
-                    newLeaf[4] = v[2];
-                    newLeaf[5] = v[3];
-                    while (newLeaf.length < (1 << self.arity)) newLeaf.push(F.zero);
-                    const newLeafHash = await hashSave(newLeaf);
+                    const newKey = this.removeKeyBits(key, level2 + 1);
+                    const newValH = await hashSave(scalar2fea(F, value));
+                    const newKVH = await hashSave([...newKey, ...newValH]);
+                    const newLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...newKVH]);
 
-                    for (let i = 0; i < (1 << self.arity); i++) node[i] = F.zero;
-                    node[keys[level2]] = newLeafHash;
-                    node[foundKeys[level2]] = oldLeafHash;
+                    for (let i = 0; i < 8; i++) node[i] = F.zero;
+                    for (let j = 0; j < 4; j++) {
+                        node[keys[level2] * 4 + j] = newLeafHash[j];
+                        node[foundKeys[level2] * 4 + j] = oldLeafHash[j];
+                    }
 
                     let r2 = await hashSave(node);
                     level2 -= 1;
 
                     while (level2 !== level) {
-                        for (let i = 0; i < (1 << self.arity); i++) node[i] = F.zero;
-                        node[keys[level2]] = r2;
+                        for (let i = 0; i < 8; i++) node[i] = F.zero;
+                        for (let j = 0; j < 4; j++) {
+                            node[keys[level2] * 4 + j] = r2[j];
+                        }
 
                         r2 = await hashSave(node);
                         level2 -= 1;
                     }
 
                     if (level >= 0) {
-                        siblings[level][keys[level]] = r2;
+                        for (let j = 0; j < 4; j++) {
+                            siblings[level][keys[level] * 4 + j] = r2[j];
+                        }
                     } else {
                         newRoot = r2;
                     }
                 }
             } else { // insert without foundKey
                 mode = 'insertNotFound';
-                const newLeaf = [];
-                newLeaf[0] = F.one;
-                newLeaf[1] = F.e(Scalar.shr(Scalar.e(F.toObject(key)), (level + 1) * self.arity));
-                newLeaf[2] = v[0];
-                newLeaf[3] = v[1];
-                newLeaf[4] = v[2];
-                newLeaf[5] = v[3];
-                while (newLeaf.length < (1 << self.arity)) newLeaf.push(F.zero);
-                const newLeafHash = await hashSave(newLeaf);
+
+                const newKey = this.removeKeyBits(key, (level + 1));
+                const newValH = await hashSave(scalar2fea(F, value));
+                const newKVH = await hashSave([...newKey, ...newValH]);
+                const newLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...newKVH]);
+
                 if (level >= 0) {
-                    siblings[level][keys[level]] = newLeafHash;
+                    for (let j = 0; j < 4; j++) {
+                        siblings[level][keys[level] * 4 + j] = newLeafHash[j];
+                    }
                 } else {
                     newRoot = newLeafHash;
                 }
             }
-        } else if ((foundKey) && (F.eq(key, foundKey))) { // Delete
-            oldValue = fea2scalar(F, siblings[level + 1].slice(2, 6));
+        } else if ((typeof (foundKey) !== 'undefined') && (nodeIsEq(key, foundKey, F))) { // Delete
             if (level >= 0) {
-                siblings[level][keys[level]] = F.zero;
+                for (let j = 0; j < 4; j++) {
+                    siblings[level][keys[level] * 4 + j] = F.zero;
+                }
 
                 let uKey = getUniqueSibling(siblings[level]);
 
                 if (uKey >= 0) {
                     mode = 'deleteFound';
-                    siblings[level + 1] = await self.db.getSmtNode(siblings[level][uKey]);
+                    siblings[level + 1] = await self.db.getSmtNode(siblings[level].slice(uKey * 4, uKey * 4 + 4));
 
-                    insKey = F.add(
-                        F.e(Scalar.add(accKey, Scalar.shl(uKey, level * self.arity))),
-                        F.mul(
-                            siblings[level + 1][1],
-                            F.e(Scalar.shl(Scalar.e(1), (level + 1) * self.arity)),
-                        ),
-                    );
-                    const insV = siblings[level + 1].slice(2, 6);
-                    insValue = fea2scalar(F, insV);
-                    isOld0 = false;
+                    if (isOneSiblings(siblings[level + 1], F)) {
+                        const hKV = await self.db.getSmtNode(siblings[level + 1].slice(4));
+                        const rKey = hKV.slice(0, 4);
 
-                    while ((uKey >= 0) && (level >= 0)) {
-                        level -= 1;
-                        if (level >= 0) {
-                            uKey = getUniqueSibling(siblings[level]);
+                        const valH = hKV.slice(4);
+                        const valA = await self.db.getSmtNode(valH);
+                        const val = fea2scalar(F, valA);
+
+                        insKey = this.joinKey([...accKey, uKey], rKey);
+                        insValue = val;
+                        isOld0 = false;
+
+                        while ((uKey >= 0) && (level >= 0)) {
+                            level -= 1;
+                            if (level >= 0) {
+                                uKey = getUniqueSibling(siblings[level]);
+                            }
                         }
-                    }
 
-                    const oldLeaf = [];
-                    oldLeaf[0] = F.one;
-                    oldLeaf[1] = F.e(Scalar.shr(Scalar.e(F.toObject(insKey)), (level + 1) * self.arity));
-                    oldLeaf[2] = insV[0];
-                    oldLeaf[3] = insV[1];
-                    oldLeaf[4] = insV[2];
-                    oldLeaf[5] = insV[3];
-                    while (oldLeaf.length < (1 << self.arity)) oldLeaf.push(F.zero);
-                    const oldLeafHash = await hashSave(oldLeaf);
+                        const oldKey = this.removeKeyBits(insKey, level + 1);
 
-                    if (level >= 0) {
-                        siblings[level][keys[level]] = oldLeafHash;
+                        const oldKVH = await hashSave([...oldKey, ...valH]);
+                        const oldLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...oldKVH]);
+
+                        if (level >= 0) {
+                            for (let j = 0; j < 4; j++) {
+                                siblings[level][keys[level] * 4 + j] = oldLeafHash[j];
+                            }
+                        } else {
+                            newRoot = oldLeafHash;
+                        }
                     } else {
-                        newRoot = oldLeafHash;
+                        mode = 'deleteNotFound';
                     }
                 } else {
                     mode = 'deleteNotFound';
                 }
             } else {
                 mode = 'deleteLast';
-                newRoot = F.zero;
+                newRoot = [F.zero, F.zero, F.zero, F.zero];
             }
         } else {
             mode = 'zeroToZero';
@@ -250,7 +239,11 @@ class SMT {
         while (level >= 0) {
             newRoot = await hashSave(siblings[level]);
             level -= 1;
-            if (level >= 0) siblings[level][keys[level]] = newRoot;
+            if (level >= 0) {
+                for (let j = 0; j < 4; j++) {
+                    siblings[level][keys[level] * 4 + j] = newRoot[j];
+                }
+            }
         }
 
         return {
@@ -269,15 +262,15 @@ class SMT {
 
     /**
      * Get value merkle-tree
-     * @param {Field} root - merkle-tree root
-     * @param {Field} key - path to retoreve the value
+     * @param {Array[Field]} root - merkle-tree root
+     * @param {Array[Field]} key - path to retoreve the value
      * @returns {Object} Information about the value to retrieve
-     *      {Field} root: merkle-tree root,
-     *      {Field} key: key to look for,
+     *      {Array[Field]} root: merkle-tree root,
+     *      {Scalar} key: key to look for,
      *      {Scalar} value: value retrieved,
-     *      {Array[Fields]} siblings: array of siblings,
+     *      {Array[Field]} siblings: array of siblings,
      *      {Bool} isOld0: is new insert or delete,
-     *      {Field} insKey: key found,
+     *      {Scalar} insKey: key found,
      *      {Scalar} insValue: value found,
      */
     async get(root, key) {
@@ -289,8 +282,7 @@ class SMT {
         const keys = self.splitKey(key);
         let level = 0;
 
-        let accKey = Scalar.e(0);
-        let lastAccKey = Scalar.e(0);
+        const accKey = [];
         let foundKey;
         let siblings = [];
 
@@ -300,33 +292,33 @@ class SMT {
         let value = Scalar.e(0);
         let isOld0 = true;
 
-        while ((!F.isZero(r)) && (!foundKey)) {
+        let foundVal;
+
+        while ((!nodeIsZero(r, F)) && (typeof (foundKey) === 'undefined')) {
             siblings[level] = await self.db.getSmtNode(r);
-            if (F.eq(siblings[level][0], F.one)) {
-                foundKey = F.add(
-                    F.e(accKey),
-                    F.mul(
-                        siblings[level][1],
-                        F.e(Scalar.shl(Scalar.e(1), level * self.arity)),
-                    ),
-                );
+            if (isOneSiblings(siblings[level], F)) {
+                const hKV = await self.db.getSmtNode(siblings[level].slice(4));
+                const foundRKey = hKV.slice(0, 4);
+                const foundOldValH = hKV.slice(4);
+                const foundValA = await self.db.getSmtNode(foundOldValH);
+                foundVal = fea2scalar(F, foundValA);
+                foundKey = this.joinKey(accKey, foundRKey);
             } else {
-                r = siblings[level][keys[level]];
-                lastAccKey = accKey;
-                accKey = Scalar.add(accKey, Scalar.shl(keys[level], level * self.arity));
+                r = siblings[level].slice(keys[level] * 4, keys[level] * 4 + 4);
+                accKey.push(keys[level]);
                 level += 1;
             }
         }
 
         level -= 1;
-        accKey = lastAccKey;
+        accKey.pop();
 
-        if (foundKey) {
-            if (F.eq(key, foundKey)) {
-                value = fea2scalar(F, siblings[level + 1].slice(2, 6));
+        if (typeof (foundKey) !== 'undefined') {
+            if (nodeIsEq(key, foundKey, F)) {
+                value = foundVal;
             } else {
                 insKey = foundKey;
-                insValue = fea2scalar(F, siblings[level + 1].slice(2, 6));
+                insValue = foundVal;
                 isOld0 = false;
             }
         }
@@ -346,19 +338,64 @@ class SMT {
 
     /**
      * Get path for a giving key
-     * @param {Field} k - key
+     * @param {Scalar} k - key
      * @returns {Array[Number]} - path merkle-tree
      */
     splitKey(k) {
-        const self = this;
         const res = [];
-        let auxk = Scalar.e(self.F.toObject(k));
-        for (let i = 0; i < self.maxLevels; i++) {
-            res.push(Scalar.toNumber(Scalar.band(auxk, self.mask)));
-            auxk = Scalar.shr(auxk, self.arity);
+        const F = this.F;
+        const auxk = [F.toObject(k[0]), F.toObject(k[1]), F.toObject(k[2]), F.toObject(k[3])];
+        for (let i = 0; i < 64; i++) {
+            for (let j = 0; j < 4; j++) {
+                res.push(Scalar.toNumber(Scalar.band(auxk[j], Scalar.e(1))));
+                auxk[j] = Scalar.shr(auxk[j], 1);
+            }
         }
 
         return res;
+    }
+
+    /**
+     * Removes bits from the key depending on the smt level
+     * @param {Array[Field]} k -key
+     * @param {Number} nBits - bits to remove
+     * @returns {Array[Field]} - remaining key bits to store
+     */
+    removeKeyBits(k, nBits) {
+        const fullLevels = Math.floor(nBits / 4);
+        const F = this.F;
+        const auxk = [F.toObject(k[0]), F.toObject(k[1]), F.toObject(k[2]), F.toObject(k[3])];
+        for (let i = 0; i < 4; i++) {
+            let n = fullLevels;
+            if (fullLevels * 4 + i < nBits) n += 1;
+            auxk[i] = Scalar.shr(auxk[i], n);
+        }
+
+        return [F.e(auxk[0]), F.e(auxk[1]), F.e(auxk[2]), F.e(auxk[3])];
+    }
+
+    /**
+     * Joins full key from remaining key and path already used
+     * @param {Array[Number]} bits - key path used
+     * @param {Array[Field]} k - remaining key
+     * @returns {Array[Field]} - Full key
+     */
+    joinKey(bits, k) {
+        const n = [0, 0, 0, 0];
+        const F = this.F;
+        const accs = [Scalar.zero, Scalar.zero, Scalar.zero, Scalar.zero];
+        for (let i = 0; i < bits.length; i++) {
+            if (bits[i]) {
+                accs[i % 4] = Scalar.bor(accs[i % 4], Scalar.shl(Scalar.one, n[i % 4]));
+            }
+            n[i % 4] += 1;
+        }
+        const auxk = [F.toObject(k[0]), F.toObject(k[1]), F.toObject(k[2]), F.toObject(k[3])];
+        for (let i = 0; i < 4; i++) {
+            auxk[i] = Scalar.bor(Scalar.shl(auxk[i], n[i]), accs[i]);
+        }
+
+        return [F.e(auxk[0]), F.e(auxk[1]), F.e(auxk[2]), F.e(auxk[3])];
     }
 }
 

@@ -21,7 +21,7 @@ describe('smtUtils', async function () {
 
     it('set-get account', async () => {
         const db = new MemDB(F);
-        const smt = new SMT(db, 4, poseidon, poseidon.F);
+        const smt = new SMT(db, poseidon, poseidon.F);
 
         const ethAddr = '0x12345';
         const account = {
@@ -29,7 +29,7 @@ describe('smtUtils', async function () {
             nonce: Scalar.e('735'),
         };
 
-        const root = await stateUtils.setAccountState(ethAddr, smt, F.zero, account.balance, account.nonce);
+        const root = await stateUtils.setAccountState(ethAddr, smt, smt.empty, account.balance, account.nonce);
         const resAccount = await stateUtils.getState(ethAddr, smt, root);
 
         expect(account.balance.toString()).to.be.equal(resAccount.balance.toString());
@@ -38,13 +38,13 @@ describe('smtUtils', async function () {
 
     it('set-get hash bytecode', async () => {
         const db = new MemDB(F);
-        const smt = new SMT(db, 4, poseidon, poseidon.F);
+        const smt = new SMT(db, poseidon, poseidon.F);
 
         const ethAddr = '0x12345';
         const bytecode = '0x6789A';
         const hashBytecode = await smtUtils.hashContractBytecode(bytecode);
 
-        const root = await stateUtils.setContractBytecode(ethAddr, smt, F.zero, bytecode);
+        const root = await stateUtils.setContractBytecode(ethAddr, smt, smt.empty, bytecode);
         const resHashBytecode = await stateUtils.getContractHashBytecode(ethAddr, smt, root);
 
         expect(hashBytecode).to.be.equal(resHashBytecode);
@@ -52,7 +52,7 @@ describe('smtUtils', async function () {
 
     it('set-get contract storage', async () => {
         const db = new MemDB(F);
-        const smt = new SMT(db, 4, poseidon, poseidon.F);
+        const smt = new SMT(db, poseidon, poseidon.F);
 
         const ethAddr = '0x12345';
         const storage = {
@@ -61,7 +61,7 @@ describe('smtUtils', async function () {
             '2873': Scalar.e(77),
         };
 
-        const root = await stateUtils.setContractStorage(ethAddr, smt, F.zero, storage);
+        const root = await stateUtils.setContractStorage(ethAddr, smt, smt.empty, storage);
         const resStorage = await stateUtils.getContractStorage(ethAddr, smt, root, Object.keys(storage));
 
         expect(lodash.isEqual(resStorage, storage)).to.be.equal(true);

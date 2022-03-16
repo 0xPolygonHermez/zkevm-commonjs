@@ -5,12 +5,12 @@ const smtUtils = require('./smt-utils');
  * Get the current state of an ethereum address
  * @param {String} ethAddr ethereum address
  * @param {Object} smt merkle tree structure
- * @param {Uint8Array} root merkle tree root
+ * @param {Array[Field]} root merkle tree root
  * @returns {Object} ethereum address state
  */
 async function getState(ethAddr, smt, root) {
-    const keyBalance = await smtUtils.keyEthAddrBalance(ethAddr, smt.arity);
-    const keyNonce = await smtUtils.keyEthAddrNonce(ethAddr, smt.arity);
+    const keyBalance = await smtUtils.keyEthAddrBalance(ethAddr);
+    const keyNonce = await smtUtils.keyEthAddrNonce(ethAddr);
 
     let response;
     try {
@@ -34,14 +34,14 @@ async function getState(ethAddr, smt, root) {
  * Set a state of an ethereum address
  * @param {String} ethAddr ethereum address
  * @param {Object} smt merkle tree structure
- * @param {Uint8Array} root merkle tree root
+ * @param {Array[Field]} root merkle tree root
  * @param {Scalar|Number} balance new balance
  * @param {Scalar|Number} nonce new nonce
- * @returns {Uint8Array} new state root
+ * @returns {Array[Field]} new state root
  */
 async function setAccountState(ethAddr, smt, root, balance, nonce) {
-    const keyBalance = await smtUtils.keyEthAddrBalance(ethAddr, smt.arity);
-    const keyNonce = await smtUtils.keyEthAddrNonce(ethAddr, smt.arity);
+    const keyBalance = await smtUtils.keyEthAddrBalance(ethAddr);
+    const keyNonce = await smtUtils.keyEthAddrNonce(ethAddr);
 
     let auxRes = await smt.set(root, keyBalance, Scalar.e(balance));
     auxRes = await smt.set(auxRes.newRoot, keyNonce, Scalar.e(nonce));
@@ -53,28 +53,27 @@ async function setAccountState(ethAddr, smt, root, balance, nonce) {
  * Get the hash(bytecode) of a smart contract
  * @param {String} ethAddr ethereum address
  * @param {Object} smt merkle tree structure
- * @param {Uint8Array} root merkle tree root
+ * @param {Array[Field]} root merkle tree root
  * @returns {String} hash(bytecode) represented as hexadecimal string
  */
 async function getContractHashBytecode(ethAddr, smt, root) {
-    const keyContractCode = await smtUtils.keyContractCode(ethAddr, smt.arity);
+    const keyContractCode = await smtUtils.keyContractCode(ethAddr);
     const res = await smt.get(root, keyContractCode);
 
-    return res.value.toString(16).padStart(64, '0');
+    return `0x${res.value.toString(16).padStart(64, '0')}`;
 }
 
 /**
  * Set the bytecode of a smart contract
  * @param {String} ethAddr ethereum address
  * @param {Object} smt merkle tree structure
- * @param {Uint8Array} root merkle tree root
+ * @param {Array[Field]} root merkle tree root
  * @param {String} bytecode smart contract bytecode represented as hexadecimal string
- * @returns {Uint8Array} new state root
+ * @returns {Array[Field]} new state root
  */
 async function setContractBytecode(ethAddr, smt, root, bytecode) {
     const hashByteCode = await smtUtils.hashContractBytecode(bytecode);
-    const keyContractCode = await smtUtils.keyContractCode(ethAddr, smt.arity);
-
+    const keyContractCode = await smtUtils.keyContractCode(ethAddr);
     const res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
 
     return res.newRoot;
@@ -84,7 +83,7 @@ async function setContractBytecode(ethAddr, smt, root, bytecode) {
  * Get the sorage values of a smart contract
  * @param {String} ethAddr ethereum address
  * @param {Object} smt merkle tree structure
- * @param {Uint8Array} root merkle tree root
+ * @param {Array[Field]} root merkle tree root
  * @param {Array[String|Scalar]} storagePos smart contract storage position
  * @returns {Object} mapping [storagePosition - value]
  */
@@ -93,7 +92,7 @@ async function getContractStorage(ethAddr, smt, root, storagePos) {
 
     for (let i = 0; i < storagePos.length; i++) {
         const pos = storagePos[i];
-        const keyStoragePos = await smtUtils.keyContractStorage(ethAddr, pos, smt.arity);
+        const keyStoragePos = await smtUtils.keyContractStorage(ethAddr, pos);
         const resSMT = await smt.get(root, keyStoragePos);
         res[(Scalar.e(pos)).toString()] = resSMT.value;
     }
@@ -105,9 +104,9 @@ async function getContractStorage(ethAddr, smt, root, storagePos) {
  * Set the storage of a smart contract address
  * @param {String} ethAddr ethereum address
  * @param {Object} smt merkle tree structure
- * @param {Uint8Array} root merkle tree root
+ * @param {Array[Field]} root merkle tree root
  * @param {Object} storage [key-value] object containing [storagePos - stoValue]
- * @returns {Uint8Array} new state root
+ * @returns {Array[Field]} new state root
  */
 async function setContractStorage(ethAddr, smt, root, storage) {
     let tmpRoot = root;
@@ -118,7 +117,7 @@ async function setContractStorage(ethAddr, smt, root, storage) {
         const pos = storagePos[i];
         const value = storage[pos];
 
-        const keyStoragePos = await smtUtils.keyContractStorage(ethAddr, pos, smt.arity);
+        const keyStoragePos = await smtUtils.keyContractStorage(ethAddr, pos);
 
         const auxRes = await smt.set(tmpRoot, keyStoragePos, Scalar.e(value));
         tmpRoot = auxRes.newRoot;
@@ -131,11 +130,11 @@ async function setContractStorage(ethAddr, smt, root, storage) {
  * Set the smt genesis with an array of addresses, amounts and nonces
  * @param {String} addressArray ethereum address array
  * @param {Object} amountArray amount array
- * @param {Uint8Array} nonceArray nonce array
+ * @param {Array[Field]} nonceArray nonce array
  * @param {Object} smt merkle tree structure
  */
 async function setGenesisBlock(addressArray, amountArray, nonceArray, smt) {
-    let currentRoot = smt.F.zero;
+    let currentRoot = smt.empty;
     for (let i = 0; i < addressArray.length; i++) {
         currentRoot = await setAccountState(addressArray[i], smt, currentRoot, amountArray[i], nonceArray[i]);
     }

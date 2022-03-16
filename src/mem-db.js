@@ -1,5 +1,5 @@
 const { Scalar } = require('ffjavascript');
-const { stringifyBigInts, unstringifyBigInts } = require('ffjavascript').utils;
+const { h4toString } = require('./smt-utils');
 
 class MemDB {
     /**
@@ -18,11 +18,15 @@ class MemDB {
 
     /**
      * Get merkle-tree node value
-     * @param {Field} key - key in Field representation
+     * @param {Array[Field]} key - key in Array Field representation
      * @returns {Array[Fields] | null} Node childs if found, otherwise return null
      */
     async getSmtNode(key) {
-        const keyS = this.F.toString(key, 16).padStart(64, '0');
+        if (key.length !== 4) {
+            throw Error('SMT key must be an array of 4 Fields');
+        }
+
+        const keyS = h4toString(key);
         const res = [];
 
         if (typeof this.db[keyS] === 'undefined') {
@@ -42,15 +46,19 @@ class MemDB {
 
     /**
      * Set merkle-tree node
-     * @param {Field} key - key in Field representation
+     * @param {Array[Field]} key - key in Field representation
      * @param {Array[Field]} value - child array
      */
     async setSmtNode(key, value) {
-        const keyS = this.F.toString(key, 16).padStart(64, '0');
+        if (key.length !== 4) {
+            throw Error('SMT key must be an array of 4 Fields');
+        }
+
+        const keyS = h4toString(key);
         this.db[keyS] = [];
 
         for (let i = 0; i < value.length; i++) {
-            this.db[keyS].push(this.F.toString(value[i], 16).padStart(64, '0'));
+            this.db[keyS].push(this.F.toString(value[i], 16).padStart(16, '0'));
         }
     }
 
@@ -61,7 +69,7 @@ class MemDB {
      */
     async setValue(key, value) {
         const keyS = Scalar.e(key).toString(16).padStart(64, '0');
-        this.db[keyS] = JSON.stringify(stringifyBigInts(value));
+        this.db[keyS] = JSON.stringify(value);
     }
 
     /**
@@ -76,7 +84,7 @@ class MemDB {
             return null;
         }
 
-        return unstringifyBigInts(JSON.parse(this.db[keyS]));
+        return JSON.parse(this.db[keyS]);
     }
 
     startCapture() {

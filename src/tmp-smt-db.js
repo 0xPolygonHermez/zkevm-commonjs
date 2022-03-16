@@ -1,3 +1,5 @@
+const { h4toString, stringToH4 } = require('./smt-utils');
+
 /**
  * This is a DB which intends to get all the state from the srcDB and
  * store all the inserts insetead of modifying the DB
@@ -13,11 +15,15 @@ class TmpSmtDB {
     /**
      * Get function of the DB, return and array of values
      * Use the srcDb in case there's no inserts stored with this key
-     * @param {Uint8Array} key - Key
-     * @returns {Uint8Array Array} Array of hex values
+     * @param {Array[Field]} key - Key
+     * @returns {Array[String]} Array of hex values
      */
     async getSmtNode(key) {
-        const keyS = this.F.toString(key, 16).padStart(64, '0');
+        if (key.length !== 4) {
+            throw Error('SMT key must be an array of 4 Fields');
+        }
+
+        const keyS = h4toString(key);
         let res = [];
 
         if (this.inserts[keyS]) {
@@ -34,14 +40,20 @@ class TmpSmtDB {
     /**
      * Set function of the DB, all the inserts will be stored
      * In the inserts Object
-     * @param {Uint8Array} key - Key
-     * @param {Uint8Array} value - Value
+     * @param {Array[Fields]} key - Key
+     * @param {Array[Fields]} value - Value
      */
     async setSmtNode(key, value) {
-        const keyS = this.F.toString(key, 16).padStart(64, '0');
+        if (key.length !== 4) {
+            throw Error('SMT key must be an array of 4 Fields');
+        }
+
+        const keyS = h4toString(key);
+
         this.inserts[keyS] = [];
+
         for (let i = 0; i < value.length; i++) {
-            this.inserts[keyS].push(this.F.toString(value[i], 16).padStart(64, '0'));
+            this.inserts[keyS].push(this.F.toString(value[i], 16).padStart(16, '0'));
         }
     }
 
@@ -51,7 +63,7 @@ class TmpSmtDB {
     async populateSrcDb() {
         const insertKeys = Object.keys(this.inserts);
         for (let i = 0; i < insertKeys.length; i++) {
-            const key = this.F.e(`0x${insertKeys[i]}`);
+            const key = stringToH4(insertKeys[i]);
             const value = this.inserts[insertKeys[i]].map((element) => this.F.e(`0x${element}`));
             await this.srcDb.setSmtNode(key, value);
         }
