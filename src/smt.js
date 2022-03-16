@@ -2,7 +2,9 @@
 
 const { Scalar } = require('ffjavascript');
 
-const { scalar2fea, fea2scalar } = require('./smt-utils');
+const {
+    scalar2fea, fea2scalar, nodeIsZero, nodeIsEq, isOneSiblings,
+} = require('./smt-utils');
 
 class SMT {
     /**
@@ -16,27 +18,6 @@ class SMT {
         this.hash = hash;
         this.F = F;
         this.empty = [F.zero, F.zero, F.zero, F.zero];
-    }
-
-    nodeIsZero(n) {
-        return (this.F.isZero(n[0])
-            && this.F.isZero(n[1])
-            && this.F.isZero(n[2])
-            && this.F.isZero(n[3]));
-    }
-
-    nodeIsEq(n1, n2) {
-        return (this.F.eq(n1[0], n2[0])
-            && this.F.eq(n1[1], n2[1])
-            && this.F.eq(n1[2], n2[2])
-            && this.F.eq(n1[3], n2[3]));
-    }
-
-    isOneSiblings(n) {
-        return (this.F.eq(n[0], this.F.one)
-            && this.F.isZero(n[1])
-            && this.F.isZero(n[2])
-            && this.F.isZero(n[3]));
     }
 
     /**
@@ -65,7 +46,7 @@ class SMT {
             let nFound = 0;
             let fnd;
             for (let i = 0; i < a.length; i += 4) {
-                if (!self.nodeIsZero(a.slice(i, i + 4))) {
+                if (!nodeIsZero(a.slice(i, i + 4), F)) {
                     nFound += 1;
                     fnd = i / 4;
                 }
@@ -99,9 +80,9 @@ class SMT {
         let foundOldValH;
         let foundVal;
 
-        while (!this.nodeIsZero(r) && (typeof (foundKey) === 'undefined')) {
+        while (!nodeIsZero(r, F) && (typeof (foundKey) === 'undefined')) {
             siblings[level] = await self.db.getSmtNode(r);
-            if (this.isOneSiblings(siblings[level])) {
+            if (isOneSiblings(siblings[level], F)) {
                 const hKV = await self.db.getSmtNode(siblings[level].slice(4));
                 foundRKey = hKV.slice(0, 4);
                 foundOldValH = hKV.slice(4);
@@ -120,7 +101,7 @@ class SMT {
 
         if (!Scalar.isZero(value)) {
             if (typeof (foundKey) !== 'undefined') {
-                if (this.nodeIsEq(key, foundKey)) { // Update
+                if (nodeIsEq(key, foundKey, F)) { // Update
                     mode = 'update';
 
                     const newValH = await hashSave(scalar2fea(F, value));
@@ -196,7 +177,7 @@ class SMT {
                     newRoot = newLeafHash;
                 }
             }
-        } else if ((typeof (foundKey) !== 'undefined') && (this.nodeIsEq(key, foundKey))) { // Delete
+        } else if ((typeof (foundKey) !== 'undefined') && (nodeIsEq(key, foundKey, F))) { // Delete
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
                     siblings[level][keys[level] * 4 + j] = F.zero;
@@ -208,7 +189,7 @@ class SMT {
                     mode = 'deleteFound';
                     siblings[level + 1] = await self.db.getSmtNode(siblings[level].slice(uKey * 4, uKey * 4 + 4));
 
-                    if (self.isOneSiblings(siblings[level + 1])) {
+                    if (isOneSiblings(siblings[level + 1], F)) {
                         const hKV = await self.db.getSmtNode(siblings[level + 1].slice(4));
                         const rKey = hKV.slice(0, 4);
 
@@ -313,9 +294,9 @@ class SMT {
 
         let foundVal;
 
-        while ((!this.nodeIsZero(r)) && (typeof (foundKey) === 'undefined')) {
+        while ((!nodeIsZero(r, F)) && (typeof (foundKey) === 'undefined')) {
             siblings[level] = await self.db.getSmtNode(r);
-            if (this.isOneSiblings(siblings[level])) {
+            if (isOneSiblings(siblings[level], F)) {
                 const hKV = await self.db.getSmtNode(siblings[level].slice(4));
                 const foundRKey = hKV.slice(0, 4);
                 const foundOldValH = hKV.slice(4);
@@ -333,7 +314,7 @@ class SMT {
         accKey.pop();
 
         if (typeof (foundKey) !== 'undefined') {
-            if (self.nodeIsEq(key, foundKey)) {
+            if (nodeIsEq(key, foundKey, F)) {
                 value = foundVal;
             } else {
                 insKey = foundKey;
@@ -374,6 +355,12 @@ class SMT {
         return res;
     }
 
+    /**
+     * Removes bits from the key depending on the smt level
+     * @param {Array[Field]} k -key
+     * @param {Number} nBits - bits to remove
+     * @returns {Array[Field]} - remaining key bits to store
+     */
     removeKeyBits(k, nBits) {
         const fullLevels = Math.floor(nBits / 4);
         const F = this.F;
@@ -387,6 +374,12 @@ class SMT {
         return [F.e(auxk[0]), F.e(auxk[1]), F.e(auxk[2]), F.e(auxk[3])];
     }
 
+    /**
+     * Joins full key from remaining key and path already used
+     * @param {Array[Number]} bits - key path used
+     * @param {Array[Field]} k - remaining key
+     * @returns {Array[Field]} - Full key
+     */
     joinKey(bits, k) {
         const n = [0, 0, 0, 0];
         const F = this.F;
@@ -400,23 +393,6 @@ class SMT {
         const auxk = [F.toObject(k[0]), F.toObject(k[1]), F.toObject(k[2]), F.toObject(k[3])];
         for (let i = 0; i < 4; i++) {
             auxk[i] = Scalar.bor(Scalar.shl(auxk[i], n[i]), accs[i]);
-        }
-
-        return [F.e(auxk[0]), F.e(auxk[1]), F.e(auxk[2]), F.e(auxk[3])];
-    }
-
-    scalar2key(s) {
-        const F = this.F;
-        const auxk = [Scalar.zero, Scalar.zero, Scalar.zero, Scalar.zero];
-        let r = Scalar.e(s);
-        let i = 0;
-        while (!Scalar.isZero(r)) {
-            auxk[i % 4] = Scalar.shl(auxk[i % 4], 1);
-            if (!Scalar.isZero(Scalar.band(r, Scalar.one))) {
-                auxk[i % 4] = Scalar.add(auxk[i % 4], Scalar.one);
-            }
-            r = Scalar.shr(r, 1);
-            i += 1;
         }
 
         return [F.e(auxk[0]), F.e(auxk[1]), F.e(auxk[2]), F.e(auxk[3])];

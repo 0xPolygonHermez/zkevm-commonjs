@@ -113,7 +113,7 @@ function h4toString(h4) {
 /**
  * Convert string into an array of scalars
  * @param {String} s - 256 bit number represented as hex string
- * @returns {Array} - Array of Scalars of 64 bits
+ * @returns {Array[Scalar]} - Array of Scalars of 64 bits
  */
 function stringToH4(s) {
     if (s.slice(0, 2) !== '0x') throw new Error('Hexadecimal required');
@@ -127,6 +127,47 @@ function stringToH4(s) {
     res[0] = Scalar.e(`0x${s.slice(50)}`);
 
     return res;
+}
+
+/**
+ * Check if an smt node is zero
+ * @param {Array[Field]} n - node
+ * @param {Object} F - Field
+ * @returns {Bool} true if all elements are zero, otherwise false
+ */
+function nodeIsZero(n, F) {
+    return (F.isZero(n[0])
+        && F.isZero(n[1])
+        && F.isZero(n[2])
+        && F.isZero(n[3]));
+}
+
+/**
+ * Check equality between two nodes
+ * @param {Array[Field]} n1 - node
+ * @param {Array[Field]} n2 - node
+ * @param {Object} F - Field
+ * @returns {Bool} true if equal, otherwise false
+ */
+function nodeIsEq(n1, n2, F) {
+    return (F.eq(n1[0], n2[0])
+        && F.eq(n1[1], n2[1])
+        && F.eq(n1[2], n2[2])
+        && F.eq(n1[3], n2[3]));
+}
+
+/**
+ * Check if a node is a final node
+ * final node: [1, 0, 0, 0]
+ * @param {Array[Field]} n - node
+ * @param {Object} F - Field
+ * @returns {Bool} true if node is final otherwise false
+ */
+function isOneSiblings(n, F) {
+    return (F.eq(n[0], F.one)
+        && F.isZero(n[1])
+        && F.isZero(n[2])
+        && F.isZero(n[3]));
 }
 
 /**
@@ -167,7 +208,7 @@ async function keyEthAddrBalance(_ethAddr) {
  *   hk1: H([0, 0, 0, 0, 0, 0, 0, 0])
  *   key = H([...hk0, ...hk1])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
- * @returns {Scalar} - key computed
+ * @returns {Array[Field]} - key computed
  */
 async function keyEthAddrNonce(_ethAddr) {
     const poseidon = await getPoseidon();
@@ -199,7 +240,7 @@ async function keyEthAddrNonce(_ethAddr) {
  *   hk1: H([0, 0, 0, 0, 0, 0, 0, 0])
  *   key = H([...hk0, ...hk1])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
- * @returns {Scalar} - key computed
+ * @returns {Array[Field]} - key computed
  */
 async function keyContractCode(_ethAddr) {
     const poseidon = await getPoseidon();
@@ -232,7 +273,7 @@ async function keyContractCode(_ethAddr) {
  *   key = H([...hk0, ...hk1])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
  * @param {Number | Scalar} _storagePos - smart contract storage position
- * @returns {Scalar} - key computed
+ * @returns {Array[Field]} - key computed
  */
 async function keyContractStorage(_ethAddr, _storagePos) {
     const poseidon = await getPoseidon();
@@ -277,8 +318,7 @@ async function fillDBArray(node, db, dbObject, Fr) {
 
     if (Scalar.fromString(childArrayHex[0], 16) !== Scalar.e(1)) {
         for (let i = 0; i < childArray.length; i += 4) {
-            if (!(Fr.isZero(childArray[i]) && Fr.isZero(childArray[i + 1])
-                  && Fr.isZero(childArray[i + 2]) && Fr.isZero(childArray[i + 3]))) {
+            if (!nodeIsZero(childArray.slice(i, i + 4), Fr)) {
                 await fillDBArray(
                     [childArray[i],
                         childArray[i + 1],
@@ -317,11 +357,7 @@ async function fillDBArray(node, db, dbObject, Fr) {
  */
 async function getCurrentDB(root, db, Fr) {
     const dbObject = {};
-    if (Fr.isZero(root[0])
-        && Fr.isZero(root[1])
-        && Fr.isZero(root[2])
-        && Fr.isZero(root[3])
-    ) {
+    if (nodeIsZero(root, Fr)) {
         return null;
     }
     await fillDBArray(root, db, dbObject, Fr);
@@ -402,4 +438,7 @@ module.exports = {
     h4toString,
     stringToH4,
     scalar2h4,
+    nodeIsZero,
+    nodeIsEq,
+    isOneSiblings,
 };

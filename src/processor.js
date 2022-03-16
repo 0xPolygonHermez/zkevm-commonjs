@@ -58,6 +58,7 @@ module.exports = class Processor {
         this.decodedTxs = [];
         this.builded = false;
         this.starkInput = {};
+        this.snarkInput = '0x';
         this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;

@@ -8,7 +8,7 @@ const { argv } = require('yargs');
 const {
     smtUtils, getPoseidon, Constants, SMT, MemDB,
 } = require('../index');
-const { pathTestVectors } = require('./helpers/test-utils');
+const { pathTestVectors, scalar2key } = require('./helpers/test-utils');
 const { h4toScalar } = require('../src/smt-utils');
 
 // eslint-disable-next-line prefer-arrow-callback
@@ -194,11 +194,11 @@ describe('smtUtils', async function () {
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
 
-        const r1 = await smt.set(smt.empty, smt.scalar2key(1), Scalar.e(1));
-        const r2 = await smt.set(r1.newRoot, smt.scalar2key(2), Scalar.e(2));
-        const r3 = await smt.set(r2.newRoot, smt.scalar2key(3), Scalar.e(3));
-        const r4 = await smt.set(r3.newRoot, smt.scalar2key(4), Scalar.e(4));
-        const r5 = await smt.set(r4.newRoot, smt.scalar2key(17), Scalar.e(5));
+        const r1 = await smt.set(smt.empty, scalar2key(1, F), Scalar.e(1));
+        const r2 = await smt.set(r1.newRoot, scalar2key(2, F), Scalar.e(2));
+        const r3 = await smt.set(r2.newRoot, scalar2key(3, F), Scalar.e(3));
+        const r4 = await smt.set(r3.newRoot, scalar2key(4, F), Scalar.e(4));
+        const r5 = await smt.set(r4.newRoot, scalar2key(17, F), Scalar.e(5));
 
         const fullDB = await smtUtils.getCurrentDB(r5.newRoot, db, F);
 
