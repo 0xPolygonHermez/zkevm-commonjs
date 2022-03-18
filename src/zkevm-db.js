@@ -135,7 +135,7 @@ class ZkEVMDB {
      * @param {Object} poseidon - Poseidon object
      * @param {Array[Fields]} stateRoot - state merkle root
      * @param {Array[Fields]} localExitRoot - exit merkle root
-     * @param {Object} genesis - genesis block accounts (address, nonce, balance, deployedBytecode, storage)
+     * @param {Object} genesis - genesis block accounts (address, nonce, balance, bytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
      * @returns {Object} ZkEVMDB object
@@ -152,7 +152,7 @@ class ZkEVMDB {
             // Add contracts to genesis
             for (let j = 0; j < genesis.length; j++) {
                 const {
-                    address, nonce, balance, deployedBytecode, storage,
+                    address, nonce, balance, bytecode, storage,
                 } = genesis[j];
 
                 // Add contract account to EVM
@@ -166,10 +166,10 @@ class ZkEVMDB {
                 newStateRoot = await setAccountState(address, newSmt, newStateRoot, evmAcc.balance, evmAcc.nonce);
 
                 // Add bytecode and storage to EVM and SMT
-                if (deployedBytecode) {
-                    await newVm.stateManager.putContractCode(addressInstance, toBuffer(deployedBytecode));
-                    const evmDeployedBytecode = await newVm.stateManager.getContractCode(addressInstance);
-                    newStateRoot = await setContractBytecode(address, newSmt, newStateRoot, `0x${evmDeployedBytecode.toString('hex')}`);
+                if (bytecode) {
+                    await newVm.stateManager.putContractCode(addressInstance, toBuffer(bytecode));
+                    const evmBytecode = await newVm.stateManager.getContractCode(addressInstance);
+                    newStateRoot = await setContractBytecode(address, newSmt, newStateRoot, `0x${evmBytecode.toString('hex')}`);
                 }
 
                 if (storage) {

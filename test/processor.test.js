@@ -86,7 +86,7 @@ describe('Processor', async function () {
                     expect(await contractAccount.isContract()).to.be.true;
 
                     const contractCode = await zkEVMDB.vm.stateManager.getContractCode(contractAddres);
-                    expect(contractCode.toString('hex')).to.be.equal(contract.deployedBytecode.slice(2));
+                    expect(contractCode.toString('hex')).to.be.equal(contract.bytecode.slice(2));
 
                     for (const [key, value] of Object.entries(contract.storage)) {
                         const contractStorage = await zkEVMDB.vm.stateManager.getContractStorage(contractAddres, toBuffer(key));
