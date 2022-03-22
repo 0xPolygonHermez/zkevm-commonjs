@@ -68,6 +68,7 @@ module.exports = class Processor {
         this.globalExitRoot = globalExitRoot;
         this.timestamp = timestamp;
         this.vm = vm;
+        this.evmSteps = [];
     }
 
     /**
@@ -223,6 +224,8 @@ module.exports = class Processor {
                     s: currenTx.s,
                 });
                 const txResult = await this.vm.runTx({ tx: evmTx });
+                this.evmSteps.push(txResult.execResult.evmSteps);
+
                 // Check transaction completed
                 if (txResult.execResult.exceptionError) {
                     currentDecodedTx.isInvalid = true;
