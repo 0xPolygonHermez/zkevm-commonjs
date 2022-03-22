@@ -286,6 +286,9 @@ module.exports = class Processor {
                             storage,
                         );
 
+                        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
+                        await this.db.setValue(keyDumpStorage, storage);
+
                         if (currenTx.to && currenTx.to !== ethers.constants.AddressZero) {
                             // Set bytecode at db when smart contract is called
                             const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
