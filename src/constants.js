@@ -7,6 +7,7 @@ module.exports.DB_STATE_ROOT = ethers.utils.id(('ZKEVM_DB_STATE_ROOT'));
 module.exports.DB_LOCAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_DB_LOCAL_EXIT_ROOT'));
 module.exports.DB_GLOBAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_GLOBAL_EXIT_ROOT'));
 module.exports.DB_SEQ_CHAINID = ethers.utils.id(('ZKEVM_DB_SEQ_CHAINID'));
+module.exports.DB_ADDRESS_STORAGE = ethers.utils.id(('ZKEVM_DB_ADDRESS_STORAGE'));
 
 // Default values and global constants
 module.exports.DEFAULT_SEQ_CHAINID = 1000;

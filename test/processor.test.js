@@ -17,6 +17,7 @@ const {
 } = require('ethereumjs-util');
 const { defaultAbiCoder } = require('@ethersproject/abi');
 const path = require('path');
+const lodash = require('lodash');
 
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
@@ -88,9 +89,12 @@ describe('Processor', async function () {
                     const contractCode = await zkEVMDB.vm.stateManager.getContractCode(contractAddres);
                     expect(contractCode.toString('hex')).to.be.equal(contract.bytecode.slice(2));
 
+                    const dumpDB = await zkEVMDB.dumpStorage(contract.address);
+
                     for (const [key, value] of Object.entries(contract.storage)) {
                         const contractStorage = await zkEVMDB.vm.stateManager.getContractStorage(contractAddres, toBuffer(key));
                         expect(contractStorage.toString('hex')).to.equal(value.slice(2));
+                        expect(dumpDB[key]).to.be.equal(value);
                     }
                 }
             }
@@ -226,10 +230,22 @@ describe('Processor', async function () {
                 const newLeaf = await zkEVMDB.getCurrentAccountState(address);
                 expect(newLeaf.balance.toString()).to.equal(leaf.balance);
                 expect(newLeaf.nonce.toString()).to.equal(leaf.nonce);
+
                 // SMT
                 const smtNewLeaf = await zkEVMDB.getCurrentAccountState(address);
                 expect(smtNewLeaf.balance.toString()).to.equal(leaf.balance);
                 expect(smtNewLeaf.nonce.toString()).to.equal(leaf.nonce);
+
+                // Storage
+                const storage = await zkEVMDB.dumpStorage(address);
+
+                if (storage !== null) {
+                    if (update) {
+                        testVectors[i].expectedNewLeafs[address].storage = storage;
+                    } else {
+                        expect(lodash.isEqual(storage, leaf.storage)).to.be.equal(true);
+                    }
+                }
             }
 
             // Check the circuit input

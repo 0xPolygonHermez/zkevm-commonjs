@@ -130,6 +130,17 @@ class ZkEVMDB {
     }
 
     /**
+     * Get smart contract storage
+     * @param {String} address - smart contract address in hex string
+     * @returns {Object} smart contract storage
+    */
+    async dumpStorage(address) {
+        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
+
+        return this.db.getValue(keyDumpStorage);
+    }
+
+    /**
      * Create a new instance of the ZkEVMDB
      * @param {Object} db - Mem db object
      * @param {Object} poseidon - Poseidon object
@@ -189,6 +200,9 @@ class ZkEVMDB {
                         smtSto[keys[k]] = values[k];
                     }
                     newStateRoot = await setContractStorage(address, newSmt, newStateRoot, smtSto);
+
+                    const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
+                    await db.setValue(keyDumpStorage, smtSto);
                 }
             }
 
