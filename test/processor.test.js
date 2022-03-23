@@ -78,7 +78,7 @@ describe('Processor', async function () {
             // Check evm contract params
             for (const contract of genesis) {
                 if (contract.contractName) {
-                // Add contract interface for future contract interaction
+                    // Add contract interface for future contract interaction
                     const contractInterface = new ethers.utils.Interface(contract.abi);
                     contract.contractInterface = contractInterface;
                     const contractAddres = new Address(toBuffer(contract.address));
@@ -137,7 +137,6 @@ describe('Processor', async function () {
                             // Call to genesis contract
                             const contract = genesis.find((x) => x.contractName === txData.contractName);
                             const functionData = contract.contractInterface.encodeFunctionData(txData.function, txData.params);
-                            delete contract.contractInterface;
                             expect(functionData).to.equal(txData.data);
                         }
                     } else {

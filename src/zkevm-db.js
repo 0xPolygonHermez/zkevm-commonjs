@@ -19,7 +19,7 @@ const { h4toString, stringToH4 } = require('./smt-utils');
 const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt) {
+    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt, deployedBridge) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
@@ -30,6 +30,7 @@ class ZkEVMDB {
 
         this.smt = smt;
         this.vm = vm;
+        this.deployedBridge = deployedBridge;
     }
 
     /**
@@ -53,6 +54,7 @@ class ZkEVMDB {
             globalExitRoot,
             timestamp,
             this.vm.copy(),
+            this.deployedBridge
         );
     }
 
@@ -81,7 +83,7 @@ class ZkEVMDB {
         // Set local exit root
         await this.db.setValue(
             Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, processor.batchNumber),
-            h4toString(processor.currentLocalExitRoot),
+            h4toString(processor.newLocalExitRoot),
         );
 
         // Set last batch number
@@ -93,7 +95,8 @@ class ZkEVMDB {
         // Update ZKEVMDB variables
         this.lastBatch = processor.batchNumber;
         this.stateRoot = processor.currentStateRoot;
-        this.localExitRoot = processor.currentLocalExitRoot;
+        this.localExitRoot = processor.newLocalExitRoot;
+        this.vm = processor.vm;
     }
 
     /**
@@ -162,7 +165,7 @@ class ZkEVMDB {
      * @param {Object} smt - smt if already instantiated
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt) {
+    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt, deployedBridge = false) {
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
@@ -229,6 +232,7 @@ class ZkEVMDB {
                 poseidon,
                 newVm,
                 newSmt,
+                deployedBridge
             );
         }
 
@@ -244,6 +248,7 @@ class ZkEVMDB {
             poseidon,
             vm,
             smt,
+            deployedBridge
         );
     }
 }

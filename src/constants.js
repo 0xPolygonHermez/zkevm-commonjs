@@ -25,3 +25,8 @@ module.exports.SMT_KEY_SC_STORAGE = 3;
 // SMT constant
 module.exports.BYTECODE_ELEMENTS_HASH = 8;
 module.exports.BYTECODE_BYTES_ELEMENT = 7;
+
+// EVM constant
+module.exports.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2 = "0xAE4bB80bE56B819606589DE61d5ec3b522EEB032";
+module.exports.GLOBAL_EXIT_ROOT_STORAGE_POS = 0;
+module.exports.LOCAL_EXIT_ROOT_STORAGE_POS = 1;

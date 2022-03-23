@@ -44,6 +44,7 @@ module.exports = class Processor {
         globalExitRoot,
         timestamp,
         vm,
+        deployedBridge
     ) {
         this.db = db;
         this.batchNumber = batchNumber;
@@ -64,11 +65,13 @@ module.exports = class Processor {
         this.currentStateRoot = root;
         this.sequencerAddress = sequencerAddress;
         this.oldLocalExitRoot = localExitRoot;
-        this.currentLocalExitRoot = localExitRoot;
         this.globalExitRoot = globalExitRoot;
         this.timestamp = timestamp;
         this.vm = vm;
         this.evmSteps = [];
+        this.deployedBridge = deployedBridge;
+        this.newLocalExitRoot = deployedBridge ? 0 : localExitRoot;
+        this.touchedAccountsBatch = {};
     }
 
     /**
@@ -92,9 +95,18 @@ module.exports = class Processor {
         // Check the validity of rawTxs
         await this._decodeAndCheckRawTx();
 
+        // Set global exit root
+        if (this.deployedBridge) {
+            await this._setGlobalExitRoot();
+        }
+
         // Process transactions and update the state
         await this._processTx();
 
+        // Read Local exit root
+        if (this.deployedBridge) {
+            await this._readLocalExitRoot();
+        }
         // Calculate stark and snark input
         await this._computeStarkInput();
         await this._computeSnarkInput();
@@ -167,6 +179,28 @@ module.exports = class Processor {
             });
             this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
         }
+    }
+
+    async _setGlobalExitRoot() {
+        const storage = {};
+        const globalExitRootPos = ethers.utils.solidityKeccak256(["uint256", "uint256"], [this.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+        storage[globalExitRootPos] = smtUtils.h4toString(this.globalExitRoot);
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+            this.smt,
+            this.currentStateRoot,
+            storage,
+        );
+    }
+
+    async _readLocalExitRoot() {
+        const res = await stateUtils.getContractStorage(
+            Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+            this.smt,
+            this.currentStateRoot,
+            [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
+        );
+        this.newLocalExitRoot = res[Constants.LOCAL_EXIT_ROOT_STORAGE_POS]
     }
 
     /**
@@ -254,6 +288,11 @@ module.exports = class Processor {
                     // Get touched evm account
                     const addressInstance = Address.fromString(address);
                     const account = await this.vm.stateManager.getAccount(addressInstance);
+
+                    // Update batch touched stack
+                    this.touchedAccountsBatch[address] = account;
+
+
                     // Update smt with touched accounts
                     this.currentStateRoot = await stateUtils.setAccountState(
                         address,
@@ -319,7 +358,7 @@ module.exports = class Processor {
         const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
         const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
-        const newLocalExitRoot = smtUtils.h4toString(this.currentLocalExitRoot);
+        const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
         const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
 
         const batchHashData = calculateBatchHashData(
@@ -365,7 +404,7 @@ module.exports = class Processor {
         const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
         const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
-        const newLocalExitRoot = smtUtils.h4toString(this.currentLocalExitRoot);
+        const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
         const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
 
         const batchHashData = calculateBatchHashData(
@@ -434,4 +473,15 @@ module.exports = class Processor {
 
         return this.decodedTxs;
     }
+
+    /**
+     * Return touched accounts in this batch
+     * @return {Object} Accounts touched in this batch
+     */
+    getTouchedAccountsBatch() {
+        this._isBuilded();
+        return this.touchedAccountsBatch;
+    }
+
+
 };
