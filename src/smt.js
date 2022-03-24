@@ -56,9 +56,9 @@ class SMT {
             return -1;
         }
 
-        async function hashSave(a) {
-            const h = self.hash(a);
-            await self.db.setSmtNode(h, a);
+        async function hashSave(a, c) {
+            const h = self.hash(a, c);
+            await self.db.setSmtNode(h, [...a, ...c]);
 
             return h;
         }
@@ -105,8 +105,7 @@ class SMT {
                     mode = 'update';
 
                     const newValH = await hashSave(scalar2fea(F, value));
-                    const newKVH = await hashSave([...foundRKey, ...newValH]);
-                    const newLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...newKVH]);
+                    const newLeafHash = await hashSave([...foundRKey, ...newValH], [1n, 0n, 0n, 0n]);
                     if (level >= 0) {
                         for (let j = 0; j < 4; j++) {
                             siblings[level][keys[level] * 4 + j] = newLeafHash[j];
@@ -122,8 +121,7 @@ class SMT {
                     while (keys[level2] === foundKeys[level2]) level2 += 1;
 
                     const oldKey = this.removeKeyBits(foundKey, level2 + 1);
-                    const oldKVH = await hashSave([...oldKey, ...foundOldValH]);
-                    const oldLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...oldKVH]);
+                    const oldLeafHash = await hashSave([...oldKey, ...foundOldValH], [1n, 0n, 0n, 0n]);
 
                     insKey = foundKey;
                     insValue = foundVal;
@@ -131,8 +129,7 @@ class SMT {
 
                     const newKey = this.removeKeyBits(key, level2 + 1);
                     const newValH = await hashSave(scalar2fea(F, value));
-                    const newKVH = await hashSave([...newKey, ...newValH]);
-                    const newLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...newKVH]);
+                    const newLeafHash = await hashSave([...newKey, ...newValH], [1n, 0n, 0n, 0n]);
 
                     for (let i = 0; i < 8; i++) node[i] = F.zero;
                     for (let j = 0; j < 4; j++) {
@@ -166,8 +163,7 @@ class SMT {
 
                 const newKey = this.removeKeyBits(key, (level + 1));
                 const newValH = await hashSave(scalar2fea(F, value));
-                const newKVH = await hashSave([...newKey, ...newValH]);
-                const newLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...newKVH]);
+                const newLeafHash = await hashSave([...newKey, ...newValH], [1n, 0n, 0n, 0n]);
 
                 if (level >= 0) {
                     for (let j = 0; j < 4; j++) {
@@ -210,8 +206,7 @@ class SMT {
 
                         const oldKey = this.removeKeyBits(insKey, level + 1);
 
-                        const oldKVH = await hashSave([...oldKey, ...valH]);
-                        const oldLeafHash = await hashSave([F.one, F.zero, F.zero, F.zero, ...oldKVH]);
+                        const oldLeafHash = await hashSave([...oldKey, ...valH], [1n, 0n, 0n, 0n]);
 
                         if (level >= 0) {
                             for (let j = 0; j < 4; j++) {

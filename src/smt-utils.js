@@ -164,10 +164,7 @@ function nodeIsEq(n1, n2, F) {
  * @returns {Bool} true if node is final otherwise false
  */
 function isOneSiblings(n, F) {
-    return (F.eq(n[0], F.one)
-        && F.isZero(n[1])
-        && F.isZero(n[2])
-        && F.isZero(n[3]));
+    return (F.eq(n[8], F.one));
 }
 
 /**
