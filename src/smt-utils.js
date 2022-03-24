@@ -158,7 +158,7 @@ function nodeIsEq(n1, n2, F) {
 
 /**
  * Check if a node is a final node
- * final node: [1, 0, 0, 0]
+ * final node: [X, X, X, X, X, X, X, X, 1, 0, 0, 0]
  * @param {Array[Field]} n - node
  * @param {Object} F - Field
  * @returns {Bool} true if node is final otherwise false
@@ -313,7 +313,7 @@ async function fillDBArray(node, db, dbObject, Fr) {
 
     dbObject[nodeHex] = childArrayHex;
 
-    if (Scalar.fromString(childArrayHex[0], 16) !== Scalar.e(1)) {
+    if (!isOneSiblings(childArray, Fr)) {
         for (let i = 0; i < childArray.length; i += 4) {
             if (!nodeIsZero(childArray.slice(i, i + 4), Fr)) {
                 await fillDBArray(
@@ -327,17 +327,10 @@ async function fillDBArray(node, db, dbObject, Fr) {
                 );
             }
         }
-    } else { // final node: Hvalue --> key prime | value
-        const nodeFinal = [childArray[4], childArray[5], childArray[6], childArray[7]];
-        const hashV = await db.getSmtNode(nodeFinal);
-        const hashVHex = hashV.map((value) => Fr.toString(value, 16).padStart(16, '0'));
-        const nodeFinalHex = Scalar.toString(h4toString(nodeFinal), 16);
-
-        dbObject[nodeFinalHex] = hashVHex;
-
+    } else { // final node: keyPrime | hValue
         // Value
-        const nodeValue = [hashV[4], hashV[5], hashV[6], hashV[7]];
-        const valueFinal = await db.getSmtNode(nodeValue);
+        const nodeValue = [childArray[4], childArray[5], childArray[6], childArray[7]];
+        const valueFinal = (await db.getSmtNode(nodeValue)).slice(0, 8);
         const valueHex = valueFinal.map((value) => Fr.toString(value, 16).padStart(16, '0'));
         const nodeValueHex = Scalar.toString(h4toString(nodeValue), 16);
 
@@ -382,7 +375,7 @@ async function hashContractBytecode(_bytecode) {
 
     for (let i = 0; i < numHashes; i++) {
         const maxBytesToAdd = constants.BYTECODE_ELEMENTS_HASH * constants.BYTECODE_BYTES_ELEMENT;
-        const elementsToHash = [];
+        const elementsToHash = []; // 4 capacity + 8 elements
 
         if (i !== 0) {
             elementsToHash.push(...tmpHash);
@@ -415,7 +408,7 @@ async function hashContractBytecode(_bytecode) {
             }
         }
 
-        tmpHash = poseidon(elementsToHash);
+        tmpHash = poseidon(elementsToHash.slice(4, 12), elementsToHash.slice(0, 4));
     }
 
     return h4toString(tmpHash);

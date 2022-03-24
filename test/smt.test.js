@@ -27,8 +27,8 @@ describe('SMT', async function () {
         const rGet = await smt.get(r1.newRoot, scalar2key(1, F));
 
         assert(Scalar.eq(rGet.value, Scalar.e(2)));
-        const r2 = await smt.set(r1.newRoot, scalar2key(1, F), Scalar.e(0));
 
+        const r2 = await smt.set(r1.newRoot, scalar2key(1, F), Scalar.e(0));
         assert(smtUtils.nodeIsZero(r2.newRoot, F));
     });
 
@@ -133,7 +133,10 @@ describe('SMT', async function () {
         const smt = new SMT(db, poseidon, poseidon.F);
 
         const expectedRoot = [
-            6620612065322622989n, 9238508154751415057n, 5907658560825300888n, 14792080416178818608n,
+            442750481621001142n,
+            12174547650106208885n,
+            10730437371575329832n,
+            4693848817100050981n,
         ];
 
         const r0 = await smt.set(smt.empty, scalar2key(0, F), Scalar.e(2)); // 0x00
@@ -148,10 +151,10 @@ describe('SMT', async function () {
         const smt = new SMT(db, poseidon, poseidon.F);
 
         const expectedRoot = [
-            17693738749818092805n,
-            10269674354167721031n,
-            7548535221641326179n,
-            14566249822942923801n,
+            1858919074628455423n,
+            6601353726528022029n,
+            10580286528342663149n,
+            10595285547726113472n,
         ];
 
         const r0 = await smt.set(
@@ -183,7 +186,6 @@ describe('SMT', async function () {
             scalar2key(Scalar.e('56714103185361745016746792718676985000067748055642999311525839752090945477479'), F),
             Scalar.e('35179347944617143021579132182092200136526168785636368258055676929581544372820'),
         );
-
         assert(smtUtils.nodeIsEq(expectedRoot, r4.newRoot, F));
     });
 });
