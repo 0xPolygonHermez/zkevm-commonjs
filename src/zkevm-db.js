@@ -12,7 +12,7 @@ const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
 const {
-    getState, setAccountState, setContractBytecode, setContractStorage,
+    getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
 } = require('./state-utils');
 const { h4toString, stringToH4 } = require('./smt-utils');
 
@@ -138,6 +138,17 @@ class ZkEVMDB {
         const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
 
         return this.db.getValue(keyDumpStorage);
+    }
+
+    /**
+     * Get smart contract bytecode
+     * @param {String} address - smart contract address in hex string
+     * @returns {String} smart contract bytecode
+    */
+    async getBytecode(address) {
+        const hashByteCode = await getContractHashBytecode(address, this.smt, this.stateRoot);
+
+        return this.db.getValue(hashByteCode);
     }
 
     /**

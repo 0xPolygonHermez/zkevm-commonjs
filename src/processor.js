@@ -272,6 +272,8 @@ module.exports = class Processor {
                             this.currentStateRoot,
                             smCode.toString('hex'),
                         );
+                        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
+                        const oldSto = await this.db.getValue(keyDumpStorage);
                         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
                         const storage = {};
                         const keys = Object.keys(sto).map((v) => `0x${v}`);
@@ -279,14 +281,18 @@ module.exports = class Processor {
                         for (let k = 0; k < keys.length; k++) {
                             storage[keys[k]] = values[k];
                         }
+                        if (oldSto) {
+                            for (const key of Object.keys(oldSto)) {
+                                const value = storage[key];
+                                if (!value) { storage[key] = '0x00'; }
+                            }
+                        }
                         this.currentStateRoot = await stateUtils.setContractStorage(
                             address,
                             this.smt,
                             this.currentStateRoot,
                             storage,
                         );
-
-                        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
                         await this.db.setValue(keyDumpStorage, storage);
 
                         if (currenTx.to && currenTx.to !== ethers.constants.AddressZero) {
