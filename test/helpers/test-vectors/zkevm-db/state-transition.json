@@ -20,7 +20,7 @@
         "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23"
       }
     ],
-    "expectedOldRoot": "0x9794250a6924d7da41d5ea2fda8fcfd3bb8249ffc9ba94624e439e88baaac13b",
+    "expectedOldRoot": "0xbdde84a5932a2f0a1a4c6c51f3b64ea265d4f1461749298cfdd09b31122ce0d6",
     "txs": [
       {
         "id": 0,
@@ -36,7 +36,7 @@
         "reason": ""
       }
     ],
-    "expectedNewRoot": "0x233b53c98ba14bd95f362ceaace6bde63ee22920ff2ab0638f66472037186420",
+    "expectedNewRoot": "0xc0465433d9caa28474892b15dd2266db120036294da4cf8e4cde9e5e68898935",
     "expectedNewLeafs": {
       "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D": {
         "balance": "99900000000000000000",

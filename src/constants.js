@@ -23,5 +23,5 @@ module.exports.SMT_KEY_SC_CODE = 2;
 module.exports.SMT_KEY_SC_STORAGE = 3;
 
 // SMT constant
-module.exports.BYTECODE_ELEMENTS_HASH = 4;
+module.exports.BYTECODE_ELEMENTS_HASH = 8;
 module.exports.BYTECODE_BYTES_ELEMENT = 7;
