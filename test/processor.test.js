@@ -25,11 +25,14 @@ const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
+const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
+
+const { Block } = require('@ethereumjs/block');
 
 describe('Processor', async function () {
     this.timeout(100000);
 
-    const pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
+    const pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
 
     let update;
     let poseidon;
@@ -57,7 +60,7 @@ describe('Processor', async function () {
                 sequencerAddress,
                 expectedNewLeafs,
                 batchL2Data,
-                localExitRoot,
+                oldLocalExitRoot,
                 globalExitRoot,
                 batchHashData,
                 inputHash,
@@ -65,22 +68,31 @@ describe('Processor', async function () {
             } = testVectors[i];
 
             const db = new MemDB(F);
-
+            const deployedBridge = true;
             // create a zkEVMDB to compile the sc
             const zkEVMDB = await ZkEVMDB.newZkEVM(
                 db,
                 poseidon,
                 [F.zero, F.zero, F.zero, F.zero],
-                smtUtils.stringToH4(localExitRoot),
+                smtUtils.stringToH4(oldLocalExitRoot),
                 genesis,
+                null,
+                null,
+                deployedBridge
             );
+
 
             // Check evm contract params
             for (const contract of genesis) {
                 if (contract.contractName) {
                     // Add contract interface for future contract interaction
-                    const contractInterface = new ethers.utils.Interface(contract.abi);
-                    contract.contractInterface = contractInterface;
+                    if (contractsPolygonHermez[contract.contractName]) {
+                        const contractInterface = new ethers.utils.Interface(contractsPolygonHermez[contract.contractName].abi);
+                        contract.contractInterface = contractInterface;
+                    } else {
+                        const contractInterface = new ethers.utils.Interface(contract.abi);
+                        contract.contractInterface = contractInterface;
+                    }
                     const contractAddres = new Address(toBuffer(contract.address));
 
                     const contractAccount = await zkEVMDB.vm.stateManager.getAccount(contractAddres);
@@ -134,10 +146,15 @@ describe('Processor', async function () {
                 if (txData.data) {
                     if (txData.to) {
                         if (txData.contractName) {
-                            // Call to genesis contract
                             const contract = genesis.find((x) => x.contractName === txData.contractName);
                             const functionData = contract.contractInterface.encodeFunctionData(txData.function, txData.params);
-                            expect(functionData).to.equal(txData.data);
+                            //console.log(contract.contractInterface.getFunction("0x122650ff"));
+                            if (!update) {
+                                expect(functionData).to.equal(txData.data);
+                            } else {
+                                txData.data = functionData;
+                                tx.data = functionData;
+                            }
                         }
                     } else {
                         // Contract deployment from tx
@@ -179,11 +196,19 @@ describe('Processor', async function () {
                     customRawTx = signData.concat(r).concat(s).concat(v);
                 } else {
                     const rawTxEthers = await wallet.signTransaction(tx);
-                    expect(rawTxEthers).to.equal(txData.rawTx);
+                    if (!update) {
+                        expect(rawTxEthers).to.equal(txData.rawTx);
+                    } else {
+                        txData.rawTx = rawTxEthers;
+                    }
                     customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
                 }
 
-                expect(customRawTx).to.equal(txData.customRawTx);
+                if (!update) {
+                    expect(customRawTx).to.equal(txData.customRawTx);
+                } else {
+                    txData.customRawTx = customRawTx;
+                }
 
                 if (txData.encodeInvalidData) {
                     customRawTx = customRawTx.slice(0, -6);
@@ -218,7 +243,7 @@ describe('Processor', async function () {
                 try {
                     expect(currentTx.reason).to.be.equal(expectedTx.reason);
                 } catch (error) {
-                    console.log({ currentTx }, { expectedTx }); // eslint-disable-line no-console
+                    //console.log({ currentTx }, { expectedTx }); // eslint-disable-line no-console
                     throw new Error(`Batch Id : ${id} TxId:${expectedTx.id} ${error}`);
                 }
             }

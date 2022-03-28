@@ -15,9 +15,9 @@ const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
 } = require('./state-utils');
 const { h4toString, stringToH4 } = require('./smt-utils');
+const ethers = require('ethers');
 
 const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
-
 class ZkEVMDB {
     constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt, deployedBridge) {
         this.db = db;
@@ -92,6 +92,12 @@ class ZkEVMDB {
             Scalar.toNumber(processor.batchNumber),
         );
 
+        // Set all concatenated touched address
+        await this.db.setValue(
+            Scalar.add(Constants.TOUCHED_ACCOUNTS, processor.batchNumber),
+            processor.getTouchedAccountsBatch(),
+        );
+
         // Update ZKEVMDB variables
         this.lastBatch = processor.batchNumber;
         this.stateRoot = processor.currentStateRoot;
@@ -153,6 +159,14 @@ class ZkEVMDB {
 
         return this.db.getValue(hashByteCode);
     }
+    /** 
+     * Get touched accounts of a given batch
+     * @returns {String} local exit root
+     */
+    async getUpdatedAccountByBatch(bathcNumber) {
+        return this.db.getValue(Scalar.add(Constants.TOUCHED_ACCOUNTS, bathcNumber));
+    }
+
 
     /**
      * Create a new instance of the ZkEVMDB
@@ -211,7 +225,7 @@ class ZkEVMDB {
                     const keys = Object.keys(sto).map((v) => `0x${v}`);
                     const values = Object.values(sto).map((v) => `0x${v}`);
                     for (let k = 0; k < keys.length; k++) {
-                        smtSto[keys[k]] = values[k];
+                        smtSto[keys[k]] = ethers.utils.RLP.decode(values[k]);
                     }
                     newStateRoot = await setContractStorage(address, newSmt, newStateRoot, smtSto);
 

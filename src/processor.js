@@ -191,6 +191,19 @@ module.exports = class Processor {
             this.currentStateRoot,
             storage,
         );
+
+        const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2))
+        await this.vm.stateManager.putContractStorage(addressInstance, toBuffer(globalExitRootPos), toBuffer(smtUtils.h4toString(this.globalExitRoot)));
+
+        const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
+        const encodedData = interfaceGlobal.encodeFunctionData("globalExitRootMap", [this.batchNumber]);
+        const globalExitRootResult = await this.vm.runCall({
+            to: addressInstance,
+            caller: Address.zero(),
+            data: Buffer.from(encodedData.slice(2), 'hex'),
+        })
+        //console.log(globalExitRootResult.execResult.returnValue.toString("hex"))
+        //console.log(storage[globalExitRootPos])
     }
 
     async _readLocalExitRoot() {
@@ -200,7 +213,14 @@ module.exports = class Processor {
             this.currentStateRoot,
             [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
         );
-        this.newLocalExitRoot = res[Constants.LOCAL_EXIT_ROOT_STORAGE_POS]
+        const newLocalExitRoot = res[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
+        if (newLocalExitRoot == 0) {
+            this.newLocalExitRoot = smtUtils.stringToH4(ethers.constants.HashZero);
+        } else {
+            this.newLocalExitRoot = smtUtils.stringToH4(newLocalExitRoot);
+        }
+        // const res = getContractStorage(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2, Constants.LOCAL_EXIT_ROOT_STORAGE_POS);
+        // this.newLocalExitRoot = ethers.utils.RLP.decode(res.toString());
     }
 
     /**
@@ -263,7 +283,13 @@ module.exports = class Processor {
                 // Check transaction completed
                 if (txResult.execResult.exceptionError) {
                     currentDecodedTx.isInvalid = true;
-                    currentDecodedTx.reason = txResult.execResult.exceptionError;
+                    if (txResult.execResult.returnValue.toString()) {
+                        const abiCoder = ethers.utils.defaultAbiCoder;
+                        const revertReasonHex = `0x${txResult.execResult.returnValue.toString("hex").slice(8)}`
+                        currentDecodedTx.reason = abiCoder.decode(["string"], revertReasonHex)[0];
+                    }
+                    else
+                        currentDecodedTx.reason = txResult.execResult.exceptionError;
                     continue;
                 }
 
@@ -318,7 +344,7 @@ module.exports = class Processor {
                         const keys = Object.keys(sto).map((v) => `0x${v}`);
                         const values = Object.values(sto).map((v) => `0x${v}`);
                         for (let k = 0; k < keys.length; k++) {
-                            storage[keys[k]] = values[k];
+                            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
                         }
                         if (oldSto) {
                             for (const key of Object.keys(oldSto)) {
@@ -482,6 +508,4 @@ module.exports = class Processor {
         this._isBuilded();
         return this.touchedAccountsBatch;
     }
-
-
 };

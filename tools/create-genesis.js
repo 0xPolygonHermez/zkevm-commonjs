@@ -19,8 +19,9 @@ const path = require('path');
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
 const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
+    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants
 } = require('../index');
+const { argv } = require('yargs');
 
 const genesisGenerator = require("./genesis-gen.json");
 
@@ -29,8 +30,8 @@ const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 async function main() {
     const genesisOutput = {};
 
-    const globalExitRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
-    const localExitRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
+    const globalExitRoot = ethers.constants.HashZero;
+    const localExitRoot = ethers.constants.HashZero;
 
     const poseidon = await getPoseidon();
     const F = poseidon.F;
@@ -53,31 +54,11 @@ async function main() {
         genesis,
     );
 
-    // // Check evm contract params
-    // for (const contract of genesis) {
-    //     if (contract.contractName) {
-    //         // Add contract interface for future contract interaction
-    //         const contractInterface = new ethers.utils.Interface(contract.abi);
-    //         contract.contractInterface = contractInterface;
-    //         const contractAddres = new Address(toBuffer(contract.address));
-
-    //         const contractAccount = await zkEVMDB.vm.stateManager.getAccount(contractAddres);
-    //         expect(await contractAccount.isContract()).to.be.true;
-
-    //         const contractCode = await zkEVMDB.vm.stateManager.getContractCode(contractAddres);
-    //         expect(contractCode.toString('hex')).to.be.equal(contract.deployedBytecode.slice(2));
-
-    //         for (const [key, value] of Object.entries(contract.storage)) {
-    //             const contractStorage = await zkEVMDB.vm.stateManager.getContractStorage(contractAddres, toBuffer(key));
-    //             expect(contractStorage.toString('hex')).to.equal(value.slice(2));
-    //         }
-    //     }
-    // }
-
     /*
      * build, sign transaction and generate rawTxs
      * rawTxs would be the calldata inserted in the contract
      */
+    const addressToContractName = {};
     const rawTxs = [];
     for (let j = 0; j < txs.length; j++) {
         const currentTx = txs[j];
@@ -102,6 +83,11 @@ async function main() {
             }
             const params = defaultAbiCoder.encode(currentTx.paramsDeploy.types, currentTx.paramsDeploy.values);
             tx.data = bytecode + params.slice(2);
+
+            const addressContract = await ethers.utils.getContractAddress(
+                { from: currentTx.from, nonce: currentTx.nonce },
+            );
+            addressToContractName[addressContract.toLowerCase()] = currentTx.contractName;
         }
 
         let customRawTx;
@@ -164,16 +150,15 @@ async function main() {
             const smCode = await currentVM.stateManager.getContractCode(addressInstance);
             const sto = await currentVM.stateManager.dumpStorage(addressInstance);
             const storage = {};
-            console.log(address)
-            console.log({ sto });
             const keys = Object.keys(sto).map((v) => `0x${v}`);
             const values = Object.values(sto).map((v) => `0x${v}`);
             for (let k = 0; k < keys.length; k++) {
-                storage[keys[k]] = values[k];
+                storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
             }
 
             currentAccountOutput.deployedBytecode = `0x${smCode.toString('hex')}`;
             currentAccountOutput.storage = storage;
+            currentAccountOutput.contractName = addressToContractName[address]
         }
         else {
             currentAccountOutput.pvtKey = (genesis.find((o) => o.address.toLowerCase() == address.toLowerCase())).pvtKey;
@@ -184,6 +169,15 @@ async function main() {
     genesisOutput.genesis = accountsOutput;
     const genesisOutputPath = path.join(__dirname, './genesis.json');
     await fs.writeFileSync(genesisOutputPath, JSON.stringify(genesisOutput, null, 2));
+
+    if (argv.update) {
+        const { pathTestVectors } = require('../test/helpers/test-utils');
+        const pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
+        const testVectors = JSON.parse(fs.readFileSync(pathProcessorTests));
+        testVectors[0].genesis = genesisOutput.genesis;
+        testVectors[0].expectedOldRoot = genesisOutput.root;
+        await fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
+    }
 }
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
