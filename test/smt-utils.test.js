@@ -93,7 +93,7 @@ describe('smtUtils', async function () {
     });
 
     it('h4toScalar, scalar2h4, h4toString & stringToH4', async () => {
-        const input = [Scalar.e(0), Scalar.e(1), Scalar.e(2), Scalar.e(3)];
+        const input = [Scalar.e(0), Scalar.e('18446744069414584321'), Scalar.e('4294967296'), Scalar.e('328469')];
 
         const resScalar = smtUtils.h4toScalar(input);
         const resString = smtUtils.h4toString(input);
