@@ -190,17 +190,6 @@ module.exports = class Processor {
 
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2))
         await this.vm.stateManager.putContractStorage(addressInstance, toBuffer(globalExitRootPos), toBuffer(smtUtils.h4toString(this.globalExitRoot)));
-
-        // TODO
-        const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
-        const encodedData = interfaceGlobal.encodeFunctionData("globalExitRootMap", [this.batchNumber]);
-        const globalExitRootResult = await this.vm.runCall({
-            to: addressInstance,
-            caller: Address.zero(),
-            data: Buffer.from(encodedData.slice(2), 'hex'),
-        })
-        //console.log(globalExitRootResult.execResult.returnValue.toString("hex"))
-        //console.log(storage[globalExitRootPos])
     }
 
     async _readLocalExitRoot() {
@@ -216,9 +205,6 @@ module.exports = class Processor {
         } else {
             this.newLocalExitRoot = smtUtils.stringToH4(newLocalExitRoot);
         }
-        // TODO
-        // const res = getContractStorage(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2, Constants.LOCAL_EXIT_ROOT_STORAGE_POS);
-        // this.newLocalExitRoot = ethers.utils.RLP.decode(res.toString());
     }
 
     /**

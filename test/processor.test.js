@@ -22,7 +22,7 @@ const lodash = require('lodash');
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
 const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
+    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
@@ -59,10 +59,12 @@ describe('Processor', async function () {
                 expectedNewLeafs,
                 batchL2Data,
                 oldLocalExitRoot,
+                newLocalExitRoot,
                 globalExitRoot,
                 batchHashData,
                 inputHash,
                 timestamp,
+                bridgeDeployed
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -290,6 +292,58 @@ describe('Processor', async function () {
                 testVectors[i].expectedNewLeafs = newLeafs
             }
 
+            // Check global and local exit roots
+            const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2))
+            const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32))
+            const globalExitRootPos = ethers.utils.solidityKeccak256(["uint256", "uint256"], [batch.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+            const globalExitRootPosBuffer = toBuffer(globalExitRootPos);
+
+            // Check local exit root
+            const localExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(addressInstanceGlobalExitRoot, localExitRootPosBuffer);
+            const localExitRootSmt = (await stateUtils.getContractStorage(
+                Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+                zkEVMDB.smt,
+                zkEVMDB.stateRoot,
+                [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
+            ))[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
+
+            if (localExitRootSmt == 0) {
+                expect(localExitRootVm.toString("hex")).to.equal("");
+                expect(newLocalExitRoot).to.equal(ethers.constants.HashZero);
+            } else {
+                expect(localExitRootVm.toString("hex")).to.equal(localExitRootSmt.toString(16).padStart(64, '0'));
+                expect(localExitRootVm).to.equal(newLocalExitRoot.slice(2));
+            }
+
+            // Check global exit root
+            const globalExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(addressInstanceGlobalExitRoot, globalExitRootPosBuffer);
+            const globalExitRootSmt = (await stateUtils.getContractStorage(
+                Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+                zkEVMDB.smt,
+                zkEVMDB.stateRoot,
+                [globalExitRootPos],
+            ))[Scalar.e(globalExitRootPos)];
+
+            if (globalExitRootSmt == 0) {
+                expect(globalExitRootVm.toString("hex")).to.equal("");
+                expect(globalExitRoot).to.equal(ethers.constants.HashZero);
+            }
+            else {
+                expect(globalExitRootVm.toString("hex")).to.equal(globalExitRootSmt.toString(16).padStart(64, '0'));
+                expect(globalExitRootVm.toString("hex")).to.equal(globalExitRoot.slice(2));
+            }
+            // Check through a call in the EVM
+            if (bridgeDeployed) {
+                const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
+                const encodedData = interfaceGlobal.encodeFunctionData("globalExitRootMap", [batch.batchNumber]);
+                const globalExitRootResult = await zkEVMDB.vm.runCall({
+                    to: addressInstanceGlobalExitRoot,
+                    caller: Address.zero(),
+                    data: Buffer.from(encodedData.slice(2), 'hex'),
+                })
+                expect(globalExitRootResult.execResult.returnValue.toString("hex")).to.be.equal(globalExitRoot.slice(2));
+            }
+
             // Check the circuit input
             const circuitInput = await batch.getStarkInput();
 
@@ -299,10 +353,12 @@ describe('Processor', async function () {
                 // Check the batchHashData and the input hash
                 expect(batchHashData).to.be.equal(circuitInput.batchHashData);
                 expect(inputHash).to.be.equal(circuitInput.inputHash);
+                expect(newLocalExitRoot).to.be.equal(circuitInput.newLocalExitRoot);
             } else {
                 testVectors[i].batchL2Data = batch.getBatchL2Data();
                 testVectors[i].batchHashData = circuitInput.batchHashData;
                 testVectors[i].inputHash = circuitInput.inputHash;
+                testVectors[i].newLocalExitRoot = circuitInput.newLocalExitRoot;
             }
 
             console.log(`Completed test ${i + 1}/${testVectors.length}`);

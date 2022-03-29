@@ -2,6 +2,7 @@
   {
     "id": 1,
     "description": "Test end to end",
+    "bridgeDeployed": true,
     "chainIdSequencer": 1001,
     "defaultChainId": 1000,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
