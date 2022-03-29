@@ -131,13 +131,13 @@ async function main() {
     const newRoot = batch.currentStateRoot;
     genesisOutput.root = smtUtils.h4toString(newRoot);
 
-    const touchedAcc = batch.getTouchedAccountsBatch();
+    const updatedAccounts = batch.getUpdatedAccountsBatch();
     const currentVM = batch.vm;
     const accountsOutput = [];
 
-    for (const item in touchedAcc) {
+    for (const item in updatedAccounts) {
         const address = item;
-        const account = touchedAcc[address];
+        const account = updatedAccounts[address];
 
         const currentAccountOutput = {};
         currentAccountOutput.balance = account.balance.toString()
@@ -156,7 +156,7 @@ async function main() {
                 storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
             }
 
-            currentAccountOutput.deployedBytecode = `0x${smCode.toString('hex')}`;
+            currentAccountOutput.bytecode = `0x${smCode.toString('hex')}`;
             currentAccountOutput.storage = storage;
             currentAccountOutput.contractName = addressToContractName[address]
         }

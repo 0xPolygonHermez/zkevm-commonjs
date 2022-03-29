@@ -19,7 +19,7 @@ const ethers = require('ethers');
 
 const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt, deployedBridge) {
+    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
@@ -30,7 +30,6 @@ class ZkEVMDB {
 
         this.smt = smt;
         this.vm = vm;
-        this.deployedBridge = deployedBridge;
     }
 
     /**
@@ -53,8 +52,7 @@ class ZkEVMDB {
             this.localExitRoot,
             globalExitRoot,
             timestamp,
-            this.vm.copy(),
-            this.deployedBridge
+            this.vm.copy()
         );
     }
 
@@ -95,7 +93,7 @@ class ZkEVMDB {
         // Set all concatenated touched address
         await this.db.setValue(
             Scalar.add(Constants.TOUCHED_ACCOUNTS, processor.batchNumber),
-            processor.getTouchedAccountsBatch(),
+            processor.getUpdatedAccountsBatch(),
         );
 
         // Update ZKEVMDB variables
@@ -163,7 +161,7 @@ class ZkEVMDB {
      * Get touched accounts of a given batch
      * @returns {String} local exit root
      */
-    async getUpdatedAccountByBatch(bathcNumber) {
+    async getUpdatedAccountsByBatch(bathcNumber) {
         return this.db.getValue(Scalar.add(Constants.TOUCHED_ACCOUNTS, bathcNumber));
     }
 
@@ -179,7 +177,7 @@ class ZkEVMDB {
      * @param {Object} smt - smt if already instantiated
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt, deployedBridge = false) {
+    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt) {
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
@@ -245,8 +243,7 @@ class ZkEVMDB {
                 localExitRoot,
                 poseidon,
                 newVm,
-                newSmt,
-                deployedBridge
+                newSmt
             );
         }
 
@@ -261,8 +258,7 @@ class ZkEVMDB {
             stringToH4(DBLocalExitRoot),
             poseidon,
             vm,
-            smt,
-            deployedBridge
+            smt
         );
     }
 }

@@ -43,8 +43,7 @@ module.exports = class Processor {
         localExitRoot,
         globalExitRoot,
         timestamp,
-        vm,
-        deployedBridge
+        vm
     ) {
         this.db = db;
         this.batchNumber = batchNumber;
@@ -69,9 +68,8 @@ module.exports = class Processor {
         this.timestamp = timestamp;
         this.vm = vm;
         this.evmSteps = [];
-        this.deployedBridge = deployedBridge;
-        this.newLocalExitRoot = deployedBridge ? 0 : localExitRoot;
-        this.touchedAccountsBatch = {};
+        this.newLocalExitRoot = localExitRoot;
+        this.updatedAccounts = {};
     }
 
     /**
@@ -96,17 +94,15 @@ module.exports = class Processor {
         await this._decodeAndCheckRawTx();
 
         // Set global exit root
-        if (this.deployedBridge) {
-            await this._setGlobalExitRoot();
-        }
+        await this._setGlobalExitRoot();
+
 
         // Process transactions and update the state
         await this._processTx();
 
         // Read Local exit root
-        if (this.deployedBridge) {
-            await this._readLocalExitRoot();
-        }
+        await this._readLocalExitRoot();
+
         // Calculate stark and snark input
         await this._computeStarkInput();
         await this._computeSnarkInput();
@@ -195,6 +191,7 @@ module.exports = class Processor {
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2))
         await this.vm.stateManager.putContractStorage(addressInstance, toBuffer(globalExitRootPos), toBuffer(smtUtils.h4toString(this.globalExitRoot)));
 
+        // TODO
         const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
         const encodedData = interfaceGlobal.encodeFunctionData("globalExitRootMap", [this.batchNumber]);
         const globalExitRootResult = await this.vm.runCall({
@@ -219,6 +216,7 @@ module.exports = class Processor {
         } else {
             this.newLocalExitRoot = smtUtils.stringToH4(newLocalExitRoot);
         }
+        // TODO
         // const res = getContractStorage(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2, Constants.LOCAL_EXIT_ROOT_STORAGE_POS);
         // this.newLocalExitRoot = ethers.utils.RLP.decode(res.toString());
     }
@@ -316,7 +314,7 @@ module.exports = class Processor {
                     const account = await this.vm.stateManager.getAccount(addressInstance);
 
                     // Update batch touched stack
-                    this.touchedAccountsBatch[address] = account;
+                    this.updatedAccounts[address] = account;
 
 
                     // Update smt with touched accounts
@@ -501,11 +499,11 @@ module.exports = class Processor {
     }
 
     /**
-     * Return touched accounts in this batch
-     * @return {Object} Accounts touched in this batch
+     * Return updated accounts in this batch
+     * @return {Object} Accounts updated in this batch
      */
-    getTouchedAccountsBatch() {
+    getUpdatedAccountsBatch() {
         this._isBuilded();
-        return this.touchedAccountsBatch;
+        return this.updatedAccounts;
     }
 };

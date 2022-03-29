@@ -27,12 +27,10 @@ const {
 const { pathTestVectors } = require('./helpers/test-utils');
 const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 
-const { Block } = require('@ethereumjs/block');
-
 describe('Processor', async function () {
     this.timeout(100000);
 
-    const pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
+    const pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
 
     let update;
     let poseidon;
@@ -68,7 +66,6 @@ describe('Processor', async function () {
             } = testVectors[i];
 
             const db = new MemDB(F);
-            const deployedBridge = true;
             // create a zkEVMDB to compile the sc
             const zkEVMDB = await ZkEVMDB.newZkEVM(
                 db,
@@ -77,21 +74,21 @@ describe('Processor', async function () {
                 smtUtils.stringToH4(oldLocalExitRoot),
                 genesis,
                 null,
-                null,
-                deployedBridge
+                null
             );
 
 
             // Check evm contract params
+            const addressToContractInterface = {};
             for (const contract of genesis) {
                 if (contract.contractName) {
                     // Add contract interface for future contract interaction
                     if (contractsPolygonHermez[contract.contractName]) {
                         const contractInterface = new ethers.utils.Interface(contractsPolygonHermez[contract.contractName].abi);
-                        contract.contractInterface = contractInterface;
+                        addressToContractInterface[contract.address] = contractInterface;
                     } else {
                         const contractInterface = new ethers.utils.Interface(contract.abi);
-                        contract.contractInterface = contractInterface;
+                        addressToContractInterface[contract.address] = contractInterface;
                     }
                     const contractAddres = new Address(toBuffer(contract.address));
 
@@ -146,9 +143,7 @@ describe('Processor', async function () {
                 if (txData.data) {
                     if (txData.to) {
                         if (txData.contractName) {
-                            const contract = genesis.find((x) => x.contractName === txData.contractName);
-                            const functionData = contract.contractInterface.encodeFunctionData(txData.function, txData.params);
-                            //console.log(contract.contractInterface.getFunction("0x122650ff"));
+                            const functionData = addressToContractInterface[txData.to].encodeFunctionData(txData.function, txData.params);
                             if (!update) {
                                 expect(functionData).to.equal(txData.data);
                             } else {
@@ -243,33 +238,54 @@ describe('Processor', async function () {
                 try {
                     expect(currentTx.reason).to.be.equal(expectedTx.reason);
                 } catch (error) {
-                    //console.log({ currentTx }, { expectedTx }); // eslint-disable-line no-console
+                    console.log({ currentTx }, { expectedTx }); // eslint-disable-line no-console
                     throw new Error(`Batch Id : ${id} TxId:${expectedTx.id} ${error}`);
                 }
             }
 
             // Check balances and nonces
-            for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
-                // EVM
+            const updatedAccounts = batch.getUpdatedAccountsBatch();
+            const newLeafs = {}
+            for (const item in updatedAccounts) {
+                const address = item;
+                const account = updatedAccounts[address];
+                newLeafs[address] = {};
+
                 const newLeaf = await zkEVMDB.getCurrentAccountState(address);
-                expect(newLeaf.balance.toString()).to.equal(leaf.balance);
-                expect(newLeaf.nonce.toString()).to.equal(leaf.nonce);
+                expect(newLeaf.balance.toString()).to.equal(account.balance.toString());
+                expect(newLeaf.nonce.toString()).to.equal(account.nonce.toString());
 
-                // SMT
                 const smtNewLeaf = await zkEVMDB.getCurrentAccountState(address);
-                expect(smtNewLeaf.balance.toString()).to.equal(leaf.balance);
-                expect(smtNewLeaf.nonce.toString()).to.equal(leaf.nonce);
+                expect(smtNewLeaf.balance.toString()).to.equal(account.balance.toString());
+                expect(smtNewLeaf.nonce.toString()).to.equal(account.nonce.toString());
 
-                // Storage
-                const storage = await zkEVMDB.dumpStorage(address);
+                newLeafs[address].balance = account.balance.toString();
+                newLeafs[address].nonce = account.nonce.toString();
 
-                if (storage !== null) {
-                    if (update) {
-                        testVectors[i].expectedNewLeafs[address].storage = storage;
-                    } else {
-                        expect(lodash.isEqual(storage, leaf.storage)).to.be.equal(true);
-                    }
+                // If account is a contract, update storage and bytecode
+                if (account.isContract()) {
+                    //const addressInstance = Address.fromString(address);
+                    //const smCode = await currentVM.stateManager.getContractCode(addressInstance);
+                    const storage = await zkEVMDB.dumpStorage(address);
+
+                    //newLeafs[address].bytecode = `0x${smCode.toString('hex')}`;
+                    newLeafs[address].storage = storage;
                 }
+            }
+            for (const leaf of genesis) {
+                if (!newLeafs[leaf.address]) {
+                    newLeafs[leaf.address] = leaf;
+                    delete newLeafs[leaf.address].address;
+                }
+            }
+
+
+            if (!update) {
+                for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
+                    expect(lodash.isEqual(leaf, newLeafs[address])).to.be.equal(true);
+                }
+            } else {
+                testVectors[i].expectedNewLeafs = newLeafs
             }
 
             // Check the circuit input
@@ -285,7 +301,6 @@ describe('Processor', async function () {
                 testVectors[i].batchL2Data = batch.getBatchL2Data();
                 testVectors[i].batchHashData = circuitInput.batchHashData;
                 testVectors[i].inputHash = circuitInput.inputHash;
-                delete testVectors[i].contractInterface;
             }
 
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
