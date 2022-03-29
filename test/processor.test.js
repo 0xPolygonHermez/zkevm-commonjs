@@ -30,7 +30,7 @@ const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 describe('Processor', async function () {
     this.timeout(100000);
 
-    const pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
+    const pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
 
     let update;
     let poseidon;
@@ -273,9 +273,11 @@ describe('Processor', async function () {
                 }
             }
             for (const leaf of genesis) {
-                if (!newLeafs[leaf.address]) {
-                    newLeafs[leaf.address] = leaf;
+                if (!newLeafs[leaf.address.toLowerCase()]) {
+                    newLeafs[leaf.address] = Object.assign({}, leaf);
                     delete newLeafs[leaf.address].address;
+                    delete newLeafs[leaf.address].bytecode;
+                    delete newLeafs[leaf.address].contractName;
                 }
             }
 
