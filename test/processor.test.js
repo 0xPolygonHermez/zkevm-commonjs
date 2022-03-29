@@ -312,7 +312,7 @@ describe('Processor', async function () {
                 expect(newLocalExitRoot).to.equal(ethers.constants.HashZero);
             } else {
                 expect(localExitRootVm.toString("hex")).to.equal(localExitRootSmt.toString(16).padStart(64, '0'));
-                expect(localExitRootVm).to.equal(newLocalExitRoot.slice(2));
+                expect(localExitRootVm.toString("hex")).to.equal(newLocalExitRoot.slice(2));
             }
 
             // Check global exit root

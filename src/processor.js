@@ -203,7 +203,7 @@ module.exports = class Processor {
         if (newLocalExitRoot == 0) {
             this.newLocalExitRoot = smtUtils.stringToH4(ethers.constants.HashZero);
         } else {
-            this.newLocalExitRoot = smtUtils.stringToH4(newLocalExitRoot);
+            this.newLocalExitRoot = smtUtils.scalar2h4(newLocalExitRoot);
         }
     }
 
