@@ -30,7 +30,12 @@ const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 describe('Processor', async function () {
     this.timeout(100000);
 
-    const pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
+    let pathProcessorTests;
+    if (argv.e2e)
+        pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
+    else {
+        pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
+    }
 
     let update;
     let poseidon;
