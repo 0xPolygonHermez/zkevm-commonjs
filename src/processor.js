@@ -43,7 +43,7 @@ module.exports = class Processor {
         localExitRoot,
         globalExitRoot,
         timestamp,
-        vm
+        vm,
     ) {
         this.db = db;
         this.batchNumber = batchNumber;
@@ -95,7 +95,6 @@ module.exports = class Processor {
 
         // Set global exit root
         await this._setGlobalExitRoot();
-
 
         // Process transactions and update the state
         await this._processTx();
@@ -179,7 +178,7 @@ module.exports = class Processor {
 
     async _setGlobalExitRoot() {
         const storage = {};
-        const globalExitRootPos = ethers.utils.solidityKeccak256(["uint256", "uint256"], [this.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [this.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
         storage[globalExitRootPos] = smtUtils.h4toString(this.globalExitRoot);
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
@@ -188,8 +187,12 @@ module.exports = class Processor {
             storage,
         );
 
-        const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2))
-        await this.vm.stateManager.putContractStorage(addressInstance, toBuffer(globalExitRootPos), toBuffer(smtUtils.h4toString(this.globalExitRoot)));
+        const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(globalExitRootPos),
+            toBuffer(smtUtils.h4toString(this.globalExitRoot)),
+        );
     }
 
     async _readLocalExitRoot() {
@@ -200,7 +203,7 @@ module.exports = class Processor {
             [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
         );
         const newLocalExitRoot = res[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
-        if (newLocalExitRoot == 0) {
+        if (newLocalExitRoot === Scalar.e(0)) {
             this.newLocalExitRoot = smtUtils.stringToH4(ethers.constants.HashZero);
         } else {
             this.newLocalExitRoot = smtUtils.scalar2h4(newLocalExitRoot);
@@ -269,11 +272,9 @@ module.exports = class Processor {
                     currentDecodedTx.isInvalid = true;
                     if (txResult.execResult.returnValue.toString()) {
                         const abiCoder = ethers.utils.defaultAbiCoder;
-                        const revertReasonHex = `0x${txResult.execResult.returnValue.toString("hex").slice(8)}`
-                        currentDecodedTx.reason = abiCoder.decode(["string"], revertReasonHex)[0];
-                    }
-                    else
-                        currentDecodedTx.reason = txResult.execResult.exceptionError;
+                        const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
+                        [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
+                    } else currentDecodedTx.reason = txResult.execResult.exceptionError;
                     continue;
                 }
 
@@ -301,7 +302,6 @@ module.exports = class Processor {
 
                     // Update batch touched stack
                     this.updatedAccounts[address] = account;
-
 
                     // Update smt with touched accounts
                     this.currentStateRoot = await stateUtils.setAccountState(
@@ -490,6 +490,7 @@ module.exports = class Processor {
      */
     getUpdatedAccountsBatch() {
         this._isBuilded();
+
         return this.updatedAccounts;
     }
 };

@@ -5,6 +5,7 @@
 /* eslint-disable multiline-comment-style */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
+/* eslint-disable guard-for-in */
 
 const { Scalar } = require('ffjavascript');
 const fs = require('fs');
@@ -21,18 +22,17 @@ const lodash = require('lodash');
 
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
+const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils
+    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
-const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 
 describe('Processor', async function () {
     this.timeout(100000);
 
     let pathProcessorTests;
-    if (argv.e2e)
-        pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
+    if (argv.e2e) pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
     else {
         pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
     }
@@ -69,7 +69,7 @@ describe('Processor', async function () {
                 batchHashData,
                 inputHash,
                 timestamp,
-                bridgeDeployed
+                bridgeDeployed,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -81,9 +81,8 @@ describe('Processor', async function () {
                 smtUtils.stringToH4(oldLocalExitRoot),
                 genesis,
                 null,
-                null
+                null,
             );
-
 
             // Check evm contract params
             const addressToContractInterface = {};
@@ -252,7 +251,7 @@ describe('Processor', async function () {
 
             // Check balances and nonces
             const updatedAccounts = batch.getUpdatedAccountsBatch();
-            const newLeafs = {}
+            const newLeafs = {};
             for (const item in updatedAccounts) {
                 const address = item;
                 const account = updatedAccounts[address];
@@ -271,36 +270,35 @@ describe('Processor', async function () {
 
                 // If account is a contract, update storage and bytecode
                 if (account.isContract()) {
-                    //const addressInstance = Address.fromString(address);
-                    //const smCode = await currentVM.stateManager.getContractCode(addressInstance);
+                    // const addressInstance = Address.fromString(address);
+                    // const smCode = await currentVM.stateManager.getContractCode(addressInstance);
                     const storage = await zkEVMDB.dumpStorage(address);
 
-                    //newLeafs[address].bytecode = `0x${smCode.toString('hex')}`;
+                    // newLeafs[address].bytecode = `0x${smCode.toString('hex')}`;
                     newLeafs[address].storage = storage;
                 }
             }
             for (const leaf of genesis) {
                 if (!newLeafs[leaf.address.toLowerCase()]) {
-                    newLeafs[leaf.address] = Object.assign({}, leaf);
+                    newLeafs[leaf.address] = { ...leaf };
                     delete newLeafs[leaf.address].address;
                     delete newLeafs[leaf.address].bytecode;
                     delete newLeafs[leaf.address].contractName;
                 }
             }
 
-
             if (!update) {
                 for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
                     expect(lodash.isEqual(leaf, newLeafs[address])).to.be.equal(true);
                 }
             } else {
-                testVectors[i].expectedNewLeafs = newLeafs
+                testVectors[i].expectedNewLeafs = newLeafs;
             }
 
             // Check global and local exit roots
-            const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2))
-            const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32))
-            const globalExitRootPos = ethers.utils.solidityKeccak256(["uint256", "uint256"], [batch.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+            const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
+            const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32));
+            const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [batch.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
             const globalExitRootPosBuffer = toBuffer(globalExitRootPos);
 
             // Check local exit root
@@ -312,16 +310,19 @@ describe('Processor', async function () {
                 [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
             ))[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
 
-            if (localExitRootSmt == 0) {
-                expect(localExitRootVm.toString("hex")).to.equal("");
+            if (localExitRootSmt === Scalar.e(0)) {
+                expect(localExitRootVm.toString('hex')).to.equal('');
                 expect(newLocalExitRoot).to.equal(ethers.constants.HashZero);
             } else {
-                expect(localExitRootVm.toString("hex")).to.equal(localExitRootSmt.toString(16).padStart(64, '0'));
-                expect(localExitRootVm.toString("hex")).to.equal(newLocalExitRoot.slice(2));
+                expect(localExitRootVm.toString('hex')).to.equal(localExitRootSmt.toString(16).padStart(64, '0'));
+                expect(localExitRootVm.toString('hex')).to.equal(newLocalExitRoot.slice(2));
             }
 
             // Check global exit root
-            const globalExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(addressInstanceGlobalExitRoot, globalExitRootPosBuffer);
+            const globalExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(
+                addressInstanceGlobalExitRoot,
+                globalExitRootPosBuffer,
+            );
             const globalExitRootSmt = (await stateUtils.getContractStorage(
                 Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
                 zkEVMDB.smt,
@@ -329,24 +330,23 @@ describe('Processor', async function () {
                 [globalExitRootPos],
             ))[Scalar.e(globalExitRootPos)];
 
-            if (globalExitRootSmt == 0) {
-                expect(globalExitRootVm.toString("hex")).to.equal("");
+            if (globalExitRootSmt === Scalar.e(0)) {
+                expect(globalExitRootVm.toString('hex')).to.equal('');
                 expect(globalExitRoot).to.equal(ethers.constants.HashZero);
-            }
-            else {
-                expect(globalExitRootVm.toString("hex")).to.equal(globalExitRootSmt.toString(16).padStart(64, '0'));
-                expect(globalExitRootVm.toString("hex")).to.equal(globalExitRoot.slice(2));
+            } else {
+                expect(globalExitRootVm.toString('hex')).to.equal(globalExitRootSmt.toString(16).padStart(64, '0'));
+                expect(globalExitRootVm.toString('hex')).to.equal(globalExitRoot.slice(2));
             }
             // Check through a call in the EVM
             if (bridgeDeployed) {
                 const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
-                const encodedData = interfaceGlobal.encodeFunctionData("globalExitRootMap", [batch.batchNumber]);
+                const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [batch.batchNumber]);
                 const globalExitRootResult = await zkEVMDB.vm.runCall({
                     to: addressInstanceGlobalExitRoot,
                     caller: Address.zero(),
                     data: Buffer.from(encodedData.slice(2), 'hex'),
-                })
-                expect(globalExitRootResult.execResult.returnValue.toString("hex")).to.be.equal(globalExitRoot.slice(2));
+                });
+                expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(globalExitRoot.slice(2));
             }
 
             // Check the circuit input

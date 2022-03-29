@@ -8,6 +8,7 @@ const {
 } = require('ethereumjs-util');
 const { Chain, Hardfork } = require('@ethereumjs/common');
 
+const ethers = require('ethers');
 const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
@@ -15,7 +16,6 @@ const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
 } = require('./state-utils');
 const { h4toString, stringToH4 } = require('./smt-utils');
-const ethers = require('ethers');
 
 const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
 class ZkEVMDB {
@@ -52,7 +52,7 @@ class ZkEVMDB {
             this.localExitRoot,
             globalExitRoot,
             timestamp,
-            this.vm.copy()
+            this.vm.copy(),
         );
     }
 
@@ -157,14 +157,14 @@ class ZkEVMDB {
 
         return this.db.getValue(hashByteCode);
     }
-    /** 
+
+    /**
      * Get touched accounts of a given batch
      * @returns {String} local exit root
      */
     async getUpdatedAccountsByBatch(bathcNumber) {
         return this.db.getValue(Scalar.add(Constants.TOUCHED_ACCOUNTS, bathcNumber));
     }
-
 
     /**
      * Create a new instance of the ZkEVMDB
@@ -243,7 +243,7 @@ class ZkEVMDB {
                 localExitRoot,
                 poseidon,
                 newVm,
-                newSmt
+                newSmt,
             );
         }
 
@@ -258,7 +258,7 @@ class ZkEVMDB {
             stringToH4(DBLocalExitRoot),
             poseidon,
             vm,
-            smt
+            smt,
         );
     }
 }
