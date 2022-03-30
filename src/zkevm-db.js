@@ -160,6 +160,7 @@ class ZkEVMDB {
 
     /**
      * Get touched accounts of a given batch
+     * @param {Number} bathcNumber - Batch number
      * @returns {String} local exit root
      */
     async getUpdatedAccountsByBatch(bathcNumber) {

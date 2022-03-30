@@ -310,7 +310,7 @@ describe('Processor', async function () {
                 [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
             ))[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
 
-            if (localExitRootSmt === Scalar.e(0)) {
+            if (Scalar.eq(localExitRootSmt, Scalar.e(0))) {
                 expect(localExitRootVm.toString('hex')).to.equal('');
                 expect(newLocalExitRoot).to.equal(ethers.constants.HashZero);
             } else {
@@ -330,7 +330,7 @@ describe('Processor', async function () {
                 [globalExitRootPos],
             ))[Scalar.e(globalExitRootPos)];
 
-            if (globalExitRootSmt === Scalar.e(0)) {
+            if (Scalar.eq(globalExitRootSmt, Scalar.e(0))) {
                 expect(globalExitRootVm.toString('hex')).to.equal('');
                 expect(globalExitRoot).to.equal(ethers.constants.HashZero);
             } else {

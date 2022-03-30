@@ -176,6 +176,10 @@ module.exports = class Processor {
         }
     }
 
+    /**
+     * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT 
+     * This will be performed before process the transactions
+     */
     async _setGlobalExitRoot() {
         const storage = {};
         const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [this.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
@@ -195,6 +199,10 @@ module.exports = class Processor {
         );
     }
 
+    /**
+     * Read the local exit root, which is a variable stored in some specific storage slot of the globalExitRootManagerL2
+     * This will be performed after processing all the transactions
+     */
     async _readLocalExitRoot() {
         const res = await stateUtils.getContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
@@ -203,7 +211,7 @@ module.exports = class Processor {
             [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
         );
         const newLocalExitRoot = res[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
-        if (newLocalExitRoot === Scalar.e(0)) {
+        if (Scalar.eq(newLocalExitRoot, Scalar.e(0))) {
             this.newLocalExitRoot = smtUtils.stringToH4(ethers.constants.HashZero);
         } else {
             this.newLocalExitRoot = smtUtils.scalar2h4(newLocalExitRoot);
