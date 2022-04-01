@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
-    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js",
-    "eslint": "npx eslint src/** test/*.test.js",
-    "eslint:fix": "npx eslint src/** test/*.test.js --fix"
+    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js && npm run test:e2e",
+    "test:e2e": "npx mocha ./test/*processor.test.js --e2e",
+    "eslint": "npx eslint src/** test/*.test.js && npx eslint tools",
+    "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix"
   },
   "repository": {
     "type": "git",

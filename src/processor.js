@@ -177,7 +177,7 @@ module.exports = class Processor {
     }
 
     /**
-     * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT 
+     * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT
      * This will be performed before process the transactions
      */
     async _setGlobalExitRoot() {

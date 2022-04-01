@@ -1,12 +1,12 @@
+/* eslint-disable no-console */
+
 const ethers = require('ethers');
 
-const path = require('path');
-
-const MerkleTreeBridge = require('@polygon-hermez/zkevm-commonjs').MTBridge;
+const MerkleTreeBridge = require('../index').MTBridge;
 const {
     verifyMerkleProof,
     calculateLeafValue,
-} = require('@polygon-hermez/zkevm-commonjs').mtBridgeUtils;
+} = require('../index').mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
     return ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
@@ -17,7 +17,7 @@ const networkIDRollup = 1;
 const batchNum = 1;
 
 async function main() {
-    const claimAddress = "0xc949254d682d8c9ad5682521675b8f43b102aec4";
+    const claimAddress = '0xc949254d682d8c9ad5682521675b8f43b102aec4';
 
     // Add a claim leaf to rollup exit tree
     const originalNetwork = networkIDMainnet;
@@ -53,13 +53,15 @@ async function main() {
             rootJSMainnet,
             rollupExitRoot,
         },
-        globalExitRoot
-    }
+        globalExitRoot,
+    };
     console.log(verifyMerkleProof(leafValue, proof, index, rootJSMainnet));
-    console.log(output)
+    console.log(output);
 }
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
+/*
+ * We recommend this pattern to be able to use async/await everywhere
+ * and properly handle errors.
+ */
 main()
     .then(() => process.exit(0))
     .catch((error) => {

@@ -5,27 +5,27 @@
 /* eslint-disable multiline-comment-style */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
+/* eslint-disable guard-for-in */
 
 const { Scalar } = require('ffjavascript');
 const fs = require('fs');
 
 const ethers = require('ethers');
 const {
-    Address, toBuffer,
+    Address,
 } = require('ethereumjs-util');
 const { defaultAbiCoder } = require('@ethersproject/abi');
 const path = require('path');
 
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
-const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants
-} = require('../index');
 const { argv } = require('yargs');
-
-const genesisGenerator = require("./genesis-gen.json");
-
 const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
+const {
+    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
+} = require('../index');
+
+const genesisGenerator = require('./genesis-gen.json');
 
 async function main() {
     const genesisOutput = {};
@@ -34,7 +34,7 @@ async function main() {
     const localExitRoot = ethers.constants.HashZero;
 
     const poseidon = await getPoseidon();
-    const F = poseidon.F;
+    const { F } = poseidon;
     const {
         genesis,
         txs,
@@ -140,8 +140,8 @@ async function main() {
         const account = updatedAccounts[address];
 
         const currentAccountOutput = {};
-        currentAccountOutput.balance = account.balance.toString()
-        currentAccountOutput.nonce = account.nonce.toString()
+        currentAccountOutput.balance = account.balance.toString();
+        currentAccountOutput.nonce = account.nonce.toString();
         currentAccountOutput.address = address;
 
         // If account is a contract, update storage and bytecode
@@ -158,10 +158,9 @@ async function main() {
 
             currentAccountOutput.bytecode = `0x${smCode.toString('hex')}`;
             currentAccountOutput.storage = storage;
-            currentAccountOutput.contractName = addressToContractName[address]
-        }
-        else {
-            currentAccountOutput.pvtKey = (genesis.find((o) => o.address.toLowerCase() == address.toLowerCase())).pvtKey;
+            currentAccountOutput.contractName = addressToContractName[address];
+        } else {
+            currentAccountOutput.pvtKey = (genesis.find((o) => o.address.toLowerCase() === address.toLowerCase())).pvtKey;
         }
         accountsOutput.push(currentAccountOutput);
     }

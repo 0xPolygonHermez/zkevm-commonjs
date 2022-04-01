@@ -92,7 +92,7 @@ class ZkEVMDB {
 
         // Set all concatenated touched address
         await this.db.setValue(
-            Scalar.add(Constants.TOUCHED_ACCOUNTS, processor.batchNumber),
+            Scalar.add(Constants.DB_TOUCHED_ACCOUNTS, processor.batchNumber),
             processor.getUpdatedAccountsBatch(),
         );
 
@@ -164,7 +164,7 @@ class ZkEVMDB {
      * @returns {String} local exit root
      */
     async getUpdatedAccountsByBatch(bathcNumber) {
-        return this.db.getValue(Scalar.add(Constants.TOUCHED_ACCOUNTS, bathcNumber));
+        return this.db.getValue(Scalar.add(Constants.DB_TOUCHED_ACCOUNTS, bathcNumber));
     }
 
     /**
