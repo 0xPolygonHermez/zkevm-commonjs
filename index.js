@@ -9,6 +9,6 @@ module.exports.stateUtils = require('./src/state-utils');
 module.exports.TmpSmtDB = require('./src/tmp-smt-db');
 module.exports.utils = require('./src/utils');
 module.exports.ZkEVMDB = require('./src/zkevm-db');
-module.exports.getPoseidon = require('./src/poseidon');
+module.exports.getPoseidon = require('./src/poseidon_opt');
 module.exports.MTBridge = require('./src/mt-bridge');
 module.exports.mtBridgeUtils = require('./src/mt-bridge-utils');
