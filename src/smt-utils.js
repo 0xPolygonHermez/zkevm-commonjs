@@ -91,7 +91,7 @@ function h4toScalar(h4) {
 function scalar2h4(s) {
     const res = [];
 
-    res.push(Scalar.band(s, Scalar.e('0xFFFFFFFF')));
+    res.push(Scalar.band(s, Scalar.e('0xFFFFFFFFFFFFFFFF')));
     res.push(Scalar.band(Scalar.shr(s, 64), Scalar.e('0xFFFFFFFFFFFFFFFF')));
     res.push(Scalar.band(Scalar.shr(s, 128), Scalar.e('0xFFFFFFFFFFFFFFFF')));
     res.push(Scalar.band(Scalar.shr(s, 192), Scalar.e('0xFFFFFFFFFFFFFFFF')));
