@@ -8,6 +8,7 @@ module.exports.DB_LOCAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_DB_LOCAL_EXIT_ROO
 module.exports.DB_GLOBAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_GLOBAL_EXIT_ROOT'));
 module.exports.DB_SEQ_CHAINID = ethers.utils.id(('ZKEVM_DB_SEQ_CHAINID'));
 module.exports.DB_ADDRESS_STORAGE = ethers.utils.id(('ZKEVM_DB_ADDRESS_STORAGE'));
+module.exports.DB_TOUCHED_ACCOUNTS = ethers.utils.id(('ZKEVM_DB_TOUCHED_ACCOUNTS'));
 
 // Default values and global constants
 module.exports.DEFAULT_SEQ_CHAINID = 1000;
@@ -25,3 +26,9 @@ module.exports.SMT_KEY_SC_STORAGE = 3;
 // SMT constant
 module.exports.BYTECODE_ELEMENTS_HASH = 8;
 module.exports.BYTECODE_BYTES_ELEMENT = 7;
+
+// EVM constant
+module.exports.ADDRESS_BRIDGE = '0x9D98DeAbC42dd696Deb9e40b4f1CAB7dDBF55988';
+module.exports.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2 = '0xAE4bB80bE56B819606589DE61d5ec3b522EEB032';
+module.exports.GLOBAL_EXIT_ROOT_STORAGE_POS = 0;
+module.exports.LOCAL_EXIT_ROOT_STORAGE_POS = 1;

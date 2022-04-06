@@ -12,8 +12,8 @@ describe('contractUtils', function () {
     let testVector;
 
     const expectedBatchHashData = '0x3d53e7e5be04b00f66af647512af6d17e4e767a5e41fa1293010b885c9fe06db';
-    const expectedSnarkInputHash = '0x2a3ae871f2767d7dcc8f076646aaac562f565913f1aaa01835c99da11587432a';
-    const expectedStarkHashExecutor = '0xebcc223d773cfe24add01e404cb00dcad025fa35d890625d455173f0d587432e';
+    const expectedSnarkInputHash = '0x287827a698e2398038390886d802b1261160628c80738e7050790fa949cd1c9d';
+    const expectedStarkHashExecutor = '0x58dc76197a13d9a9f0894e3d5984098339944ad4fa2cff01945b053d39cd1c9e';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_0.json')));

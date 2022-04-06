@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
-    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js",
-    "eslint": "npx eslint src/** test/*.test.js",
-    "eslint:fix": "npx eslint src/** test/*.test.js --fix"
+    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js && npm run test:e2e",
+    "test:e2e": "npx mocha ./test/processor.test.js --e2e",
+    "eslint": "npx eslint src/** test/*.test.js && npx eslint tools",
+    "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix"
   },
   "repository": {
     "type": "git",
@@ -42,7 +43,8 @@
     "@ethersproject/abi": "^5.5.0",
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
-    "@polygon-hermez/vm": "5.7.4",
+    "@polygon-hermez/vm": "5.7.2",
+    "@polygon-hermez/contracts-zkevm": "github:hermeznetwork/contracts-zkevm#v0.0.3",
     "chai": "^4.3.4",
     "circomlibjs": "^0.1.1",
     "ethereumjs-util": "^7.1.4",
