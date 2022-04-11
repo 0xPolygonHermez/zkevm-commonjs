@@ -8,6 +8,7 @@ const {
 } = require('ethereumjs-util');
 const { Chain, Hardfork } = require('@ethereumjs/common');
 
+const ethers = require('ethers');
 const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
@@ -17,7 +18,6 @@ const {
 const { h4toString, stringToH4 } = require('./smt-utils');
 
 const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
-
 class ZkEVMDB {
     constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt) {
         this.db = db;
@@ -81,7 +81,7 @@ class ZkEVMDB {
         // Set local exit root
         await this.db.setValue(
             Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, processor.batchNumber),
-            h4toString(processor.currentLocalExitRoot),
+            h4toString(processor.newLocalExitRoot),
         );
 
         // Set last batch number
@@ -90,10 +90,17 @@ class ZkEVMDB {
             Scalar.toNumber(processor.batchNumber),
         );
 
+        // Set all concatenated touched address
+        await this.db.setValue(
+            Scalar.add(Constants.DB_TOUCHED_ACCOUNTS, processor.batchNumber),
+            processor.getUpdatedAccountsBatch(),
+        );
+
         // Update ZKEVMDB variables
         this.lastBatch = processor.batchNumber;
         this.stateRoot = processor.currentStateRoot;
-        this.localExitRoot = processor.currentLocalExitRoot;
+        this.localExitRoot = processor.newLocalExitRoot;
+        this.vm = processor.vm;
     }
 
     /**
@@ -149,6 +156,15 @@ class ZkEVMDB {
         const hashByteCode = await getContractHashBytecode(address, this.smt, this.stateRoot);
 
         return this.db.getValue(hashByteCode);
+    }
+
+    /**
+     * Get touched accounts of a given batch
+     * @param {Number} bathcNumber - Batch number
+     * @returns {String} local exit root
+     */
+    async getUpdatedAccountsByBatch(bathcNumber) {
+        return this.db.getValue(Scalar.add(Constants.DB_TOUCHED_ACCOUNTS, bathcNumber));
     }
 
     /**
@@ -208,7 +224,7 @@ class ZkEVMDB {
                     const keys = Object.keys(sto).map((v) => `0x${v}`);
                     const values = Object.values(sto).map((v) => `0x${v}`);
                     for (let k = 0; k < keys.length; k++) {
-                        smtSto[keys[k]] = values[k];
+                        smtSto[keys[k]] = ethers.utils.RLP.decode(values[k]);
                     }
                     newStateRoot = await setContractStorage(address, newSmt, newStateRoot, smtSto);
 

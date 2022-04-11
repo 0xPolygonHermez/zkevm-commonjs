@@ -99,9 +99,10 @@ describe('ZkEVMDB', function () {
             expectedNewRoot,
             chainIdSequencer,
             sequencerAddress,
-            localExitRoot,
+            oldLocalExitRoot,
             globalExitRoot,
             timestamp,
+            newLocalExitRoot,
         } = testVectors[0];
 
         const db = new MemDB(F);
@@ -208,7 +209,7 @@ describe('ZkEVMDB', function () {
             db,
             poseidon,
             genesisRoot,
-            smtUtils.stringToH4(localExitRoot),
+            smtUtils.stringToH4(oldLocalExitRoot),
             genesis,
         );
         const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, smtUtils.stringToH4(globalExitRoot));
@@ -245,7 +246,7 @@ describe('ZkEVMDB', function () {
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(numBatch + 1);
         if (!update) {
             expect(smtUtils.h4toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(expectedNewRoot);
-            expect(smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot())).to.be.equal(localExitRoot);
+            expect(smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot())).to.be.equal(newLocalExitRoot);
         }
 
         const lastBatchDB = await db.getValue(Constants.DB_LAST_BATCH);

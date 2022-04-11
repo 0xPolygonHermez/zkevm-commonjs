@@ -1,26 +1,27 @@
 // Optimization is taken from https://github.com/filecoin-project/neptune
 
-const poseidonConstants = require("./poseidon_constants_opt.js");
 const { F1Field, Scalar } = require('ffjavascript');
+const poseidonConstants = require('./poseidon_constants_opt');
 
 function unsringifyConstants(Fr, o) {
-    if ((typeof(o) == "string") && (/^[0-9]+$/.test(o) ))  {
+    if ((typeof (o) === 'string') && (/^[0-9]+$/.test(o))) {
         return Fr.e(o);
-    } else if ((typeof(o) == "string") && (/^0x[0-9a-fA-F]+$/.test(o) ))  {
+    } if ((typeof (o) === 'string') && (/^0x[0-9a-fA-F]+$/.test(o))) {
         return Fr.e(o);
-    } else if (Array.isArray(o)) {
+    } if (Array.isArray(o)) {
         return o.map(unsringifyConstants.bind(null, Fr));
-    } else if (typeof o == "object") {
-        if (o===null) return null;
+    } if (typeof o === 'object') {
+        if (o === null) return null;
         const res = {};
         const keys = Object.keys(o);
-        keys.forEach( (k) => {
+        keys.forEach((k) => {
             res[k] = unsringifyConstants(Fr, o[k]);
         });
+
         return res;
-    } else {
-        return o;
     }
+
+    return o;
 }
 
 module.exports = async function buildPoseidon() {
@@ -30,7 +31,7 @@ module.exports = async function buildPoseidon() {
 
     const opt = unsringifyConstants(F, poseidonConstants);
 
-    const pow7 = a => F.mul(a, F.square(F.mul(a, F.square(a, a))));
+    const pow7 = (a) => F.mul(a, F.square(F.mul(a, F.square(a, a))));
 
     function poseidon(inputs, capacity) {
         if (inputs.length !== 8) throw new Error('Invalid Input size (must be 8)');
@@ -53,46 +54,38 @@ module.exports = async function buildPoseidon() {
 
         state = state.map((a, i) => F.add(a, C[i]));
 
-        for (let r = 0; r < nRoundsF/2-1; r++) {
-            state = state.map(a => pow7(a));
-            state = state.map((a, i) => F.add(a, C[(r +1)* t +i]));
-            state = state.map((_, i) =>
-                state.reduce((acc, a, j) => F.add(acc, F.mul(M[j][i], a)), F.zero)
-            );
+        for (let r = 0; r < nRoundsF / 2 - 1; r++) {
+            state = state.map((a) => pow7(a));
+            state = state.map((a, i) => F.add(a, C[(r + 1) * t + i]));
+            // eslint-disable-next-line no-loop-func
+            state = state.map((_, i) => state.reduce((acc, a, j) => F.add(acc, F.mul(M[j][i], a)), F.zero));
         }
-        state = state.map(a => pow7(a));
-        state = state.map((a, i) => F.add(a, C[(nRoundsF/2-1 +1)* t +i]));
-        state = state.map((_, i) =>
-            state.reduce((acc, a, j) => F.add(acc, F.mul(P[j][i], a)), F.zero)
-        );
+        state = state.map((a) => pow7(a));
+        state = state.map((a, i) => F.add(a, C[(nRoundsF / 2 - 1 + 1) * t + i]));
+        state = state.map((_, i) => state.reduce((acc, a, j) => F.add(acc, F.mul(P[j][i], a)), F.zero));
         for (let r = 0; r < nRoundsP; r++) {
             state[0] = pow7(state[0]);
-            state[0] = F.add(state[0], C[(nRoundsF/2 +1)*t + r]);
+            state[0] = F.add(state[0], C[(nRoundsF / 2 + 1) * t + r]);
 
-
-            const s0 = state.reduce((acc, a, j) => {
-                return F.add(acc, F.mul(S[(t*2-1)*r+j], a));
-            }, F.zero);
-            for (let k=1; k<t; k++) {
-                state[k] = F.add(state[k], F.mul(state[0], S[(t*2-1)*r+t+k-1]   ));
+            const s0 = state.reduce((acc, a, j) => F.add(acc, F.mul(S[(t * 2 - 1) * r + j], a)), F.zero);
+            for (let k = 1; k < t; k++) {
+                state[k] = F.add(state[k], F.mul(state[0], S[(t * 2 - 1) * r + t + k - 1]));
             }
-            state[0] =s0;
+            state[0] = s0;
         }
-        for (let r = 0; r < nRoundsF/2-1; r++) {
-            state = state.map(a => pow7(a));
-            state = state.map((a, i) => F.add(a, C[ (nRoundsF/2 +1)*t + nRoundsP + r*t + i ]));
-            state = state.map((_, i) =>
-                state.reduce((acc, a, j) => F.add(acc, F.mul(M[j][i], a)), F.zero)
-            );
+        for (let r = 0; r < nRoundsF / 2 - 1; r++) {
+            state = state.map((a) => pow7(a));
+            state = state.map((a, i) => F.add(a, C[(nRoundsF / 2 + 1) * t + nRoundsP + r * t + i]));
+            // eslint-disable-next-line no-loop-func
+            state = state.map((_, i) => state.reduce((acc, a, j) => F.add(acc, F.mul(M[j][i], a)), F.zero));
         }
-        state = state.map(a => pow7(a));
-        state = state.map((_, i) =>
-            state.reduce((acc, a, j) => F.add(acc, F.mul(M[j][i], a)), F.zero)
-        );
+        state = state.map((a) => pow7(a));
+        state = state.map((_, i) => state.reduce((acc, a, j) => F.add(acc, F.mul(M[j][i], a)), F.zero));
 
         return [state[0], state[1], state[2], state[3]];
     }
 
     poseidon.F = F;
+
     return poseidon;
-}
+};
