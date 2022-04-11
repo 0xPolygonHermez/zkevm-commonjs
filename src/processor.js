@@ -2,8 +2,9 @@
 /* eslint-disable no-continue */
 const ethers = require('ethers');
 const { Transaction } = require('@ethereumjs/tx');
+const { Block } = require('@ethereumjs/block');
 const {
-    Address, Account, BN, toBuffer,
+    Address, BN, toBuffer,
 } = require('ethereumjs-util');
 
 const { Scalar } = require('ffjavascript');
@@ -93,6 +94,9 @@ module.exports = class Processor {
         // Check the validity of rawTxs
         await this._decodeAndCheckRawTx();
 
+        // Set oldStateRoot to system contract
+        await this._setBatchHash();
+
         // Set global exit root
         await this._setGlobalExitRoot();
 
@@ -177,18 +181,59 @@ module.exports = class Processor {
     }
 
     /**
+     * Set the old state root exit root in a specific storage slot of the system smart contract for both vm and SMT
+     * This will be performed before process the transactions
+     */
+    async _setBatchHash() {
+        const newStorageEntry = {};
+        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [this.batchNumber - 1, Constants.STATE_ROOT_STORAGE_POS]);
+        newStorageEntry[stateRootPos] = smtUtils.h4toString(this.oldStateRoot);
+
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            newStorageEntry,
+        );
+
+        const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(stateRootPos),
+            toBuffer(smtUtils.h4toString(this.oldStateRoot)),
+        );
+
+        // store data in internal DB
+        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
+
+        // add address to updatedAccounts
+        const account = await this.vm.stateManager.getAccount(addressInstance);
+        this.updatedAccounts[Constants.ADDRESS_SYSTEM] = account;
+
+        // update its storage
+        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+        const storage = {};
+        const keys = Object.keys(sto).map((v) => `0x${v}`);
+        const values = Object.values(sto).map((v) => `0x${v}`);
+        for (let k = 0; k < keys.length; k++) {
+            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+        }
+        await this.db.setValue(keyDumpStorage, storage);
+    }
+
+    /**
      * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT
      * This will be performed before process the transactions
      */
     async _setGlobalExitRoot() {
-        const storage = {};
+        const newStorageEntry = {};
         const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [this.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-        storage[globalExitRootPos] = smtUtils.h4toString(this.globalExitRoot);
+        newStorageEntry[globalExitRootPos] = smtUtils.h4toString(this.globalExitRoot);
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
             this.smt,
             this.currentStateRoot,
-            storage,
+            newStorageEntry,
         );
 
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
@@ -197,6 +242,25 @@ module.exports = class Processor {
             toBuffer(globalExitRootPos),
             toBuffer(smtUtils.h4toString(this.globalExitRoot)),
         );
+
+        // store data in internal DB
+        const keyDumpStorage = Scalar.add(
+            Constants.DB_ADDRESS_STORAGE,
+            Scalar.fromString(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2, 16),
+        );
+
+        const account = await this.vm.stateManager.getAccount(addressInstance);
+        this.updatedAccounts[Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2] = account;
+
+        // update its storage
+        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+        const storage = {};
+        const keys = Object.keys(sto).map((v) => `0x${v}`);
+        const values = Object.values(sto).map((v) => `0x${v}`);
+        for (let k = 0; k < keys.length; k++) {
+            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+        }
+        await this.db.setValue(keyDumpStorage, storage);
     }
 
     /**
@@ -210,6 +274,7 @@ module.exports = class Processor {
             this.currentStateRoot,
             [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
         );
+
         const newLocalExitRoot = res[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
         if (Scalar.eq(newLocalExitRoot, Scalar.e(0))) {
             this.newLocalExitRoot = smtUtils.stringToH4(ethers.constants.HashZero);
@@ -272,7 +337,19 @@ module.exports = class Processor {
                     r: currenTx.r,
                     s: currenTx.s,
                 });
-                const txResult = await this.vm.runTx({ tx: evmTx });
+
+                // Build block information
+                const blockData = {};
+                blockData.header = {};
+                blockData.header.timestamp = new BN(Scalar.e(this.timestamp));
+                blockData.header.number = new BN(Scalar.e(this.batchNumber));
+                blockData.header.coinbase = new Address(toBuffer(this.sequencerAddress));
+                blockData.header.gasLimit = new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
+                blockData.header.difficulty = new BN(Scalar.e(Constants.BATCH_DIFFICULTY));
+
+                const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
+                const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
+
                 this.evmSteps.push(txResult.execResult.evmSteps);
 
                 // Check transaction completed
@@ -286,24 +363,11 @@ module.exports = class Processor {
                     continue;
                 }
 
-                // Update sequencer fees in EVM
-                const amountSpent = Number(txResult.amountSpent);
-                const seqAddr = new Address(toBuffer(this.sequencerAddress));
-                const seqAcc = await this.vm.stateManager.getAccount(seqAddr);
-                const seqBalance = new BN(Scalar.add(amountSpent, seqAcc.balance));
-                const seqAccData = {
-                    nonce: seqAcc.nonce,
-                    balance: seqBalance,
-                };
-                await this.vm.stateManager.putAccount(seqAddr, Account.fromAccountData(seqAccData));
-
                 // PROCESS TX in the smt updating the touched accounts from the EVM
                 const touchedStack = this.vm.stateManager._customTouched;
                 for (const item of touchedStack) {
                     const address = `0x${item}`;
-                    if (address === ethers.constants.AddressZero) {
-                        continue;
-                    }
+
                     // Get touched evm account
                     const addressInstance = Address.fromString(address);
                     const account = await this.vm.stateManager.getAccount(addressInstance);
@@ -323,6 +387,7 @@ module.exports = class Processor {
                     // If account is a contract, update storage and bytecode
                     if (account.isContract()) {
                         const smCode = await this.vm.stateManager.getContractCode(addressInstance);
+
                         this.currentStateRoot = await stateUtils.setContractBytecode(
                             address,
                             this.smt,
@@ -332,6 +397,7 @@ module.exports = class Processor {
                         const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
                         const oldSto = await this.db.getValue(keyDumpStorage);
                         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+
                         const storage = {};
                         const keys = Object.keys(sto).map((v) => `0x${v}`);
                         const values = Object.values(sto).map((v) => `0x${v}`);

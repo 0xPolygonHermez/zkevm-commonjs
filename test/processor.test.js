@@ -32,8 +32,12 @@ describe('Processor', async function () {
     this.timeout(100000);
 
     let pathProcessorTests;
-    if (argv.e2e) pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
-    else {
+
+    if (argv.e2e) {
+        pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
+    } else if (argv.blockinfo) {
+        pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info.json');
+    } else {
         pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
     }
 
@@ -93,7 +97,13 @@ describe('Processor', async function () {
                         const contractInterface = new ethers.utils.Interface(contractsPolygonHermez[contract.contractName].abi);
                         addressToContractInterface[contract.address] = contractInterface;
                     } else {
-                        const contractInterface = new ethers.utils.Interface(contract.abi);
+                        let contractInterface;
+                        if (typeof contract.abi === 'undefined') {
+                            const { abi } = require(`${artifactsPath}/${contract.contractName}.sol/${contract.contractName}.json`);
+                            contractInterface = new ethers.utils.Interface(abi);
+                        } else {
+                            contractInterface = new ethers.utils.Interface(contract.abi);
+                        }
                         addressToContractInterface[contract.address] = contractInterface;
                     }
                     const contractAddres = new Address(toBuffer(contract.address));
@@ -268,13 +278,9 @@ describe('Processor', async function () {
                 newLeafs[address].balance = account.balance.toString();
                 newLeafs[address].nonce = account.nonce.toString();
 
-                // If account is a contract, update storage and bytecode
-                if (account.isContract()) {
-                    // const addressInstance = Address.fromString(address);
-                    // const smCode = await currentVM.stateManager.getContractCode(addressInstance);
+                if (account.isContract() || address === Constants.ADDRESS_SYSTEM
+                || address === Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2) {
                     const storage = await zkEVMDB.dumpStorage(address);
-
-                    // newLeafs[address].bytecode = `0x${smCode.toString('hex')}`;
                     newLeafs[address].storage = storage;
                 }
             }
