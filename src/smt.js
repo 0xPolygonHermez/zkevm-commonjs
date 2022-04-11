@@ -226,6 +226,11 @@ class SMT {
             }
         } else {
             mode = 'zeroToZero';
+            if (foundKey) {
+                insKey = foundKey;
+                insValue = foundVal;
+                isOld0 = false;
+            }
         }
 
         siblings = siblings.slice(0, level + 1);

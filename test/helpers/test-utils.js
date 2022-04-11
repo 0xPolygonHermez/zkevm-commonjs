@@ -14,9 +14,8 @@ function scalar2key(s, F) {
     let r = Scalar.e(s);
     let i = 0;
     while (!Scalar.isZero(r)) {
-        auxk[i % 4] = Scalar.shl(auxk[i % 4], 1);
         if (!Scalar.isZero(Scalar.band(r, Scalar.one))) {
-            auxk[i % 4] = Scalar.add(auxk[i % 4], Scalar.one);
+            auxk[i % 4] = Scalar.add(auxk[i % 4], Scalar.shl(Scalar.one, Math.floor(i / 4)));
         }
         r = Scalar.shr(r, 1);
         i += 1;

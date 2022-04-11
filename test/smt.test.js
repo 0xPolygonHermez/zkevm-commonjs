@@ -151,10 +151,10 @@ describe('SMT', async function () {
         const smt = new SMT(db, poseidon, poseidon.F);
 
         const expectedRoot = [
-            1858919074628455423n,
-            6601353726528022029n,
-            10580286528342663149n,
-            10595285547726113472n,
+            13590506365193044307n,
+            13215874698458506886n,
+            4743455437729219665n,
+            1933616419393621600n,
         ];
 
         const r0 = await smt.set(
@@ -187,5 +187,15 @@ describe('SMT', async function () {
             Scalar.e('35179347944617143021579132182092200136526168785636368258055676929581544372820'),
         );
         assert(smtUtils.nodeIsEq(expectedRoot, r4.newRoot, F));
+    });
+
+    it('It should Zero to Zero with isOldZero=0', async () => {
+        const db = new MemDB(F);
+        const smt = new SMT(db, poseidon, poseidon.F);
+
+        const r0 = await smt.set(smt.empty, scalar2key(0x1, F), Scalar.e(2)); // 0x00
+        const r1 = await smt.set(r0.newRoot, scalar2key(0x10000, F), Scalar.e(0)); // 0x1111
+
+        assert(!r1.isOldZero);
     });
 });
