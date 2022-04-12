@@ -24,6 +24,7 @@ const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants,
 } = require('../index');
+const Constants = require('../src/constants');
 
 async function main() {
     // load generator
