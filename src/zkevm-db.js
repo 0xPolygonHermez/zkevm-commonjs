@@ -17,7 +17,8 @@ const {
 } = require('./state-utils');
 const { h4toString, stringToH4 } = require('./smt-utils');
 
-const common = Common.custom({ chainId: Constants.DEFAULT_SEQ_CHAINID, hardfork: Hardfork.Berlin });
+const common = Common.custom({ chainId: Constants.DEFAULT_SEQ_CHAINID }, { hardfork: Hardfork.Berlin });
+
 class ZkEVMDB {
     constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt) {
         this.db = db;
