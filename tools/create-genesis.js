@@ -17,7 +17,7 @@ const {
 const { defaultAbiCoder } = require('@ethersproject/abi');
 const path = require('path');
 
-const artifactsPath = path.join(__dirname, 'artifacts/contracts');
+const artifactsPath = path.join(__dirname, '../test/artifacts/contracts');
 
 const { argv } = require('yargs');
 const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
@@ -25,9 +25,17 @@ const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
 } = require('../index');
 
-const genesisGenerator = require('./genesis-gen.json');
-
 async function main() {
+    // load generator
+    const inputPath = (typeof argv.gen === 'undefined') ? undefined : argv.gen;
+    if (inputPath === undefined) { throw Error('Input genesis must be provided'); }
+
+    // load output file
+    const outPath = (typeof argv.out === 'undefined') ? undefined : argv.out;
+    if (outPath === undefined) { throw Error('Output file must be specified'); }
+
+    const genesisGenerator = require(inputPath);
+
     const genesisOutput = {};
 
     const globalExitRoot = ethers.constants.HashZero;
@@ -73,22 +81,25 @@ async function main() {
             data: currentTx.data || '0x',
         };
 
+        // Contract deployment from tx
+        let bytecode;
+        if (contractsPolygonHermez[currentTx.contractName]) {
+            bytecode = contractsPolygonHermez[currentTx.contractName].bytecode;
+        } else {
+            ({ bytecode } = require(`${artifactsPath}/${currentTx.contractName}.sol/${currentTx.contractName}.json`));
+        }
+
         if (currentTx.paramsDeploy) {
-            // Contract deployment from tx
-            let bytecode;
-            if (contractsPolygonHermez[currentTx.contractName]) {
-                bytecode = contractsPolygonHermez[currentTx.contractName].bytecode;
-            } else {
-                ({ bytecode } = require(`${artifactsPath}/${currentTx.contractName}.sol/${currentTx.contractName}.json`));
-            }
             const params = defaultAbiCoder.encode(currentTx.paramsDeploy.types, currentTx.paramsDeploy.values);
             tx.data = bytecode + params.slice(2);
-
-            const addressContract = await ethers.utils.getContractAddress(
-                { from: currentTx.from, nonce: currentTx.nonce },
-            );
-            addressToContractName[addressContract.toLowerCase()] = currentTx.contractName;
+        } else {
+            tx.data = bytecode;
         }
+
+        const addressContract = await ethers.utils.getContractAddress(
+            { from: currentTx.from, nonce: currentTx.nonce },
+        );
+        addressToContractName[addressContract.toLowerCase()] = currentTx.contractName;
 
         let customRawTx;
         const address = genesis.find((o) => o.address === currentTx.from);
@@ -165,17 +176,29 @@ async function main() {
         accountsOutput.push(currentAccountOutput);
     }
 
+    // add accounts that has not been used
+    for (let i = 0; i < genesis.length; i++) {
+        const item = genesis[i];
+        if (typeof updatedAccounts[item.address.toLowerCase()] === 'undefined') {
+            accountsOutput.push(item);
+        }
+    }
+
     genesisOutput.genesis = accountsOutput;
-    const genesisOutputPath = path.join(__dirname, './genesis.json');
+    const genesisOutputPath = path.join(outPath);
     await fs.writeFileSync(genesisOutputPath, JSON.stringify(genesisOutput, null, 2));
 
     if (argv.update) {
-        const { pathTestVectors } = require('../test/helpers/test-utils');
-        const pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
-        const testVectors = JSON.parse(fs.readFileSync(pathProcessorTests));
+        const updatePath = (typeof argv.update === 'undefined') ? undefined : argv.update;
+
+        if (!fs.existsSync(updatePath)) {
+            throw new Error('Update file does not exist');
+        }
+
+        const testVectors = JSON.parse(fs.readFileSync(updatePath));
         testVectors[0].genesis = genesisOutput.genesis;
         testVectors[0].expectedOldRoot = genesisOutput.root;
-        await fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
+        await fs.writeFileSync(updatePath, JSON.stringify(testVectors, null, 2));
     }
 }
 // We recommend this pattern to be able to use async/await everywhere

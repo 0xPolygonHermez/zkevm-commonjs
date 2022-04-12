@@ -112,3 +112,6 @@ test/cache
 
 # custom
 package-lock.json
+
+# ignore genesis
+tools/*.ignore.json
