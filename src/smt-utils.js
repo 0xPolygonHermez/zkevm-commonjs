@@ -45,6 +45,20 @@ function fea2scalar(Fr, arr) {
 }
 
 /**
+ * Field elemetn array to Scalar
+ * result = arr[0] + arr[1]*(2^32) + arr[2]*(2^64) + arr[3]*(2^96) + arr[3]*(2^128) + arr[3]*(2^160) + arr[3]*(2^192) + arr[3]*(2^224)
+ * @param {Field} F - field element
+ * @param {Array[Field]} arr - array of fields elements
+ * @returns {string}
+ */
+function fea2hash(Fr, arr) {
+    const s = fea2scalar(Fr, arr);
+    const res = `0x${Scalar.toString(s, 16).padStart(32, '0')}`;
+
+    return res;
+}
+
+/**
  * Field element to 32bit number
  * @param {Field} Fr - field element
  * @param {Field} fe - field to convert
@@ -417,6 +431,7 @@ async function hashContractBytecode(_bytecode) {
 module.exports = {
     scalar2fea,
     fea2scalar,
+    fea2hash,
     fe2n,
     keyEthAddrBalance,
     keyEthAddrNonce,

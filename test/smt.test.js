@@ -194,8 +194,9 @@ describe('SMT', async function () {
         const smt = new SMT(db, poseidon, poseidon.F);
 
         const r0 = await smt.set(smt.empty, scalar2key(0x1, F), Scalar.e(2)); // 0x00
-        const r1 = await smt.set(r0.newRoot, scalar2key(0x10000, F), Scalar.e(0)); // 0x1111
+        const r1 = await smt.set(r0.newRoot, scalar2key(0x2, F), Scalar.e(3)); // 0x00
+        const r2 = await smt.set(r1.newRoot, scalar2key(0x10000, F), Scalar.e(0)); // 0x1111
 
-        assert(!r1.isOldZero);
+        assert(!r2.isOldZero);
     });
 });
