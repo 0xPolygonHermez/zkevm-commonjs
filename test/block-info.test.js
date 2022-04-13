@@ -28,15 +28,12 @@ const {
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
-describe('Block info tests', async function () {
-    this.timeout(100000);
-
-    const pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info.json');
-
+describe('Block info tests', function () {
+    this.timeout(5000);
+    const pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info-batches.json');
     let update;
     let poseidon;
     let F;
-
     let testVectors;
 
     before(async () => {
@@ -53,18 +50,10 @@ describe('Block info tests', async function () {
                 id,
                 genesis,
                 expectedOldRoot,
-                txs,
-                expectedNewRoot,
+                batches,
                 chainIdSequencer,
                 sequencerAddress,
-                expectedNewLeafs,
-                batchL2Data,
                 oldLocalExitRoot,
-                newLocalExitRoot,
-                globalExitRoot,
-                batchHashData,
-                inputHash,
-                timestamp,
                 bridgeDeployed,
             } = testVectors[i];
 
@@ -127,243 +116,253 @@ describe('Block info tests', async function () {
              * rawTxs would be the calldata inserted in the contract
              */
             const txProcessed = [];
-            const rawTxs = [];
-            for (let j = 0; j < txs.length; j++) {
-                const txData = txs[j];
 
-                const tx = {
-                    to: txData.to,
-                    nonce: txData.nonce,
-                    value: processorUtils.toHexStringRlp(ethers.utils.parseUnits(txData.value, 'wei')),
-                    gasLimit: txData.gasLimit,
-                    gasPrice: processorUtils.toHexStringRlp(ethers.utils.parseUnits(txData.gasPrice, 'wei')),
-                    chainId: txData.chainId,
-                    data: txData.data || '0x',
-                };
+            for (let k = 0; k < batches.length; k++) {
+                const {
+                    txs, expectedNewRoot, expectedNewLeafs, batchL2Data, globalExitRoot,
+                    inputHash, timestamp, batchHashData, newLocalExitRoot,
+                } = batches[k];
+                const rawTxs = [];
+                for (let j = 0; j < txs.length; j++) {
+                    const txData = txs[j];
 
-                // The tx will have paramsDeploy in case is a deployment with constructor
-                // let params = '';
-                // if (txData.paramsDeploy) {
-                //     params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
-                //     tx.data += params.slice(2);
-                // }
+                    const tx = {
+                        to: txData.to,
+                        nonce: txData.nonce,
+                        value: processorUtils.toHexStringRlp(ethers.utils.parseUnits(txData.value, 'wei')),
+                        gasLimit: txData.gasLimit,
+                        gasPrice: processorUtils.toHexStringRlp(ethers.utils.parseUnits(txData.gasPrice, 'wei')),
+                        chainId: txData.chainId,
+                        data: txData.data || '0x',
+                    };
 
-                if (txData.data) {
-                    if (txData.to) {
-                        if (txData.contractName) {
-                            const functionData = addressToContractInterface[txData.to].encodeFunctionData(txData.function, txData.params);
-                            if (!update) {
-                                expect(functionData).to.equal(txData.data);
-                            } else {
-                                txData.data = functionData;
-                                tx.data = functionData;
+                    // The tx will have paramsDeploy in case is a deployment with constructor
+                    // let params = '';
+                    // if (txData.paramsDeploy) {
+                    //     params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
+                    //     tx.data += params.slice(2);
+                    // }
+
+                    if (txData.data) {
+                        if (txData.to) {
+                            if (txData.contractName) {
+                                const functionData = addressToContractInterface[txData.to]
+                                    .encodeFunctionData(txData.function, txData.params);
+                                if (!update) {
+                                    expect(functionData).to.equal(txData.data);
+                                } else {
+                                    txData.data = functionData;
+                                    tx.data = functionData;
+                                }
                             }
+                        } else {
+                            // Contract deployment from tx
+                            delete tx.to;
+
+                            const { bytecode } = require(`${artifactsPath}/${txData.contractName}.sol/${txData.contractName}.json`);
+                            const params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
+                            expect(tx.data).to.equal(bytecode + params.slice(2));
                         }
-                    } else {
-                        // Contract deployment from tx
-                        delete tx.to;
-
-                        const { bytecode } = require(`${artifactsPath}/${txData.contractName}.sol/${txData.contractName}.json`);
-                        const params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
-                        expect(tx.data).to.equal(bytecode + params.slice(2));
                     }
-                }
 
-                if ((tx.to && tx.to !== '0x0' && !ethers.utils.isAddress(tx.to)) || !ethers.utils.isAddress(txData.from)) {
-                    expect(txData.customRawTx).to.equal(undefined);
-                    // eslint-disable-next-line no-continue
-                    continue;
-                }
+                    if ((tx.to && tx.to !== '0x0' && !ethers.utils.isAddress(tx.to)) || !ethers.utils.isAddress(txData.from)) {
+                        expect(txData.customRawTx).to.equal(undefined);
+                        // eslint-disable-next-line no-continue
+                        continue;
+                    }
 
-                let customRawTx;
-                const address = genesis.find((o) => o.address === txData.from);
-                const wallet = new ethers.Wallet(address.pvtKey);
-                if (tx.chainId === 0) {
-                    const signData = ethers.utils.RLP.encode([
-                        processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
-                        processorUtils.toHexStringRlp(tx.gasPrice),
-                        processorUtils.toHexStringRlp(tx.gasLimit),
-                        processorUtils.toHexStringRlp(tx.to),
-                        processorUtils.toHexStringRlp(tx.value),
-                        processorUtils.toHexStringRlp(tx.data),
-                        processorUtils.toHexStringRlp(tx.chainId),
-                        '0x',
-                        '0x',
-                    ]);
-                    const digest = ethers.utils.keccak256(signData);
-                    const signingKey = new ethers.utils.SigningKey(address.pvtKey);
-                    const signature = signingKey.signDigest(digest);
-                    const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
-                    const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
-                    const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
-                    customRawTx = signData.concat(r).concat(s).concat(v);
-                } else {
-                    const rawTxEthers = await wallet.signTransaction(tx);
+                    let customRawTx;
+                    const address = genesis.find((o) => o.address === txData.from);
+                    const wallet = new ethers.Wallet(address.pvtKey);
+                    if (tx.chainId === 0) {
+                        const signData = ethers.utils.RLP.encode([
+                            processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
+                            processorUtils.toHexStringRlp(tx.gasPrice),
+                            processorUtils.toHexStringRlp(tx.gasLimit),
+                            processorUtils.toHexStringRlp(tx.to),
+                            processorUtils.toHexStringRlp(tx.value),
+                            processorUtils.toHexStringRlp(tx.data),
+                            processorUtils.toHexStringRlp(tx.chainId),
+                            '0x',
+                            '0x',
+                        ]);
+                        const digest = ethers.utils.keccak256(signData);
+                        const signingKey = new ethers.utils.SigningKey(address.pvtKey);
+                        const signature = signingKey.signDigest(digest);
+                        const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
+                        const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
+                        const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
+                        customRawTx = signData.concat(r).concat(s).concat(v);
+                    } else {
+                        const rawTxEthers = await wallet.signTransaction(tx);
+                        if (!update) {
+                            expect(rawTxEthers).to.equal(txData.rawTx);
+                        } else {
+                            txData.rawTx = rawTxEthers;
+                        }
+                        customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
+                    }
+
                     if (!update) {
-                        expect(rawTxEthers).to.equal(txData.rawTx);
+                        expect(customRawTx).to.equal(txData.customRawTx);
                     } else {
-                        txData.rawTx = rawTxEthers;
+                        txData.customRawTx = customRawTx;
                     }
-                    customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
+
+                    if (txData.encodeInvalidData) {
+                        customRawTx = customRawTx.slice(0, -6);
+                    }
+                    rawTxs.push(customRawTx);
+                    txProcessed.push(txData);
+                }
+
+                const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, smtUtils.stringToH4(globalExitRoot));
+                for (let j = 0; j < rawTxs.length; j++) {
+                    batch.addRawTx(rawTxs[j]);
+                }
+
+                // execute the transactions added to the batch
+                await batch.executeTxs();
+                // consolidate state
+                await zkEVMDB.consolidate(batch);
+
+                const newRoot = batch.currentStateRoot;
+                if (!update) {
+                    expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
+                } else {
+                    testVectors[i].batches[k].expectedNewRoot = smtUtils.h4toString(newRoot);
+                }
+
+                // Check errors on decode transactions
+                const decodedTx = await batch.getDecodedTxs();
+
+                if (!update) {
+                    for (let j = 0; j < decodedTx.length; j++) {
+                        const currentTx = decodedTx[j];
+                        const expectedTx = txProcessed[j];
+                        try {
+                            expect(currentTx.reason).to.be.equal(expectedTx.reason);
+                        } catch (error) {
+                            console.log({ currentTx }, { expectedTx }); // eslint-disable-line no-console
+                            throw new Error(`Batch Id : ${id} TxId:${expectedTx.id} ${error}`);
+                        }
+                    }
+                }
+
+                // Check balances and nonces
+                const updatedAccounts = batch.getUpdatedAccountsBatch();
+                const newLeafs = {};
+                for (const item in updatedAccounts) {
+                    const address = item;
+                    const account = updatedAccounts[address];
+                    newLeafs[address] = {};
+
+                    const newLeaf = await zkEVMDB.getCurrentAccountState(address);
+                    expect(newLeaf.balance.toString()).to.equal(account.balance.toString());
+                    expect(newLeaf.nonce.toString()).to.equal(account.nonce.toString());
+
+                    const smtNewLeaf = await zkEVMDB.getCurrentAccountState(address);
+                    expect(smtNewLeaf.balance.toString()).to.equal(account.balance.toString());
+                    expect(smtNewLeaf.nonce.toString()).to.equal(account.nonce.toString());
+
+                    newLeafs[address].balance = account.balance.toString();
+                    newLeafs[address].nonce = account.nonce.toString();
+
+                    if (account.isContract() || address === Constants.ADDRESS_SYSTEM
+                        || address === Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2) {
+                        const storage = await zkEVMDB.dumpStorage(address);
+                        newLeafs[address].storage = storage;
+                    }
+                }
+                for (const leaf of genesis) {
+                    if (!newLeafs[leaf.address.toLowerCase()]) {
+                        newLeafs[leaf.address] = { ...leaf };
+                        delete newLeafs[leaf.address].address;
+                        delete newLeafs[leaf.address].bytecode;
+                        delete newLeafs[leaf.address].contractName;
+                    }
                 }
 
                 if (!update) {
-                    expect(customRawTx).to.equal(txData.customRawTx);
+                    for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
+                        expect(lodash.isEqual(leaf, newLeafs[address])).to.be.equal(true);
+                    }
                 } else {
-                    txData.customRawTx = customRawTx;
+                    testVectors[i].batches[k].expectedNewLeafs = newLeafs;
                 }
 
-                if (txData.encodeInvalidData) {
-                    customRawTx = customRawTx.slice(0, -6);
+                // Check global and local exit roots
+                const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
+                const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32));
+                const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [batch.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+                const globalExitRootPosBuffer = toBuffer(globalExitRootPos);
+
+                // Check local exit root
+                const localExitRootVm = await zkEVMDB.vm.stateManager
+                    .getContractStorage(addressInstanceGlobalExitRoot, localExitRootPosBuffer);
+                const localExitRootSmt = (await stateUtils.getContractStorage(
+                    Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+                    zkEVMDB.smt,
+                    zkEVMDB.stateRoot,
+                    [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
+                ))[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
+
+                if (Scalar.eq(localExitRootSmt, Scalar.e(0))) {
+                    expect(localExitRootVm.toString('hex')).to.equal('');
+                    expect(newLocalExitRoot).to.equal(ethers.constants.HashZero);
+                } else {
+                    expect(localExitRootVm.toString('hex')).to.equal(localExitRootSmt.toString(16).padStart(64, '0'));
+                    expect(localExitRootVm.toString('hex')).to.equal(newLocalExitRoot.slice(2));
                 }
-                rawTxs.push(customRawTx);
-                txProcessed.push(txData);
-            }
 
-            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, smtUtils.stringToH4(globalExitRoot));
-            for (let j = 0; j < rawTxs.length; j++) {
-                batch.addRawTx(rawTxs[j]);
-            }
+                // Check global exit root
+                const globalExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(
+                    addressInstanceGlobalExitRoot,
+                    globalExitRootPosBuffer,
+                );
+                const globalExitRootSmt = (await stateUtils.getContractStorage(
+                    Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+                    zkEVMDB.smt,
+                    zkEVMDB.stateRoot,
+                    [globalExitRootPos],
+                ))[Scalar.e(globalExitRootPos)];
 
-            // execute the transactions added to the batch
-            await batch.executeTxs();
-            // consolidate state
-            await zkEVMDB.consolidate(batch);
+                if (Scalar.eq(globalExitRootSmt, Scalar.e(0))) {
+                    expect(globalExitRootVm.toString('hex')).to.equal('');
+                    expect(globalExitRoot).to.equal(ethers.constants.HashZero);
+                } else {
+                    expect(globalExitRootVm.toString('hex')).to.equal(globalExitRootSmt.toString(16).padStart(64, '0'));
+                    expect(globalExitRootVm.toString('hex')).to.equal(globalExitRoot.slice(2));
+                }
+                // Check through a call in the EVM
+                if (bridgeDeployed) {
+                    const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
+                    const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [batch.batchNumber]);
+                    const globalExitRootResult = await zkEVMDB.vm.runCall({
+                        to: addressInstanceGlobalExitRoot,
+                        caller: Address.zero(),
+                        data: Buffer.from(encodedData.slice(2), 'hex'),
+                    });
+                    expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(globalExitRoot.slice(2));
+                }
 
-            const newRoot = batch.currentStateRoot;
-            if (!update) {
-                expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
-            } else {
-                testVectors[i].expectedNewRoot = smtUtils.h4toString(newRoot);
-            }
+                // Check the circuit input
+                const circuitInput = await batch.getStarkInput();
 
-            // Check errors on decode transactions
-            const decodedTx = await batch.getDecodedTxs();
-
-            for (let j = 0; j < decodedTx.length; j++) {
-                const currentTx = decodedTx[j];
-                const expectedTx = txProcessed[j];
-                try {
-                    expect(currentTx.reason).to.be.equal(expectedTx.reason);
-                } catch (error) {
-                    console.log({ currentTx }, { expectedTx }); // eslint-disable-line no-console
-                    throw new Error(`Batch Id : ${id} TxId:${expectedTx.id} ${error}`);
+                // Check the encode transaction match with the vector test
+                if (!update) {
+                    expect(batchL2Data).to.be.equal(batch.getBatchL2Data());
+                    // Check the batchHashData and the input hash
+                    expect(batchHashData).to.be.equal(circuitInput.batchHashData);
+                    expect(inputHash).to.be.equal(circuitInput.inputHash);
+                    expect(newLocalExitRoot).to.be.equal(circuitInput.newLocalExitRoot);
+                } else {
+                    testVectors[i].batches[k].batchL2Data = batch.getBatchL2Data();
+                    testVectors[i].batches[k].batchHashData = circuitInput.batchHashData;
+                    testVectors[i].batches[k].inputHash = circuitInput.inputHash;
+                    testVectors[i].batches[k].newLocalExitRoot = circuitInput.newLocalExitRoot;
                 }
             }
-
-            // Check balances and nonces
-            const updatedAccounts = batch.getUpdatedAccountsBatch();
-            const newLeafs = {};
-            for (const item in updatedAccounts) {
-                const address = item;
-                const account = updatedAccounts[address];
-                newLeafs[address] = {};
-
-                const newLeaf = await zkEVMDB.getCurrentAccountState(address);
-                expect(newLeaf.balance.toString()).to.equal(account.balance.toString());
-                expect(newLeaf.nonce.toString()).to.equal(account.nonce.toString());
-
-                const smtNewLeaf = await zkEVMDB.getCurrentAccountState(address);
-                expect(smtNewLeaf.balance.toString()).to.equal(account.balance.toString());
-                expect(smtNewLeaf.nonce.toString()).to.equal(account.nonce.toString());
-
-                newLeafs[address].balance = account.balance.toString();
-                newLeafs[address].nonce = account.nonce.toString();
-
-                if (account.isContract() || address === Constants.ADDRESS_SYSTEM
-                || address === Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2) {
-                    const storage = await zkEVMDB.dumpStorage(address);
-                    newLeafs[address].storage = storage;
-                }
-            }
-            for (const leaf of genesis) {
-                if (!newLeafs[leaf.address.toLowerCase()]) {
-                    newLeafs[leaf.address] = { ...leaf };
-                    delete newLeafs[leaf.address].address;
-                    delete newLeafs[leaf.address].bytecode;
-                    delete newLeafs[leaf.address].contractName;
-                }
-            }
-
-            if (!update) {
-                for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
-                    expect(lodash.isEqual(leaf, newLeafs[address])).to.be.equal(true);
-                }
-            } else {
-                testVectors[i].expectedNewLeafs = newLeafs;
-            }
-
-            // Check global and local exit roots
-            const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
-            const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32));
-            const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [batch.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-            const globalExitRootPosBuffer = toBuffer(globalExitRootPos);
-
-            // Check local exit root
-            const localExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(addressInstanceGlobalExitRoot, localExitRootPosBuffer);
-            const localExitRootSmt = (await stateUtils.getContractStorage(
-                Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
-                zkEVMDB.smt,
-                zkEVMDB.stateRoot,
-                [Constants.LOCAL_EXIT_ROOT_STORAGE_POS],
-            ))[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
-
-            if (Scalar.eq(localExitRootSmt, Scalar.e(0))) {
-                expect(localExitRootVm.toString('hex')).to.equal('');
-                expect(newLocalExitRoot).to.equal(ethers.constants.HashZero);
-            } else {
-                expect(localExitRootVm.toString('hex')).to.equal(localExitRootSmt.toString(16).padStart(64, '0'));
-                expect(localExitRootVm.toString('hex')).to.equal(newLocalExitRoot.slice(2));
-            }
-
-            // Check global exit root
-            const globalExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(
-                addressInstanceGlobalExitRoot,
-                globalExitRootPosBuffer,
-            );
-            const globalExitRootSmt = (await stateUtils.getContractStorage(
-                Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
-                zkEVMDB.smt,
-                zkEVMDB.stateRoot,
-                [globalExitRootPos],
-            ))[Scalar.e(globalExitRootPos)];
-
-            if (Scalar.eq(globalExitRootSmt, Scalar.e(0))) {
-                expect(globalExitRootVm.toString('hex')).to.equal('');
-                expect(globalExitRoot).to.equal(ethers.constants.HashZero);
-            } else {
-                expect(globalExitRootVm.toString('hex')).to.equal(globalExitRootSmt.toString(16).padStart(64, '0'));
-                expect(globalExitRootVm.toString('hex')).to.equal(globalExitRoot.slice(2));
-            }
-            // Check through a call in the EVM
-            if (bridgeDeployed) {
-                const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
-                const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [batch.batchNumber]);
-                const globalExitRootResult = await zkEVMDB.vm.runCall({
-                    to: addressInstanceGlobalExitRoot,
-                    caller: Address.zero(),
-                    data: Buffer.from(encodedData.slice(2), 'hex'),
-                });
-                expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(globalExitRoot.slice(2));
-            }
-
-            // Check the circuit input
-            const circuitInput = await batch.getStarkInput();
-
-            // Check the encode transaction match with the vector test
-            if (!update) {
-                expect(batchL2Data).to.be.equal(batch.getBatchL2Data());
-                // Check the batchHashData and the input hash
-                expect(batchHashData).to.be.equal(circuitInput.batchHashData);
-                expect(inputHash).to.be.equal(circuitInput.inputHash);
-                expect(newLocalExitRoot).to.be.equal(circuitInput.newLocalExitRoot);
-            } else {
-                testVectors[i].batchL2Data = batch.getBatchL2Data();
-                testVectors[i].batchHashData = circuitInput.batchHashData;
-                testVectors[i].inputHash = circuitInput.inputHash;
-                testVectors[i].newLocalExitRoot = circuitInput.newLocalExitRoot;
-            }
-
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
         }
         if (update) {
