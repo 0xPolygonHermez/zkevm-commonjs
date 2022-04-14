@@ -87,6 +87,43 @@ class MemDB {
         return JSON.parse(this.db[keyS]);
     }
 
+    /**
+     * Get program value
+     * @param {Array[Field]} key - key in Array Field representation
+     * @returns {Array[Byte] | null} Node childs if found, otherwise return null
+     */
+    async getProgram(key) {
+        if (key.length !== 4) {
+            throw Error('Program key must be an array of 4 Fields');
+        }
+
+        const keyS = h4toString(key);
+
+        if (typeof this.db[keyS] === 'undefined') {
+            return null;
+        }
+
+        if (this.capturing) {
+            this.capturing[keyS] = this.db[keyS];
+        }
+
+        return this.db[keyS];
+    }
+
+    /**
+     * Set program node
+     * @param {Array[Field]} key - key in Field representation
+     * @param {Array[byte]} value - child array
+     */
+    async setProgram(key, value) {
+        if (key.length !== 4) {
+            throw Error('Program key must be an array of 4 Fields');
+        }
+
+        const keyS = h4toString(key);
+        this.db[keyS] = value;
+    }
+
     startCapture() {
         this.capturing = {};
     }
