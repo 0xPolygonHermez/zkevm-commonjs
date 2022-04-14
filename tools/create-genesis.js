@@ -22,7 +22,7 @@ const artifactsPath = path.join(__dirname, '../test/artifacts/contracts');
 const { argv } = require('yargs');
 const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils,
+    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants,
 } = require('../index');
 
 async function main() {
@@ -170,7 +170,7 @@ async function main() {
             currentAccountOutput.bytecode = `0x${smCode.toString('hex')}`;
             currentAccountOutput.storage = storage;
             currentAccountOutput.contractName = addressToContractName[address];
-        } else {
+        } else if (address !== Constants.ADDRESS_SYSTEM && address !== Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2) {
             currentAccountOutput.pvtKey = (genesis.find((o) => o.address.toLowerCase() === address.toLowerCase())).pvtKey;
         }
         accountsOutput.push(currentAccountOutput);

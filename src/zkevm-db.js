@@ -6,7 +6,7 @@ const Common = require('@ethereumjs/common').default;
 const {
     Address, Account, BN, toBuffer,
 } = require('ethereumjs-util');
-const { Chain, Hardfork } = require('@ethereumjs/common');
+const { Hardfork } = require('@ethereumjs/common');
 
 const ethers = require('ethers');
 const Constants = require('./constants');
@@ -17,7 +17,8 @@ const {
 } = require('./state-utils');
 const { h4toString, stringToH4 } = require('./smt-utils');
 
-const common = new Common({ chain: Chain.Mainnet, hardfork: Hardfork.Berlin });
+const common = Common.custom({ chainId: Constants.DEFAULT_SEQ_CHAINID }, { hardfork: Hardfork.Berlin });
+
 class ZkEVMDB {
     constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt) {
         this.db = db;
