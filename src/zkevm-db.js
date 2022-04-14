@@ -9,6 +9,7 @@ const {
 const { Hardfork } = require('@ethereumjs/common');
 
 const ethers = require('ethers');
+const clone = require('lodash/clone');
 const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
@@ -53,7 +54,7 @@ class ZkEVMDB {
             this.localExitRoot,
             globalExitRoot,
             timestamp,
-            this.vm.copy(),
+            clone(this.vm),
         );
     }
 

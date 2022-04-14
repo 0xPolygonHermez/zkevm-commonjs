@@ -34,8 +34,8 @@ contract BlockInfo {
     function getChainId() public {
         testChainId = block.chainid;
     }
-
-    // function getBlockhash(uint blockNumber) public {
-    //     testBlockhash = blockhash(blockNumber);
-    // }
+    
+    function getBlockhash(uint blockNumber) public {
+        testBlockhash = blockhash(blockNumber);
+    }
 }
