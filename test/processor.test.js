@@ -37,6 +37,8 @@ describe('Processor', async function () {
         pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
     } else if (argv.blockinfo) {
         pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info.json');
+    } else if (argv.selfdestruct) {
+        pathProcessorTests = path.join(pathTestVectors, 'selfdestruct/selfdestruct.json');
     } else {
         pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
     }
@@ -278,11 +280,10 @@ describe('Processor', async function () {
                 newLeafs[address].balance = account.balance.toString();
                 newLeafs[address].nonce = account.nonce.toString();
 
-                if (account.isContract() || address === Constants.ADDRESS_SYSTEM
-                || address === Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2) {
-                    const storage = await zkEVMDB.dumpStorage(address);
-                    newLeafs[address].storage = storage;
-                }
+                const storage = await zkEVMDB.dumpStorage(address);
+                const hashBytecode = await zkEVMDB.getHashBytecode(address);
+                newLeafs[address].storage = storage;
+                newLeafs[address].hashBytecode = hashBytecode;
             }
             for (const leaf of genesis) {
                 if (!newLeafs[leaf.address.toLowerCase()]) {
