@@ -29,7 +29,7 @@ const {
 const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Block info tests', function () {
-    this.timeout(5000);
+    this.timeout(50000);
     const pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info-batches.json');
     let update;
     let poseidon;

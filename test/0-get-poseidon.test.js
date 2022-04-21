@@ -14,23 +14,19 @@ describe('getPoseidon', async function () {
 
     it('get one time poseidon', async () => {
         const startTime = performance.now();
-        for (let i = 0; i < numtimes; i++) {
-            await getPoseidon();
-        }
+        await getPoseidon();
         const stopTime = performance.now();
         firstTime = stopTime - startTime;
     });
 
     it('get 10 times poseidon', async () => {
         const startTime = performance.now();
-        for (let i = 0; i < numtimes; i++) {
-            await getPoseidon();
-        }
+        await getPoseidon();
         const stopTime = performance.now();
         secondTime = stopTime - startTime;
     });
 
     it('check times', async () => {
-        expect(10 * firstTime).to.be.greaterThan(firstTime + 9 * secondTime);
+        expect(numtimes * firstTime).to.be.greaterThan(firstTime + numtimes * secondTime);
     });
 });
