@@ -360,7 +360,6 @@ module.exports = class Processor {
                         const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
                         [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
                     } else currentDecodedTx.reason = txResult.execResult.exceptionError;
-                    continue;
                 }
 
                 // PROCESS TX in the smt updating the touched accounts from the EVM
