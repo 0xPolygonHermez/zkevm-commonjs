@@ -69,12 +69,19 @@ async function getContractHashBytecode(ethAddr, smt, root) {
  * @param {Object} smt merkle tree structure
  * @param {Array[Field]} root merkle tree root
  * @param {String} bytecode smart contract bytecode represented as hexadecimal string
+ * @param {Bool} flagDelete flag to set bytecode to 0
  * @returns {Array[Field]} new state root
  */
-async function setContractBytecode(ethAddr, smt, root, bytecode) {
-    const hashByteCode = await smtUtils.hashContractBytecode(bytecode);
+async function setContractBytecode(ethAddr, smt, root, bytecode, flagDelete) {
     const keyContractCode = await smtUtils.keyContractCode(ethAddr);
-    const res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
+    let res;
+
+    if (flagDelete === true) {
+        res = await smt.set(root, keyContractCode, Scalar.e(0));
+    } else {
+        const hashByteCode = await smtUtils.hashContractBytecode(bytecode);
+        res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
+    }
 
     return res.newRoot;
 }

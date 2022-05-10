@@ -360,7 +360,6 @@ module.exports = class Processor {
                         const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
                         [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
                     } else currentDecodedTx.reason = txResult.execResult.exceptionError;
-                    continue;
                 }
 
                 // PROCESS TX in the smt updating the touched accounts from the EVM
@@ -393,6 +392,7 @@ module.exports = class Processor {
                             this.smt,
                             this.currentStateRoot,
                             smCode.toString('hex'),
+                            false,
                         );
                         const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
                         const oldSto = await this.db.getValue(keyDumpStorage);
@@ -423,6 +423,20 @@ module.exports = class Processor {
                             const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
                             this.db.setValue(hashedBytecode, smCode.toString('hex'));
                             this.contractsBytecode[hashedBytecode] = smCode.toString('hex');
+                        }
+                    } else {
+                        // handle self-destruct
+                        const oldHashBytecode = await stateUtils.getContractHashBytecode(address, this.smt, this.currentStateRoot);
+
+                        if (oldHashBytecode !== Constants.BYTECODE_EMPTY) {
+                            // delete leaf bytecode
+                            this.currentStateRoot = await stateUtils.setContractBytecode(
+                                address,
+                                this.smt,
+                                this.currentStateRoot,
+                                '0x',
+                                true,
+                            );
                         }
                     }
                 }

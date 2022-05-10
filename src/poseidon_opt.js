@@ -3,6 +3,9 @@
 const { F1Field, Scalar } = require('ffjavascript');
 const poseidonConstants = require('./poseidon_constants_opt');
 
+let poseidon;
+let isBuilt = false;
+
 function unsringifyConstants(Fr, o) {
     if ((typeof (o) === 'string') && (/^[0-9]+$/.test(o))) {
         return Fr.e(o);
@@ -24,7 +27,11 @@ function unsringifyConstants(Fr, o) {
     return o;
 }
 
-module.exports = async function buildPoseidon() {
+/**
+ * Build poseidon hash function with golden prime
+ * @returns {Object} poseidon function
+ */
+async function buildPoseidon() {
     const goldenPrime = (1n << 64n) - (1n << 32n) + 1n;
 
     const F = new F1Field(Scalar.e(goldenPrime));
@@ -33,7 +40,7 @@ module.exports = async function buildPoseidon() {
 
     const pow7 = (a) => F.mul(a, F.square(F.mul(a, F.square(a, a))));
 
-    function poseidon(inputs, capacity) {
+    poseidon = function (inputs, capacity) {
         if (inputs.length !== 8) throw new Error('Invalid Input size (must be 8)');
 
         let state;
@@ -83,9 +90,24 @@ module.exports = async function buildPoseidon() {
         state = state.map((_, i) => state.reduce((acc, a, j) => F.add(acc, F.mul(M[j][i], a)), F.zero));
 
         return [state[0], state[1], state[2], state[3]];
-    }
+    };
 
     poseidon.F = F;
 
     return poseidon;
-};
+}
+
+/**
+ * singleton to build poseidon once
+ * @returns {Object} - poseidon hash function
+ */
+async function getPoseidon() {
+    if (isBuilt === false) {
+        poseidon = await buildPoseidon();
+        isBuilt = true;
+    }
+
+    return poseidon;
+}
+
+module.exports = getPoseidon;

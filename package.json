@@ -1,15 +1,17 @@
 {
   "name": "@polygon-hermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "0.0.17",
+  "version": "0.0.24",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
-    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js && npm run test:e2e && npm run test:blockinfo",
+    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js && npm run test:e2e && npm run test:blockinfo && npm run test:selfdestruct",
     "test:e2e": "npx mocha ./test/processor.test.js --e2e",
     "test:blockinfo": "npx mocha ./test/processor.test.js --blockinfo",
+    "test:selfdestruct": "npx mocha ./test/processor.test.js --selfdestruct",
     "eslint": "npx eslint src/** test/*.test.js && npx eslint tools",
-    "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix"
+    "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix",
+    "test:update": "./tools/update-tests/update-tests.sh"
   },
   "repository": {
     "type": "git",
@@ -46,7 +48,7 @@
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
     "@polygon-hermez/contracts-zkevm": "github:hermeznetwork/contracts-zkevm#v0.0.3",
-    "@polygon-hermez/vm": "5.7.5",
+    "@polygon-hermez/vm": "5.7.14",
     "chai": "^4.3.4",
     "circomlibjs": "^0.1.1",
     "ethereumjs-util": "^7.1.4",

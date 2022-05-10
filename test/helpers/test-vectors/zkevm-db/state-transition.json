@@ -19,7 +19,7 @@
         "nonce": "0"
       }
     ],
-    "expectedOldRoot": "0xbdde84a5932a2f0a1a4c6c51f3b64ea265d4f1461749298cfdd09b31122ce0d6",
+    "expectedOldRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
     "txs": [
       {
         "id": 0,
@@ -35,7 +35,7 @@
         "customRawTx": "0xee80843b9aca00830186a0944d5cf5032b2a844602278b01199ed191a86c93ff88016345785d8a0000808203e980801186622d03b6b8da7cf111d1ccba5bb185c56deae6a322cebc6dda0556f3cb9700910c26408b64b51c5da36ba2f38ef55ba1cee719d5a6c012259687999074321b"
       }
     ],
-    "expectedNewRoot": "0xacefe70ff20fea86c8d06fda611779b6913622dc982d08d6e31549296926ccc0",
+    "expectedNewRoot": "0x2aa02f4e58dc165ceeaac1d4ea5333246d3e5114301b22ce1996d0888e35227e",
     "expectedNewLeafs": {
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99900000000000000000",

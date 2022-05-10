@@ -9,6 +9,7 @@ const {
 const { Hardfork } = require('@ethereumjs/common');
 
 const ethers = require('ethers');
+const clone = require('lodash/clone');
 const Constants = require('./constants');
 const Processor = require('./processor');
 const SMT = require('./smt');
@@ -53,7 +54,7 @@ class ZkEVMDB {
             this.localExitRoot,
             globalExitRoot,
             timestamp,
-            this.vm.copy(),
+            clone(this.vm),
         );
     }
 
@@ -152,11 +153,20 @@ class ZkEVMDB {
      * Get smart contract bytecode
      * @param {String} address - smart contract address in hex string
      * @returns {String} smart contract bytecode
-    */
+     */
     async getBytecode(address) {
-        const hashByteCode = await getContractHashBytecode(address, this.smt, this.stateRoot);
+        const hashByteCode = await this.getHashBytecode(address);
 
         return this.db.getValue(hashByteCode);
+    }
+
+    /**
+     * Get smart contract hash bytecode
+     * @param {String} address - smart contract address in hex string
+     * @returns {String} smart hash contract bytecode
+     */
+    async getHashBytecode(address) {
+        return getContractHashBytecode(address, this.smt, this.stateRoot);
     }
 
     /**
