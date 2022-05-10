@@ -28,9 +28,9 @@ class SMT {
      * @returns {Object} Information about the tree insertion
      *      {Array[Field]} oldRoot: previous root,
      *      {Array[Field]} newRoot: new root
-     *      {Field} key: key modified,
-     *      {Array[Field]} siblings: array of siblings,
-     *      {Scalar} insKey: inserted key,
+     *      {Array[Field]} key modified,
+     *      {Array[Array[Field]]} siblings: array of siblings,
+     *      {Array[Field]} insKey: inserted key,
      *      {Scalar} insValue: insefted value,
      *      {Bool} isOld0: is new insert or delete,
      *      {Scalar} oldValue: old leaf value,
@@ -267,11 +267,11 @@ class SMT {
      * @param {Array[Field]} key - path to retoreve the value
      * @returns {Object} Information about the value to retrieve
      *      {Array[Field]} root: merkle-tree root,
-     *      {Scalar} key: key to look for,
+     *      {Array[Field]} key: key to look for,
      *      {Scalar} value: value retrieved,
-     *      {Array[Field]} siblings: array of siblings,
+     *      {Array[Array[Field]]} siblings: array of siblings,
      *      {Bool} isOld0: is new insert or delete,
-     *      {Scalar} insKey: key found,
+     *      {Array[Field]} insKey: key found,
      *      {Scalar} insValue: value found,
      */
     async get(root, key) {
@@ -287,7 +287,7 @@ class SMT {
         let foundKey;
         let siblings = [];
 
-        let insKey = F.zero;
+        let insKey;
         let insValue = Scalar.e(0);
 
         let value = Scalar.e(0);
