@@ -2,11 +2,11 @@
 
 const ethers = require('ethers');
 
-const MerkleTreeBridge = require('../index').MTBridge;
+const MerkleTreeBridge = require('../../index').MTBridge;
 const {
     verifyMerkleProof,
     calculateLeafValue,
-} = require('../index').mtBridgeUtils;
+} = require('../../index').mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
     return ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);

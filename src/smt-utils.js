@@ -183,9 +183,8 @@ function isOneSiblings(n, F) {
 
 /**
  * Leaf type 0:
- *   hk0: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 0, 0])
- *   hk1: H([0, 0, 0, 0, 0, 0, 0, 0])
- *   key = H([...hk0, ...hk1])
+ *   hk0: H([0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0])
+ *   key: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 0, 0], [hk0[0], hk0[1], hk0[2], hk0[3]])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
  * @returns {Scalar} - key computed
  */
@@ -204,20 +203,16 @@ async function keyEthAddrBalance(_ethAddr) {
 
     const ethAddrArr = scalar2fea(F, ethAddr);
 
-    const key0 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
-    const key1 = [F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero];
+    const key1 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1Capacity = stringToH4(constants.HASH_POSEIDON_ALL_ZEROES);
 
-    const hk0 = poseidon(key0);
-    const hk1 = poseidon(key1);
-
-    return poseidon([...hk0, ...hk1]);
+    return poseidon(key1, key1Capacity);
 }
 
 /**
  * Leaf type 1:
- *   hk0: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 1, 0])
- *   hk1: H([0, 0, 0, 0, 0, 0, 0, 0])
- *   key = H([...hk0, ...hk1])
+ *   hk0: H([0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0])
+ *   key: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 1, 0], [hk0[0], hk0[1], hk0[2], hk0[3]]
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
  * @returns {Array[Field]} - key computed
  */
@@ -236,20 +231,16 @@ async function keyEthAddrNonce(_ethAddr) {
 
     const ethAddrArr = scalar2fea(F, ethAddr);
 
-    const key0 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
-    const key1 = [F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero];
+    const key1 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1Capacity = stringToH4(constants.HASH_POSEIDON_ALL_ZEROES);
 
-    const hk0 = poseidon(key0);
-    const hk1 = poseidon(key1);
-
-    return poseidon([...hk0, ...hk1]);
+    return poseidon(key1, key1Capacity);
 }
 
 /**
- * Leaf type 1:
- *   hk0: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 2, 0])
- *   hk1: H([0, 0, 0, 0, 0, 0, 0, 0])
- *   key = H([...hk0, ...hk1])
+ * Leaf type 2:
+ *   hk0: H([0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0])
+ *   key: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 2, 0], [hk0[0], hk0[1], hk0[2], hk0[3]]
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
  * @returns {Array[Field]} - key computed
  */
@@ -268,20 +259,16 @@ async function keyContractCode(_ethAddr) {
 
     const ethAddrArr = scalar2fea(F, ethAddr);
 
-    const key0 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
-    const key1 = [F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero, F.zero];
+    const key1 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1Capacity = stringToH4(constants.HASH_POSEIDON_ALL_ZEROES);
 
-    const hk0 = poseidon(key0);
-    const hk1 = poseidon(key1);
-
-    return poseidon([...hk0, ...hk1]);
+    return poseidon(key1, key1Capacity);
 }
 
 /**
  * Leaf type 3:
- *   hk0: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 3, 0])
- *   hk1: H([stoPos[0:4], stoPos[4:8], stoPos[8:12], stoPos[12:16], stoPos[16:20], stoPos[20:24], stoPos[24:28], stoPos[28:32])
- *   key = H([...hk0, ...hk1])
+ * hk0: H([stoPos[0:4], stoPos[4:8], stoPos[8:12], stoPos[12:16], stoPos[16:20], stoPos[20:24], stoPos[24:28], stoPos[28:32], [0, 0, 0, 0])
+ * key: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 3, 0], [hk0[0], hk0[1], hk0[2], hk0[3])
  * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
  * @param {Number | Scalar} _storagePos - smart contract storage position
  * @returns {Array[Field]} - key computed
@@ -304,12 +291,12 @@ async function keyContractStorage(_ethAddr, _storagePos) {
     const storagePos = Scalar.e(_storagePos);
     const storagePosArray = scalar2fea(F, storagePos);
 
-    const key0 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const hk0 = poseidon(storagePosArray, [F.zero, F.zero, F.zero, F.zero]);
 
-    const hk0 = poseidon(key0);
-    const hk1 = poseidon(storagePosArray);
+    const key1 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1Capacity = hk0;
 
-    return poseidon([...hk0, ...hk1]);
+    return poseidon(key1, key1Capacity);
 }
 
 /**
