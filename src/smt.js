@@ -72,7 +72,7 @@ class SMT {
 
         let insKey;
         let insValue;
-        const oldValue = Scalar.e(0);
+        let oldValue = Scalar.e(0);
         let mode;
         let newRoot = oldRoot;
         let isOld0 = true;
@@ -102,6 +102,7 @@ class SMT {
             if (typeof (foundKey) !== 'undefined') {
                 if (nodeIsEq(key, foundKey, F)) { // Update
                     mode = 'update';
+                    oldValue = foundVal;
 
                     const newValH = await hashSave(scalar2fea(F, value), [F.zero, F.zero, F.zero, F.zero]);
                     const newLeafHash = await hashSave([...foundRKey, ...newValH], [F.one, F.zero, F.zero, F.zero]);
@@ -173,6 +174,7 @@ class SMT {
                 }
             }
         } else if ((typeof (foundKey) !== 'undefined') && (nodeIsEq(key, foundKey, F))) { // Delete
+            oldValue = foundVal;
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
                     siblings[level][keys[level] * 4 + j] = F.zero;
