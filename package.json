@@ -10,7 +10,8 @@
     "test:blockinfo": "npx mocha ./test/processor.test.js --blockinfo",
     "test:selfdestruct": "npx mocha ./test/processor.test.js --selfdestruct",
     "eslint": "npx eslint src/** test/*.test.js && npx eslint tools",
-    "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix"
+    "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix",
+    "test:update": "./tools/update-tests/update-tests.sh"
   },
   "repository": {
     "type": "git",

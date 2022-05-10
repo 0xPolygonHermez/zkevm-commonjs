@@ -17,13 +17,13 @@ const {
 const { defaultAbiCoder } = require('@ethersproject/abi');
 const path = require('path');
 
-const artifactsPath = path.join(__dirname, '../test/artifacts/contracts');
+const artifactsPath = path.join(__dirname, '../../test/artifacts/contracts');
 
 const { argv } = require('yargs');
 const contractsPolygonHermez = require('@polygon-hermez/contracts-zkevm');
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants,
-} = require('../index');
+} = require('../../index');
 
 async function main() {
     // load generator
