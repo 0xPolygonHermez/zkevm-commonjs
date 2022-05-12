@@ -360,6 +360,23 @@ module.exports = class Processor {
                         const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
                         [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
                     } else currentDecodedTx.reason = txResult.execResult.exceptionError;
+
+                    // UPDATE sender account adding the nonce and the substracting the gas spended
+                    const senderAcc = await this.vm.stateManager.getAccount(txResult.execResult.runState.caller)
+                    this.updatedAccounts[currenTx.from] = senderAcc;
+                    // Update smt with touched accounts
+                    this.currentStateRoot = await stateUtils.setAccountState(
+                        currenTx.from,
+                        this.smt,
+                        this.currentStateRoot,
+                        Scalar.e(senderAcc.balance),
+                        Scalar.e(senderAcc.nonce),
+                    );
+                    // Consolidate transacttions to refresh touchedAccounts
+                    await this.vm.stateManager.checkpoint();
+                    await this.vm.stateManager.commit();
+
+                    continue;
                 }
 
                 // PROCESS TX in the smt updating the touched accounts from the EVM
