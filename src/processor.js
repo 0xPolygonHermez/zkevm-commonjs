@@ -361,7 +361,7 @@ module.exports = class Processor {
                         [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
                     } else currentDecodedTx.reason = txResult.execResult.exceptionError;
 
-                    // UPDATE sender account adding the nonce and the substracting the gas spended
+                    // UPDATE sender account adding the nonce and substracting the gas spended
                     const senderAcc = await this.vm.stateManager.getAccount(txResult.execResult.runState.caller)
                     this.updatedAccounts[currenTx.from] = senderAcc;
                     // Update smt with touched accounts
@@ -372,6 +372,24 @@ module.exports = class Processor {
                         Scalar.e(senderAcc.balance),
                         Scalar.e(senderAcc.nonce),
                     );
+
+                    // UPDATE miner Acc
+                    // Get touched evm account
+                    const addressSeq = Address.fromString(this.sequencerAddress);
+                    const accountSeq = await this.vm.stateManager.getAccount(addressSeq);
+
+                    // Update batch touched stack
+                    this.updatedAccounts[this.sequencerAddress] = accountSeq;
+
+                    // Update smt with touched accounts
+                    this.currentStateRoot = await stateUtils.setAccountState(
+                        this.sequencerAddress,
+                        this.smt,
+                        this.currentStateRoot,
+                        Scalar.e(accountSeq.balance),
+                        Scalar.e(accountSeq.nonce),
+                    );
+
                     // Consolidate transacttions to refresh touchedAccounts
                     await this.vm.stateManager.checkpoint();
                     await this.vm.stateManager.commit();
