@@ -362,7 +362,7 @@ module.exports = class Processor {
                     } else currentDecodedTx.reason = txResult.execResult.exceptionError;
 
                     // UPDATE sender account adding the nonce and substracting the gas spended
-                    const senderAcc = await this.vm.stateManager.getAccount(txResult.execResult.runState.caller)
+                    const senderAcc = await this.vm.stateManager.getAccount(txResult.execResult.runState.caller);
                     this.updatedAccounts[currenTx.from] = senderAcc;
                     // Update smt with touched accounts
                     this.currentStateRoot = await stateUtils.setAccountState(
@@ -373,8 +373,10 @@ module.exports = class Processor {
                         Scalar.e(senderAcc.nonce),
                     );
 
-                    // UPDATE miner Acc
-                    // Get touched evm account
+                    /*
+                     * UPDATE miner Acc
+                     * Get touched evm account
+                     */
                     const addressSeq = Address.fromString(this.sequencerAddress);
                     const accountSeq = await this.vm.stateManager.getAccount(addressSeq);
 
