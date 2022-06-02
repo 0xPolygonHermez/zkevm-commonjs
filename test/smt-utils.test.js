@@ -43,6 +43,15 @@ describe('smtUtils', async function () {
     });
 
     it('scalar2fea & fea2scalar', async () => {
+        const value = (Scalar.e('115792089237316195423570985008687907853269984665640564039457584007913129639935')).toString(16);
+
+        const fea = smtUtils.string2fea(F, value);
+        const str = smtUtils.fea2String(F, fea);
+
+        expect(str).to.be.equal(value);
+    });
+
+    it('fea2String & string2fea', async () => {
         const value = Scalar.e('115792089237316195423570985008687907853269984665640564039457584007913129639935');
 
         const fea = smtUtils.scalar2fea(F, value);

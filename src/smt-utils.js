@@ -25,7 +25,7 @@ function scalar2fea(Fr, scalar) {
 }
 
 /**
- * Field elemetn array to Scalar
+ * Field element array to Scalar
  * result = arr[0] + arr[1]*(2^32) + arr[2]*(2^64) + arr[3]*(2^96) + arr[3]*(2^128) + arr[3]*(2^160) + arr[3]*(2^192) + arr[3]*(2^224)
  * @param {Field} F - field element
  * @param {Array[Field]} arr - array of fields elements
@@ -45,17 +45,28 @@ function fea2scalar(Fr, arr) {
 }
 
 /**
- * Field elemetn array to Scalar
- * result = arr[0] + arr[1]*(2^32) + arr[2]*(2^64) + arr[3]*(2^96) + arr[3]*(2^128) + arr[3]*(2^160) + arr[3]*(2^192) + arr[3]*(2^224)
+ * Field element array to hexadecimal string
  * @param {Field} F - field element
  * @param {Array[Field]} arr - array of fields elements
  * @returns {string}
  */
-function fea2hash(Fr, arr) {
+function fea2String(Fr, arr) {
     const s = fea2scalar(Fr, arr);
     const res = `0x${Scalar.toString(s, 16).padStart(32, '0')}`;
 
     return res;
+}
+
+/**
+ * Field element array to Scalar
+ * @param {Field} F - field element
+ * @param {String} str - hexadecimla string
+ * @returns {Array[Field]}
+ */
+function string2fea(Fr, str) {
+    const scalar = Scalar.fromString(str, 16);
+
+    return scalar2fea(Fr, scalar);
 }
 
 /**
@@ -365,27 +376,26 @@ async function hashContractBytecode(_bytecode) {
     const poseidon = await getPoseidon();
     const { F } = poseidon;
 
-    const bytecode = _bytecode.startsWith('0x') ? _bytecode.slice(2) : _bytecode;
+    let bytecode = _bytecode.startsWith('0x') ? _bytecode.slice(2) : _bytecode.slice();
+    bytecode = (bytecode % 2) ? `0${bytecode}` : bytecode;
+
+    // add padding
+    bytecode += '01';
+    while ((bytecode.length % (56 * 2)) !== 0) bytecode += '00';
+    const lastByte = (Number(bytecode.slice(-2)) | 0x80).toString(16);
+    bytecode = `${bytecode.slice(0, -2)}${lastByte}`;
 
     const numBytes = bytecode.length / 2;
-
     const numHashes = Math.ceil(numBytes / (constants.BYTECODE_ELEMENTS_HASH * constants.BYTECODE_BYTES_ELEMENT));
 
-    let tmpHash;
+    let tmpHash = [F.zero, F.zero, F.zero, F.zero];
     let bytesPointer = 0;
 
     for (let i = 0; i < numHashes; i++) {
         const maxBytesToAdd = constants.BYTECODE_ELEMENTS_HASH * constants.BYTECODE_BYTES_ELEMENT;
         const elementsToHash = []; // 4 capacity + 8 elements
 
-        if (i !== 0) {
-            elementsToHash.push(...tmpHash);
-        } else {
-            elementsToHash.push(F.zero);
-            elementsToHash.push(F.zero);
-            elementsToHash.push(F.zero);
-            elementsToHash.push(F.zero);
-        }
+        elementsToHash.push(...tmpHash);
 
         const subsetBytecode = bytecode.slice(bytesPointer, bytesPointer + maxBytesToAdd * 2);
         bytesPointer += maxBytesToAdd * 2;
@@ -399,7 +409,7 @@ async function hashContractBytecode(_bytecode) {
                 byteToAdd = subsetBytecode.slice(j * 2, (j + 1) * 2);
             }
 
-            tmpElem = tmpElem.concat(byteToAdd);
+            tmpElem = byteToAdd.concat(tmpElem);
             counter += 1;
 
             if (counter === constants.BYTECODE_BYTES_ELEMENT) {
@@ -418,7 +428,8 @@ async function hashContractBytecode(_bytecode) {
 module.exports = {
     scalar2fea,
     fea2scalar,
-    fea2hash,
+    fea2String,
+    string2fea,
     fe2n,
     keyEthAddrBalance,
     keyEthAddrNonce,
