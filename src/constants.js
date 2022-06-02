@@ -22,6 +22,7 @@ module.exports.SMT_KEY_BALANCE = 0;
 module.exports.SMT_KEY_NONCE = 1;
 module.exports.SMT_KEY_SC_CODE = 2;
 module.exports.SMT_KEY_SC_STORAGE = 3;
+module.exports.SMT_KEY_SC_LENGTH = 4;
 
 // SMT constant
 module.exports.BYTECODE_ELEMENTS_HASH = 8;

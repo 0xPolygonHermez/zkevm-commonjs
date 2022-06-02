@@ -15,6 +15,7 @@ const Processor = require('./processor');
 const SMT = require('./smt');
 const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
+    getContractBytecodeLength,
 } = require('./state-utils');
 const { h4toString, stringToH4 } = require('./smt-utils');
 
@@ -167,6 +168,15 @@ class ZkEVMDB {
      */
     async getHashBytecode(address) {
         return getContractHashBytecode(address, this.smt, this.stateRoot);
+    }
+
+    /**
+     * Get smart contract bytecode length length
+     * @param {String} address - smart contract address in hex string
+     * @returns {Number} smart hash bytecode
+     */
+    async getLength(address) {
+        return getContractBytecodeLength(address, this.smt, this.stateRoot);
     }
 
     /**
