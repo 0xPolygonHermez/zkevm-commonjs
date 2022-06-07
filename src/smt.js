@@ -65,6 +65,7 @@ class SMT {
 
         const keys = self.splitKey(key);
         let level = 0;
+        let proofHashCounter = 0;
 
         const accKey = [];
         let foundKey;
@@ -257,7 +258,7 @@ class SMT {
             isOld0,
             oldValue,
             newValue: value,
-            mode,
+            mode
         };
     }
 
@@ -282,6 +283,7 @@ class SMT {
 
         const keys = self.splitKey(key);
         let level = 0;
+        let proofHashCounter = 0;
 
         const accKey = [];
         let foundKey;
@@ -332,6 +334,7 @@ class SMT {
             isOld0,
             insKey,
             insValue,
+            proofHashCounter: siblings.length + 2
         };
     }
 
