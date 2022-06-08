@@ -3,7 +3,7 @@
 const { Scalar } = require('ffjavascript');
 
 const {
-    scalar2fea, fea2scalar, nodeIsZero, nodeIsEq, isOneSiblings,
+    scalar2fea, fea2scalar, nodeIsZero, nodeIsEq, isOneSiblings, h4toScalar
 } = require('./smt-utils');
 
 class SMT {
@@ -96,8 +96,12 @@ class SMT {
             }
         }
 
+
         level -= 1;
         accKey.pop();
+
+        // calculate hash to validate oldRoot
+        proofHashCounter = nodeIsZero(oldRoot, F) ? 0 : (siblings.slice(0, level + 1).length + (((foundVal ?? 0n) === 0n) ? 0 : 2));
 
         if (!Scalar.isZero(value)) {
             if (typeof (foundKey) !== 'undefined') {
@@ -107,6 +111,7 @@ class SMT {
 
                     const newValH = await hashSave(scalar2fea(F, value), [F.zero, F.zero, F.zero, F.zero]);
                     const newLeafHash = await hashSave([...foundRKey, ...newValH], [F.one, F.zero, F.zero, F.zero]);
+                    proofHashCounter += 2;
                     if (level >= 0) {
                         for (let j = 0; j < 4; j++) {
                             siblings[level][keys[level] * 4 + j] = newLeafHash[j];
@@ -139,6 +144,7 @@ class SMT {
                     }
 
                     let r2 = await hashSave(node, [F.zero, F.zero, F.zero, F.zero]);
+                    proofHashCounter += 4;
                     level2 -= 1;
 
                     while (level2 !== level) {
@@ -148,6 +154,7 @@ class SMT {
                         }
 
                         r2 = await hashSave(node, [F.zero, F.zero, F.zero, F.zero]);
+                        ++proofHashCounter;
                         level2 -= 1;
                     }
 
@@ -161,10 +168,10 @@ class SMT {
                 }
             } else { // insert without foundKey
                 mode = 'insertNotFound';
-
                 const newKey = this.removeKeyBits(key, (level + 1));
                 const newValH = await hashSave(scalar2fea(F, value), [F.zero, F.zero, F.zero, F.zero]);
                 const newLeafHash = await hashSave([...newKey, ...newValH], [F.one, F.zero, F.zero, F.zero]);
+                proofHashCounter += 2;
 
                 if (level >= 0) {
                     for (let j = 0; j < 4; j++) {
@@ -186,10 +193,11 @@ class SMT {
                 if (uKey >= 0) {
                     mode = 'deleteFound';
                     siblings[level + 1] = await self.db.getSmtNode(siblings[level].slice(uKey * 4, uKey * 4 + 4));
-
+                    ++proofHashCounter;
                     if (isOneSiblings(siblings[level + 1], F)) {
                         const valH = siblings[level + 1].slice(4, 8);
                         const valA = (await self.db.getSmtNode(valH)).slice(0, 8);
+                        ++proofHashCounter;
                         const rKey = siblings[level + 1].slice(0, 4);
 
                         const val = fea2scalar(F, valA);
@@ -209,6 +217,7 @@ class SMT {
 
                         // eslint-disable-next-line max-len
                         const oldLeafHash = await hashSave([...oldKey, ...valH], [F.one, F.zero, F.zero, F.zero]);
+                        ++proofHashCounter;
 
                         if (level >= 0) {
                             for (let j = 0; j < 4; j++) {
@@ -240,6 +249,7 @@ class SMT {
 
         while (level >= 0) {
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
+            ++proofHashCounter;
             level -= 1;
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
@@ -248,6 +258,7 @@ class SMT {
             }
         }
 
+        console.log(['STORAGE.siblings', mode, siblings.length, siblings.length * 2 + 2]);
         return {
             oldRoot,
             newRoot,
@@ -258,7 +269,8 @@ class SMT {
             isOld0,
             oldValue,
             newValue: value,
-            mode
+            mode,
+            proofHashCounter
         };
     }
 
@@ -334,8 +346,34 @@ class SMT {
             isOld0,
             insKey,
             insValue,
-            proofHashCounter: siblings.length + 2
+            proofHashCounter: nodeIsZero(root, F) ? 0 : (siblings.length + (F.isZero(value) ? 0 : 2))
         };
+    }
+
+    async getData(root) {
+        const self = this;
+        const { F } = this;
+
+        let siblings = [];
+
+        let nodes = [];
+        let pendingNodes = [root];
+        while (pendingNodes.length > 0) {
+            const node = pendingNodes[0];
+            pendingNodes = pendingNodes.slice(1);
+            if (nodeIsZero(node, F)) continue;
+            siblings = await self.db.getSmtNode(node);
+            nodes.push([node, siblings]);
+            if (!siblings) continue;
+            if (isOneSiblings(siblings, F)) {
+                const value = (await self.db.getSmtNode(siblings.slice(4, 8))).slice(0, 8);
+                nodes.push([node, value]);
+                continue;
+            }
+            pendingNodes.push(siblings.slice(0, 4));
+            pendingNodes.push(siblings.slice(4, 8));
+        }
+        return nodes;
     }
 
     /**
@@ -355,6 +393,20 @@ class SMT {
         }
 
         return res;
+    }
+
+    async dump(root) {
+        const self = this;
+        const nodes = await self.getData(root);
+        nodes.forEach(([key, value], index) => {
+            const nodeValue = value === null ? 'null' : (value.length === 8 ? fea2scalar(this.F, value).toString(16).padStart(64, '0') :
+                             ('['+
+                             h4toScalar(value.slice(0, 4)).toString(16).padStart(64,'0')+', '+
+                             h4toScalar(value.slice(4, 8)).toString(16).padStart(64,'0')+', '+
+                             h4toScalar(value.slice(8)).toString(16)+']'));
+
+            console.log('#== ['+ index.toString(10).padStart(3)+'] '+h4toScalar(key).toString(16).padStart(64,'0')+ ' ==> '+ nodeValue);
+        });
     }
 
     /**
