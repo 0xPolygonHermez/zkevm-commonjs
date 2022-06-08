@@ -3,7 +3,7 @@
 const { Scalar } = require('ffjavascript');
 
 const {
-    scalar2fea, fea2scalar, nodeIsZero, nodeIsEq, isOneSiblings, h4toScalar
+    scalar2fea, fea2scalar, nodeIsZero, nodeIsEq, isOneSiblings,
 } = require('./smt-utils');
 
 class SMT {
@@ -36,6 +36,7 @@ class SMT {
      *      {Scalar} oldValue: old leaf value,
      *      {Scalar} newValue: new leaf value,
      *      {String} mode: action performed by the insertion,
+     *      {Number} proofHashCounter: counter of hashs must be done to proof this operation
      */
     async set(oldRoot, key, value) {
         const self = this;
@@ -258,7 +259,6 @@ class SMT {
             }
         }
 
-        console.log(['STORAGE.siblings', mode, siblings.length, siblings.length * 2 + 2]);
         return {
             oldRoot,
             newRoot,
@@ -286,6 +286,7 @@ class SMT {
      *      {Bool} isOld0: is new insert or delete,
      *      {Array[Field]} insKey: key found,
      *      {Scalar} insValue: value found,
+     *      {Number} proofHashCounter: counter of hashs must be done to proof this operation
      */
     async get(root, key) {
         const self = this;
@@ -350,32 +351,6 @@ class SMT {
         };
     }
 
-    async getData(root) {
-        const self = this;
-        const { F } = this;
-
-        let siblings = [];
-
-        let nodes = [];
-        let pendingNodes = [root];
-        while (pendingNodes.length > 0) {
-            const node = pendingNodes[0];
-            pendingNodes = pendingNodes.slice(1);
-            if (nodeIsZero(node, F)) continue;
-            siblings = await self.db.getSmtNode(node);
-            nodes.push([node, siblings]);
-            if (!siblings) continue;
-            if (isOneSiblings(siblings, F)) {
-                const value = (await self.db.getSmtNode(siblings.slice(4, 8))).slice(0, 8);
-                nodes.push([node, value]);
-                continue;
-            }
-            pendingNodes.push(siblings.slice(0, 4));
-            pendingNodes.push(siblings.slice(4, 8));
-        }
-        return nodes;
-    }
-
     /**
      * Get path for a giving key
      * @param {Scalar} k - key
@@ -393,20 +368,6 @@ class SMT {
         }
 
         return res;
-    }
-
-    async dump(root) {
-        const self = this;
-        const nodes = await self.getData(root);
-        nodes.forEach(([key, value], index) => {
-            const nodeValue = value === null ? 'null' : (value.length === 8 ? fea2scalar(this.F, value).toString(16).padStart(64, '0') :
-                             ('['+
-                             h4toScalar(value.slice(0, 4)).toString(16).padStart(64,'0')+', '+
-                             h4toScalar(value.slice(4, 8)).toString(16).padStart(64,'0')+', '+
-                             h4toScalar(value.slice(8)).toString(16)+']'));
-
-            console.log('#== ['+ index.toString(10).padStart(3)+'] '+h4toScalar(key).toString(16).padStart(64,'0')+ ' ==> '+ nodeValue);
-        });
     }
 
     /**
