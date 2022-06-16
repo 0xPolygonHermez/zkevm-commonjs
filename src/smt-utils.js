@@ -311,6 +311,34 @@ async function keyContractStorage(_ethAddr, _storagePos) {
 }
 
 /**
+ * Leaf type 4:
+ *   hk0: H([0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0])
+ *   key: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 4, 0], [hk0[0], hk0[1], hk0[2], hk0[3]]
+ * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
+ * @returns {Array[Field]} - key computed
+ */
+async function keyContractLength(_ethAddr) {
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
+
+    const constant = F.e(constants.SMT_KEY_SC_LENGTH);
+
+    let ethAddr;
+    if (typeof _ethAddr === 'string') {
+        ethAddr = Scalar.fromString(_ethAddr, 16);
+    } else {
+        ethAddr = Scalar.e(_ethAddr);
+    }
+
+    const ethAddrArr = scalar2fea(F, ethAddr);
+
+    const key1 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1Capacity = stringToH4(constants.HASH_POSEIDON_ALL_ZEROES);
+
+    return poseidon(key1, key1Capacity);
+}
+
+/**
  * Fill the dbObject with all the childs recursively
  * @param {Array[Field]} node merkle node
  * @param {Object} db Mem DB
@@ -377,11 +405,12 @@ async function hashContractBytecode(_bytecode) {
     const { F } = poseidon;
 
     let bytecode = _bytecode.startsWith('0x') ? _bytecode.slice(2) : _bytecode.slice();
-    bytecode = (bytecode % 2) ? `0${bytecode}` : bytecode;
-
+    bytecode = (bytecode.length % 2) ? `0${bytecode}` : bytecode;
     // add padding
     bytecode += '01';
+
     while ((bytecode.length % (56 * 2)) !== 0) bytecode += '00';
+
     const lastByte = (Number(bytecode.slice(-2)) | 0x80).toString(16);
     bytecode = `${bytecode.slice(0, -2)}${lastByte}`;
 
@@ -435,6 +464,7 @@ module.exports = {
     keyEthAddrNonce,
     keyContractCode,
     keyContractStorage,
+    keyContractLength,
     getCurrentDB,
     hashContractBytecode,
     h4toScalar,

@@ -36,17 +36,20 @@ describe('smtUtils', async function () {
         expect(account.nonce.toString()).to.be.equal(resAccount.nonce.toString());
     });
 
-    it('set-get hash bytecode', async () => {
+    it('set-get hash bytecode and length', async () => {
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
 
-        const ethAddr = '0x12345';
-        const bytecode = '0x6789A';
+        const ethAddr = '0x123456';
+        const bytecode = '0x6789AB';
+
         const hashBytecode = await smtUtils.hashContractBytecode(bytecode);
-
         const root = await stateUtils.setContractBytecode(ethAddr, smt, smt.empty, bytecode);
-        const resHashBytecode = await stateUtils.getContractHashBytecode(ethAddr, smt, root);
 
+        const resHashBytecode = await stateUtils.getContractHashBytecode(ethAddr, smt, root);
+        const resBytecodeLength = await stateUtils.getContractBytecodeLength(ethAddr, smt, root);
+
+        expect(resBytecodeLength.toString()).to.be.equal(((bytecode.length - 2) / 2).toString());
         expect(hashBytecode).to.be.equal(resHashBytecode);
     });
 
