@@ -32,6 +32,7 @@ module.exports = class Processor {
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Object} vm - vm instance
+     * @param {Address} aggregatorAddress - aggregator address which intends to forge the batch
      */
     constructor(
         db,
@@ -45,6 +46,7 @@ module.exports = class Processor {
         globalExitRoot,
         timestamp,
         vm,
+        aggregatorAddress
     ) {
         this.db = db;
         this.batchNumber = batchNumber;
@@ -63,14 +65,18 @@ module.exports = class Processor {
         this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;
-        this.sequencerAddress = sequencerAddress;
         this.oldLocalExitRoot = localExitRoot;
+        this.newLocalExitRoot = localExitRoot;
         this.globalExitRoot = globalExitRoot;
+
+        this.sequencerAddress = sequencerAddress;
         this.timestamp = timestamp;
+
         this.vm = vm;
         this.evmSteps = [];
-        this.newLocalExitRoot = localExitRoot;
         this.updatedAccounts = {};
+
+        this.aggregatorAddress = aggregatorAddress;
     }
 
     /**
@@ -500,9 +506,6 @@ module.exports = class Processor {
             this.getBatchL2Data(),
             globalExitRoot,
             this.timestamp,
-            this.sequencerAddress,
-            this.seqChainID,
-            this.batchNumber,
         );
 
         const inputHash = calculateStarkInput(
@@ -511,6 +514,8 @@ module.exports = class Processor {
             newStateRoot,
             newLocalExitRoot, // should be the new exit root, but it's not modified in this version
             batchHashData,
+            this.batchNumber,
+            this.timestamp
         );
 
         this.starkInput = {
@@ -545,10 +550,7 @@ module.exports = class Processor {
         const batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
             globalExitRoot,
-            this.timestamp,
-            this.sequencerAddress,
-            this.seqChainID,
-            this.batchNumber,
+            this.sequencerAddress
         );
 
         this.snarkInput = calculateSnarkInput(
@@ -557,6 +559,9 @@ module.exports = class Processor {
             newStateRoot,
             newLocalExitRoot,
             batchHashData,
+            this.batchNumber,
+            this.timestamp,
+            this.aggregatorAddress
         );
     }
 

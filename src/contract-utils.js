@@ -11,7 +11,6 @@ const { FrSNARK } = require('./constants');
  * @param {String} batchHashData - Batch hash data
  * @param {Number} numBatch - Batch number
  * @param {Number} timestamp - Block timestamp
- * @param {String} aggregatorAddress - Aggregator address
  * @returns {String} - global hash in hex encoding
  */
 function calculateStarkInput(
@@ -21,8 +20,7 @@ function calculateStarkInput(
     newLocalExitRoot,
     batchHashData,
     numBatch,
-    timestamp,
-    aggregatorAddress
+    timestamp
 ) {
     const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
     const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
@@ -30,7 +28,7 @@ function calculateStarkInput(
     const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64', 'address'],
+        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64'],
         [
             currentStateRootHex,
             currentLocalExitRootHex,
@@ -38,8 +36,7 @@ function calculateStarkInput(
             newLocalExitRootHex,
             batchHashData,
             numBatch,
-            timestamp,
-            aggregatorAddress
+            timestamp
         ],
     );
 
@@ -68,17 +65,24 @@ function calculateSnarkInput(
     timestamp,
     aggregatorAddress
 ) {
-    const hashKeccak = calculateStarkInput(
-        currentStateRoot,
-        currentLocalExitRoot,
-        newStateRoot,
-        newLocalExitRoot,
-        batchHashData,
-        numBatch,
-        timestamp,
-        aggregatorAddress
-    );
+    const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
+    const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
+    const newStateRootHex = `0x${Scalar.e(newStateRoot).toString(16).padStart(64, '0')}`;
+    const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
+    const hashKeccak = ethers.utils.solidityKeccak256(
+        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64', 'address'],
+        [
+            currentStateRootHex,
+            currentLocalExitRootHex,
+            newStateRootHex,
+            newLocalExitRootHex,
+            batchHashData,
+            numBatch,
+            timestamp,
+            aggregatorAddress
+        ],
+    );
     return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), FrSNARK).toString(16).padStart(64, '0')}`;
 }
 
