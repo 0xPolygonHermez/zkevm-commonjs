@@ -47,7 +47,7 @@
     "@ethersproject/abi": "^5.5.0",
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
-    "@polygon-hermez/contracts-zkevm": "github:hermeznetwork/contracts-zkevm#v0.0.3",
+    "@polygon-hermez/contracts-zkevm": "github:hermeznetwork/contracts-zkevm#feature/poeV2",
     "@polygon-hermez/vm": "5.7.14",
     "chai": "^4.3.4",
     "circomlibjs": "^0.1.1",
