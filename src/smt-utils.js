@@ -25,7 +25,7 @@ function scalar2fea(Fr, scalar) {
 }
 
 /**
- * Field elemetn array to Scalar
+ * Field element array to Scalar
  * result = arr[0] + arr[1]*(2^32) + arr[2]*(2^64) + arr[3]*(2^96) + arr[3]*(2^128) + arr[3]*(2^160) + arr[3]*(2^192) + arr[3]*(2^224)
  * @param {Field} F - field element
  * @param {Array[Field]} arr - array of fields elements
@@ -45,17 +45,28 @@ function fea2scalar(Fr, arr) {
 }
 
 /**
- * Field elemetn array to Scalar
- * result = arr[0] + arr[1]*(2^32) + arr[2]*(2^64) + arr[3]*(2^96) + arr[3]*(2^128) + arr[3]*(2^160) + arr[3]*(2^192) + arr[3]*(2^224)
+ * Field element array to hexadecimal string
  * @param {Field} F - field element
  * @param {Array[Field]} arr - array of fields elements
  * @returns {string}
  */
-function fea2hash(Fr, arr) {
+function fea2String(Fr, arr) {
     const s = fea2scalar(Fr, arr);
     const res = `0x${Scalar.toString(s, 16).padStart(32, '0')}`;
 
     return res;
+}
+
+/**
+ * Hexadecimal string to Field element array
+ * @param {Field} F - field element
+ * @param {String} str - hexadecimal string
+ * @returns {Array[Field]}
+ */
+function string2fea(Fr, str) {
+    const scalar = Scalar.fromString(str, 16);
+
+    return scalar2fea(Fr, scalar);
 }
 
 /**
@@ -300,6 +311,34 @@ async function keyContractStorage(_ethAddr, _storagePos) {
 }
 
 /**
+ * Leaf type 4:
+ *   hk0: H([0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0])
+ *   key: H([ethAddr[0:4], ethAddr[4:8], ethAddr[8:12], ethAddr[12:16], ethAddr[16:20], 0, 4, 0], [hk0[0], hk0[1], hk0[2], hk0[3]]
+ * @param {String | Scalar} _ethAddr - ethereum address represented as hexadecimal string
+ * @returns {Array[Field]} - key computed
+ */
+async function keyContractLength(_ethAddr) {
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
+
+    const constant = F.e(constants.SMT_KEY_SC_LENGTH);
+
+    let ethAddr;
+    if (typeof _ethAddr === 'string') {
+        ethAddr = Scalar.fromString(_ethAddr, 16);
+    } else {
+        ethAddr = Scalar.e(_ethAddr);
+    }
+
+    const ethAddrArr = scalar2fea(F, ethAddr);
+
+    const key1 = [ethAddrArr[0], ethAddrArr[1], ethAddrArr[2], ethAddrArr[3], ethAddrArr[4], ethAddrArr[5], constant, F.zero];
+    const key1Capacity = stringToH4(constants.HASH_POSEIDON_ALL_ZEROES);
+
+    return poseidon(key1, key1Capacity);
+}
+
+/**
  * Fill the dbObject with all the childs recursively
  * @param {Array[Field]} node merkle node
  * @param {Object} db Mem DB
@@ -365,27 +404,27 @@ async function hashContractBytecode(_bytecode) {
     const poseidon = await getPoseidon();
     const { F } = poseidon;
 
-    const bytecode = _bytecode.startsWith('0x') ? _bytecode.slice(2) : _bytecode;
+    let bytecode = _bytecode.startsWith('0x') ? _bytecode.slice(2) : _bytecode.slice();
+    bytecode = (bytecode.length % 2) ? `0${bytecode}` : bytecode;
+    // add padding
+    bytecode += '01';
+
+    while ((bytecode.length % (56 * 2)) !== 0) bytecode += '00';
+
+    const lastByte = (Number(bytecode.slice(-2)) | 0x80).toString(16);
+    bytecode = `${bytecode.slice(0, -2)}${lastByte}`;
 
     const numBytes = bytecode.length / 2;
-
     const numHashes = Math.ceil(numBytes / (constants.BYTECODE_ELEMENTS_HASH * constants.BYTECODE_BYTES_ELEMENT));
 
-    let tmpHash;
+    let tmpHash = [F.zero, F.zero, F.zero, F.zero];
     let bytesPointer = 0;
 
     for (let i = 0; i < numHashes; i++) {
         const maxBytesToAdd = constants.BYTECODE_ELEMENTS_HASH * constants.BYTECODE_BYTES_ELEMENT;
         const elementsToHash = []; // 4 capacity + 8 elements
 
-        if (i !== 0) {
-            elementsToHash.push(...tmpHash);
-        } else {
-            elementsToHash.push(F.zero);
-            elementsToHash.push(F.zero);
-            elementsToHash.push(F.zero);
-            elementsToHash.push(F.zero);
-        }
+        elementsToHash.push(...tmpHash);
 
         const subsetBytecode = bytecode.slice(bytesPointer, bytesPointer + maxBytesToAdd * 2);
         bytesPointer += maxBytesToAdd * 2;
@@ -399,7 +438,7 @@ async function hashContractBytecode(_bytecode) {
                 byteToAdd = subsetBytecode.slice(j * 2, (j + 1) * 2);
             }
 
-            tmpElem = tmpElem.concat(byteToAdd);
+            tmpElem = byteToAdd.concat(tmpElem);
             counter += 1;
 
             if (counter === constants.BYTECODE_BYTES_ELEMENT) {
@@ -418,12 +457,14 @@ async function hashContractBytecode(_bytecode) {
 module.exports = {
     scalar2fea,
     fea2scalar,
-    fea2hash,
+    fea2String,
+    string2fea,
     fe2n,
     keyEthAddrBalance,
     keyEthAddrNonce,
     keyContractCode,
     keyContractStorage,
+    keyContractLength,
     getCurrentDB,
     hashContractBytecode,
     h4toScalar,

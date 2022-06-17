@@ -208,7 +208,7 @@ module.exports = class Processor {
 
         // add address to updatedAccounts
         const account = await this.vm.stateManager.getAccount(addressInstance);
-        this.updatedAccounts[Constants.ADDRESS_SYSTEM] = account;
+        this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
 
         // update its storage
         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
@@ -250,7 +250,7 @@ module.exports = class Processor {
         );
 
         const account = await this.vm.stateManager.getAccount(addressInstance);
-        this.updatedAccounts[Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2] = account;
+        this.updatedAccounts[Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2.toLowerCase()] = account;
 
         // update its storage
         const sto = await this.vm.stateManager.dumpStorage(addressInstance);

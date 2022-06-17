@@ -34,7 +34,7 @@ async function main() {
     const outPath = (typeof argv.out === 'undefined') ? undefined : argv.out;
     if (outPath === undefined) { throw Error('Output file must be specified'); }
 
-    const genesisGenerator = require(inputPath);
+    const genesisGenerator = require(path.join(__dirname, inputPath));
 
     const genesisOutput = {};
 
@@ -149,7 +149,6 @@ async function main() {
     for (const item in updatedAccounts) {
         const address = item;
         const account = updatedAccounts[address];
-
         const currentAccountOutput = {};
         currentAccountOutput.balance = account.balance.toString();
         currentAccountOutput.nonce = account.nonce.toString();
@@ -185,7 +184,7 @@ async function main() {
     }
 
     genesisOutput.genesis = accountsOutput;
-    const genesisOutputPath = path.join(outPath);
+    const genesisOutputPath = path.join(__dirname, outPath);
     await fs.writeFileSync(genesisOutputPath, JSON.stringify(genesisOutput, null, 2));
 
     if (argv.update) {
