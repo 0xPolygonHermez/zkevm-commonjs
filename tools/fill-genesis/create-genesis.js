@@ -149,7 +149,6 @@ async function main() {
     for (const item in updatedAccounts) {
         const address = item;
         const account = updatedAccounts[address];
-        console.log(address);
         const currentAccountOutput = {};
         currentAccountOutput.balance = account.balance.toString();
         currentAccountOutput.nonce = account.nonce.toString();

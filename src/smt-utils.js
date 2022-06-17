@@ -58,9 +58,9 @@ function fea2String(Fr, arr) {
 }
 
 /**
- * Field element array to Scalar
+ * Hexadecimal string to Field element array
  * @param {Field} F - field element
- * @param {String} str - hexadecimla string
+ * @param {String} str - hexadecimal string
  * @returns {Array[Field]}
  */
 function string2fea(Fr, str) {

@@ -171,9 +171,9 @@ class ZkEVMDB {
     }
 
     /**
-     * Get smart contract bytecode length length
+     * Get smart contract bytecode length
      * @param {String} address - smart contract address in hex string
-     * @returns {Number} smart hash bytecode
+     * @returns {Number} smart contract length in bytes
      */
     async getLength(address) {
         return getContractBytecodeLength(address, this.smt, this.stateRoot);

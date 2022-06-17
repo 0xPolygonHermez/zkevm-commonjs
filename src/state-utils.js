@@ -68,7 +68,7 @@ async function getContractHashBytecode(ethAddr, smt, root) {
  * @param {String} ethAddr ethereum address
  * @param {Object} smt merkle tree structure
  * @param {Array[Field]} root merkle tree root
- * @returns {Number} length represented as hexadecimal string
+ * @returns {Number} contract length in bytes
  */
 async function getContractBytecodeLength(ethAddr, smt, root) {
     const keyContractLength = await smtUtils.keyContractLength(ethAddr);
