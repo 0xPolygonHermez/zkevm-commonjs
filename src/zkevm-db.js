@@ -56,7 +56,7 @@ class ZkEVMDB {
             globalExitRoot,
             timestamp,
             clone(this.vm),
-            aggregatorAddress ? aggregatorAddress : sequencerAddress
+            aggregatorAddress || sequencerAddress,
         );
     }
 
