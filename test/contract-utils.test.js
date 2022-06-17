@@ -21,13 +21,13 @@ describe('contractUtils', function () {
 
     it('calculateBatchHashData', async () => {
         const {
-            batchL2Data, globalExitRoot, sequencerAddr
+            batchL2Data, globalExitRoot, sequencerAddr,
 
         } = testVector;
         const computedBatchHashData = await contractUtils.calculateBatchHashData(
             batchL2Data,
             globalExitRoot,
-            sequencerAddr
+            sequencerAddr,
         );
 
         expect(computedBatchHashData).to.be.equal(expectedBatchHashData);
@@ -41,7 +41,7 @@ describe('contractUtils', function () {
             newStateRoot,
             sequencerAddr,
             numBatch,
-            timestamp
+            timestamp,
         } = testVector;
 
         const computedGlobalHash = await contractUtils.calculateSnarkInput(
@@ -52,7 +52,7 @@ describe('contractUtils', function () {
             expectedBatchHashData,
             numBatch,
             timestamp,
-            sequencerAddr // should be aggregator address
+            sequencerAddr, // should be aggregator address
         );
 
         expect(computedGlobalHash).to.be.equal(expectedSnarkInputHash);
@@ -65,7 +65,7 @@ describe('contractUtils', function () {
             oldStateRoot,
             newStateRoot,
             numBatch,
-            timestamp
+            timestamp,
         } = testVector;
 
         const computedGlobalHash = await contractUtils.calculateStarkInput(
@@ -75,7 +75,7 @@ describe('contractUtils', function () {
             newLocalExitRoot,
             expectedBatchHashData,
             numBatch,
-            timestamp
+            timestamp,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedStarkHashExecutor);

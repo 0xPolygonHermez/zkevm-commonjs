@@ -46,7 +46,7 @@ module.exports = class Processor {
         globalExitRoot,
         timestamp,
         vm,
-        aggregatorAddress
+        aggregatorAddress,
     ) {
         this.db = db;
         this.batchNumber = batchNumber;
@@ -515,7 +515,7 @@ module.exports = class Processor {
             newLocalExitRoot, // should be the new exit root, but it's not modified in this version
             batchHashData,
             this.batchNumber,
-            this.timestamp
+            this.timestamp,
         );
 
         this.starkInput = {
@@ -550,7 +550,7 @@ module.exports = class Processor {
         const batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
             globalExitRoot,
-            this.sequencerAddress
+            this.sequencerAddress,
         );
 
         this.snarkInput = calculateSnarkInput(
@@ -561,7 +561,7 @@ module.exports = class Processor {
             batchHashData,
             this.batchNumber,
             this.timestamp,
-            this.aggregatorAddress
+            this.aggregatorAddress,
         );
     }
 
