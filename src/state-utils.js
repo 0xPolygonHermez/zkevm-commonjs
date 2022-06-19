@@ -64,7 +64,21 @@ async function getContractHashBytecode(ethAddr, smt, root) {
 }
 
 /**
- * Set the bytecode of a smart contract
+ * Get the bytecode length of a smart contract
+ * @param {String} ethAddr ethereum address
+ * @param {Object} smt merkle tree structure
+ * @param {Array[Field]} root merkle tree root
+ * @returns {Number} contract length in bytes
+ */
+async function getContractBytecodeLength(ethAddr, smt, root) {
+    const keyContractLength = await smtUtils.keyContractLength(ethAddr);
+    const res = await smt.get(root, keyContractLength);
+
+    return Number(res.value);
+}
+
+/**
+ * Set the bytecode and its length of a smart contract
  * @param {String} ethAddr ethereum address
  * @param {Object} smt merkle tree structure
  * @param {Array[Field]} root merkle tree root
@@ -74,13 +88,20 @@ async function getContractHashBytecode(ethAddr, smt, root) {
  */
 async function setContractBytecode(ethAddr, smt, root, bytecode, flagDelete) {
     const keyContractCode = await smtUtils.keyContractCode(ethAddr);
+    const keyContractLength = await smtUtils.keyContractLength(ethAddr);
+
     let res;
 
     if (flagDelete === true) {
         res = await smt.set(root, keyContractCode, Scalar.e(0));
+        res = await smt.set(res.newRoot, keyContractLength, Scalar.e(0));
     } else {
         const hashByteCode = await smtUtils.hashContractBytecode(bytecode);
+        let parsedBytecode = bytecode.startsWith('0x') ? bytecode.slice(2) : bytecode.slice();
+        parsedBytecode = (parsedBytecode.length % 2) ? `0${parsedBytecode}` : parsedBytecode;
+        const bytecodeLength = parsedBytecode.length / 2;
         res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
+        res = await smt.set(res.newRoot, keyContractLength, bytecodeLength);
     }
 
     return res.newRoot;
@@ -154,6 +175,7 @@ module.exports = {
     setAccountState,
     setContractBytecode,
     setContractStorage,
+    getContractBytecodeLength,
     getContractHashBytecode,
     getContractStorage,
     setGenesisBlock,

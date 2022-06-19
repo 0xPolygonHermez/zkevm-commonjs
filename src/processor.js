@@ -208,7 +208,7 @@ module.exports = class Processor {
 
         // add address to updatedAccounts
         const account = await this.vm.stateManager.getAccount(addressInstance);
-        this.updatedAccounts[Constants.ADDRESS_SYSTEM] = account;
+        this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
 
         // update its storage
         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
@@ -250,7 +250,7 @@ module.exports = class Processor {
         );
 
         const account = await this.vm.stateManager.getAccount(addressInstance);
-        this.updatedAccounts[Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2] = account;
+        this.updatedAccounts[Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2.toLowerCase()] = account;
 
         // update its storage
         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
@@ -360,6 +360,43 @@ module.exports = class Processor {
                         const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
                         [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
                     } else currentDecodedTx.reason = txResult.execResult.exceptionError;
+
+                    // UPDATE sender account adding the nonce and substracting the gas spended
+                    const senderAcc = await this.vm.stateManager.getAccount(txResult.execResult.runState.caller);
+                    this.updatedAccounts[currenTx.from] = senderAcc;
+                    // Update smt with touched accounts
+                    this.currentStateRoot = await stateUtils.setAccountState(
+                        currenTx.from,
+                        this.smt,
+                        this.currentStateRoot,
+                        Scalar.e(senderAcc.balance),
+                        Scalar.e(senderAcc.nonce),
+                    );
+
+                    /*
+                     * UPDATE miner Acc
+                     * Get touched evm account
+                     */
+                    const addressSeq = Address.fromString(this.sequencerAddress);
+                    const accountSeq = await this.vm.stateManager.getAccount(addressSeq);
+
+                    // Update batch touched stack
+                    this.updatedAccounts[this.sequencerAddress] = accountSeq;
+
+                    // Update smt with touched accounts
+                    this.currentStateRoot = await stateUtils.setAccountState(
+                        this.sequencerAddress,
+                        this.smt,
+                        this.currentStateRoot,
+                        Scalar.e(accountSeq.balance),
+                        Scalar.e(accountSeq.nonce),
+                    );
+
+                    // Consolidate transacttions to refresh touchedAccounts
+                    await this.vm.stateManager.checkpoint();
+                    await this.vm.stateManager.commit();
+
+                    continue;
                 }
 
                 // PROCESS TX in the smt updating the touched accounts from the EVM

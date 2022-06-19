@@ -9,7 +9,7 @@ const {
 const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('smt full-genesis', async function () {
-    this.timeout(10000);
+    this.timeout(50000);
 
     const pathFullGenesis = path.join(pathTestVectors, 'merkle-tree/smt-full-genesis.json');
 
@@ -41,15 +41,12 @@ describe('smt full-genesis', async function () {
                     address, balance, nonce,
                     bytecode, storage,
                 } = addresses[j];
-
                 // add balance and nonce
                 tmpRoot = await stateUtils.setAccountState(address, smt, tmpRoot, balance, nonce);
-
                 // add bytecode if defined
                 if (typeof bytecode !== 'undefined') {
                     tmpRoot = await stateUtils.setContractBytecode(address, smt, tmpRoot, bytecode);
                 }
-
                 // add storage if defined
                 if (typeof storage !== 'undefined') {
                     tmpRoot = await stateUtils.setContractStorage(address, smt, tmpRoot, storage);
