@@ -11,8 +11,7 @@
     "test:selfdestruct": "npx mocha ./test/processor.test.js --selfdestruct",
     "eslint": "npx eslint src/** test/*.test.js && npx eslint tools",
     "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix",
-    "test:update": "./tools/update-tests/update-tests.sh",
-    "test:counter": "npx mocha ./test/smt-hash-counter.test.js"
+    "test:update": "./tools/update-tests/update-tests.sh"
   },
   "repository": {
     "type": "git",
