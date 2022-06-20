@@ -197,7 +197,7 @@ class SMT {
                     if (isOneSiblings(siblings[level + 1], F)) {
                         const valH = siblings[level + 1].slice(4, 8);
                         const valA = (await self.db.getSmtNode(valH)).slice(0, 8);
-                        proofHashCounter = proofHashCounter + 1;
+                        proofHashCounter += 1;
                         const rKey = siblings[level + 1].slice(0, 4);
 
                         const val = fea2scalar(F, valA);
