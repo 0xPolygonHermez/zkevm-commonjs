@@ -39,7 +39,6 @@ describe('contractUtils', function () {
             newLocalExitRoot,
             oldStateRoot,
             newStateRoot,
-            sequencerAddr,
             numBatch,
             timestamp,
         } = testVector;
@@ -51,8 +50,7 @@ describe('contractUtils', function () {
             newLocalExitRoot,
             expectedBatchHashData,
             numBatch,
-            timestamp,
-            sequencerAddr, // should be aggregator address
+            timestamp
         );
 
         expect(computedGlobalHash).to.be.equal(expectedSnarkInputHash);

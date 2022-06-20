@@ -32,7 +32,6 @@ module.exports = class Processor {
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Object} vm - vm instance
-     * @param {Address} aggregatorAddress - aggregator address which intends to forge the batch
      */
     constructor(
         db,
@@ -45,8 +44,7 @@ module.exports = class Processor {
         localExitRoot,
         globalExitRoot,
         timestamp,
-        vm,
-        aggregatorAddress,
+        vm
     ) {
         this.db = db;
         this.batchNumber = batchNumber;
@@ -75,8 +73,6 @@ module.exports = class Processor {
         this.vm = vm;
         this.evmSteps = [];
         this.updatedAccounts = {};
-
-        this.aggregatorAddress = aggregatorAddress;
     }
 
     /**
@@ -560,8 +556,7 @@ module.exports = class Processor {
             newLocalExitRoot,
             batchHashData,
             this.batchNumber,
-            this.timestamp,
-            this.aggregatorAddress,
+            this.timestamp
         );
     }
 
