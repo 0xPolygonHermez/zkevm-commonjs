@@ -52,7 +52,6 @@ function calculateStarkInput(
  * @param {String} batchHashData - Batch hash data
  * @param {Number} numBatch - Batch number
  * @param {Number} timestamp - Block timestamp
- * @param {String} aggregatorAddress - Aggregator address
  * @returns {String} - global hash % FrSNARK in hex encoding
  */
 function calculateSnarkInput(
@@ -62,8 +61,7 @@ function calculateSnarkInput(
     newLocalExitRoot,
     batchHashData,
     numBatch,
-    timestamp,
-    aggregatorAddress,
+    timestamp
 ) {
     const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
     const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
@@ -71,7 +69,7 @@ function calculateSnarkInput(
     const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64', 'address'],
+        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64'],
         [
             currentStateRootHex,
             currentLocalExitRootHex,
@@ -79,8 +77,7 @@ function calculateSnarkInput(
             newLocalExitRootHex,
             batchHashData,
             numBatch,
-            timestamp,
-            aggregatorAddress,
+            timestamp
         ],
     );
 
@@ -122,7 +119,7 @@ function generateSolidityInputs(
     publicSignals,
 ) {
     const proofA = [proof.pi_a[0],
-        proof.pi_a[1],
+    proof.pi_a[1],
     ];
     const proofB = [
         [
@@ -135,7 +132,7 @@ function generateSolidityInputs(
         ],
     ];
     const proofC = [proof.pi_c[0],
-        proof.pi_c[1],
+    proof.pi_c[1],
     ];
     const input = publicSignals;
 
