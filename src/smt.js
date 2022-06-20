@@ -36,6 +36,7 @@ class SMT {
      *      {Scalar} oldValue: old leaf value,
      *      {Scalar} newValue: new leaf value,
      *      {String} mode: action performed by the insertion,
+     *      {Number} proofHashCounter: counter of hashs must be done to proof this operation
      */
     async set(oldRoot, key, value) {
         const self = this;
@@ -65,6 +66,7 @@ class SMT {
 
         const keys = self.splitKey(key);
         let level = 0;
+        let proofHashCounter = 0;
 
         const accKey = [];
         let foundKey;
@@ -98,6 +100,9 @@ class SMT {
         level -= 1;
         accKey.pop();
 
+        // calculate hash to validate oldRoot
+        proofHashCounter = nodeIsZero(oldRoot, F) ? 0 : (siblings.slice(0, level + 1).length + (((foundVal ?? 0n) === 0n) ? 0 : 2));
+
         if (!Scalar.isZero(value)) {
             if (typeof (foundKey) !== 'undefined') {
                 if (nodeIsEq(key, foundKey, F)) { // Update
@@ -106,6 +111,7 @@ class SMT {
 
                     const newValH = await hashSave(scalar2fea(F, value), [F.zero, F.zero, F.zero, F.zero]);
                     const newLeafHash = await hashSave([...foundRKey, ...newValH], [F.one, F.zero, F.zero, F.zero]);
+                    proofHashCounter += 2;
                     if (level >= 0) {
                         for (let j = 0; j < 4; j++) {
                             siblings[level][keys[level] * 4 + j] = newLeafHash[j];
@@ -138,6 +144,7 @@ class SMT {
                     }
 
                     let r2 = await hashSave(node, [F.zero, F.zero, F.zero, F.zero]);
+                    proofHashCounter += 4;
                     level2 -= 1;
 
                     while (level2 !== level) {
@@ -147,6 +154,7 @@ class SMT {
                         }
 
                         r2 = await hashSave(node, [F.zero, F.zero, F.zero, F.zero]);
+                        proofHashCounter += 1;
                         level2 -= 1;
                     }
 
@@ -160,10 +168,10 @@ class SMT {
                 }
             } else { // insert without foundKey
                 mode = 'insertNotFound';
-
                 const newKey = this.removeKeyBits(key, (level + 1));
                 const newValH = await hashSave(scalar2fea(F, value), [F.zero, F.zero, F.zero, F.zero]);
                 const newLeafHash = await hashSave([...newKey, ...newValH], [F.one, F.zero, F.zero, F.zero]);
+                proofHashCounter += 2;
 
                 if (level >= 0) {
                     for (let j = 0; j < 4; j++) {
@@ -185,10 +193,11 @@ class SMT {
                 if (uKey >= 0) {
                     mode = 'deleteFound';
                     siblings[level + 1] = await self.db.getSmtNode(siblings[level].slice(uKey * 4, uKey * 4 + 4));
-
+                    proofHashCounter += 1;
                     if (isOneSiblings(siblings[level + 1], F)) {
                         const valH = siblings[level + 1].slice(4, 8);
                         const valA = (await self.db.getSmtNode(valH)).slice(0, 8);
+                        proofHashCounter += 1;
                         const rKey = siblings[level + 1].slice(0, 4);
 
                         const val = fea2scalar(F, valA);
@@ -208,6 +217,7 @@ class SMT {
 
                         // eslint-disable-next-line max-len
                         const oldLeafHash = await hashSave([...oldKey, ...valH], [F.one, F.zero, F.zero, F.zero]);
+                        proofHashCounter += 1;
 
                         if (level >= 0) {
                             for (let j = 0; j < 4; j++) {
@@ -239,6 +249,7 @@ class SMT {
 
         while (level >= 0) {
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
+            proofHashCounter += 1;
             level -= 1;
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
@@ -258,6 +269,7 @@ class SMT {
             oldValue,
             newValue: value,
             mode,
+            proofHashCounter,
         };
     }
 
@@ -273,6 +285,7 @@ class SMT {
      *      {Bool} isOld0: is new insert or delete,
      *      {Array[Field]} insKey: key found,
      *      {Scalar} insValue: value found,
+     *      {Number} proofHashCounter: counter of hashs must be done to proof this operation
      */
     async get(root, key) {
         const self = this;
@@ -332,6 +345,7 @@ class SMT {
             isOld0,
             insKey,
             insValue,
+            proofHashCounter: nodeIsZero(root, F) ? 0 : (siblings.length + (F.isZero(value) ? 0 : 2)),
         };
     }
 
