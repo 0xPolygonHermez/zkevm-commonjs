@@ -97,7 +97,6 @@ class SMT {
             }
         }
 
-
         level -= 1;
         accKey.pop();
 
@@ -155,7 +154,7 @@ class SMT {
                         }
 
                         r2 = await hashSave(node, [F.zero, F.zero, F.zero, F.zero]);
-                        ++proofHashCounter;
+                        proofHashCounter += 1;
                         level2 -= 1;
                     }
 
@@ -194,11 +193,11 @@ class SMT {
                 if (uKey >= 0) {
                     mode = 'deleteFound';
                     siblings[level + 1] = await self.db.getSmtNode(siblings[level].slice(uKey * 4, uKey * 4 + 4));
-                    ++proofHashCounter;
+                    proofHashCounter += 1;
                     if (isOneSiblings(siblings[level + 1], F)) {
                         const valH = siblings[level + 1].slice(4, 8);
                         const valA = (await self.db.getSmtNode(valH)).slice(0, 8);
-                        ++proofHashCounter;
+                        proofHashCounter = proofHashCounter + 1;
                         const rKey = siblings[level + 1].slice(0, 4);
 
                         const val = fea2scalar(F, valA);
@@ -218,7 +217,7 @@ class SMT {
 
                         // eslint-disable-next-line max-len
                         const oldLeafHash = await hashSave([...oldKey, ...valH], [F.one, F.zero, F.zero, F.zero]);
-                        ++proofHashCounter;
+                        proofHashCounter += 1;
 
                         if (level >= 0) {
                             for (let j = 0; j < 4; j++) {
@@ -250,7 +249,7 @@ class SMT {
 
         while (level >= 0) {
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
-            ++proofHashCounter;
+            proofHashCounter += 1;
             level -= 1;
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
@@ -270,7 +269,7 @@ class SMT {
             oldValue,
             newValue: value,
             mode,
-            proofHashCounter
+            proofHashCounter,
         };
     }
 
@@ -296,7 +295,6 @@ class SMT {
 
         const keys = self.splitKey(key);
         let level = 0;
-        let proofHashCounter = 0;
 
         const accKey = [];
         let foundKey;
@@ -347,7 +345,7 @@ class SMT {
             isOld0,
             insKey,
             insValue,
-            proofHashCounter: nodeIsZero(root, F) ? 0 : (siblings.length + (F.isZero(value) ? 0 : 2))
+            proofHashCounter: nodeIsZero(root, F) ? 0 : (siblings.length + (F.isZero(value) ? 0 : 2)),
         };
     }
 
