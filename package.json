@@ -1,7 +1,7 @@
 {
   "name": "@polygon-hermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "0.0.26",
+  "version": "0.0.28",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
@@ -48,7 +48,7 @@
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
     "@polygon-hermez/contracts-zkevm": "github:hermeznetwork/contracts-zkevm#v0.0.3",
-    "@polygon-hermez/vm": "5.7.14",
+    "@polygon-hermez/vm": "5.7.15",
     "chai": "^4.3.4",
     "circomlibjs": "^0.1.1",
     "ethereumjs-util": "^7.1.4",
