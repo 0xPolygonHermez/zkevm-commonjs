@@ -229,8 +229,8 @@ module.exports = class Processor {
      */
     async _setGlobalExitRoot() {
         const newStorageEntry = {};
-        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [this.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-        newStorageEntry[globalExitRootPos] = smtUtils.h4toString(this.globalExitRoot);
+        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [smtUtils.h4toString(this.globalExitRoot), Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+        newStorageEntry[globalExitRootPos] = this.batchNumber;
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
             this.smt,
@@ -242,7 +242,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(smtUtils.h4toString(this.globalExitRoot)),
+            toBuffer(this.batchNumber),
         );
 
         // store data in internal DB

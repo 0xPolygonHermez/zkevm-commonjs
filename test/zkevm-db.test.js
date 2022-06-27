@@ -53,8 +53,10 @@ describe('ZkEVMDB', function () {
         // build an empty batch
         const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, globalExitRoot);
         await batch.executeTxs();
-        const newRoot = batch.currentStateRoot;
-        expect(newRoot).to.be.equal(genesisRoot);
+
+        // New root should be different because the will add in the mapping on globalExitRoot
+        //const newRoot = batch.currentStateRoot;
+        //expect(newRoot).to.be.equal(genesisRoot);
 
         // checks DB state previous consolidate zkEVMDB
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
@@ -68,7 +70,6 @@ describe('ZkEVMDB', function () {
 
         // checks after consolidate zkEVMDB
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(Number(Scalar.add(numBatch, 1)));
-        expect(zkEVMDB.getCurrentStateRoot()).to.be.equal(genesisRoot);
 
         // check against DB
         const lastBatchDB = await db.getValue(Constants.DB_LAST_BATCH, db, F);

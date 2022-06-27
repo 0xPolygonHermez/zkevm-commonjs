@@ -63,22 +63,14 @@ function calculateSnarkInput(
     numBatch,
     timestamp
 ) {
-    const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
-    const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
-    const newStateRootHex = `0x${Scalar.e(newStateRoot).toString(16).padStart(64, '0')}`;
-    const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
-
-    const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64'],
-        [
-            currentStateRootHex,
-            currentLocalExitRootHex,
-            newStateRootHex,
-            newLocalExitRootHex,
-            batchHashData,
-            numBatch,
-            timestamp
-        ],
+    const hashKeccak = calculateStarkInput(
+        currentStateRoot,
+        currentLocalExitRoot,
+        newStateRoot,
+        newLocalExitRoot,
+        batchHashData,
+        numBatch,
+        timestamp
     );
 
     return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), FrSNARK).toString(16).padStart(64, '0')}`;

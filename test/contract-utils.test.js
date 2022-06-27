@@ -12,7 +12,7 @@ describe('contractUtils', function () {
     let testVector;
 
     const expectedBatchHashData = '0xa4e1166ff3f7ecf8c8ff3049fc2e28b03091d3bf0db4bce702d954840196f79d';
-    const expectedSnarkInputHash = '0x176c17db243220364f356f183f5cd7e995223d061ec5c630c18a1302aec1bfab';
+    const expectedSnarkInputHash = '0x12bcbec575263760c8b89071ddb92de1cab523639aad606b2142c052dfcc42cd';
     const expectedStarkHashExecutor = '0x73855bab378977b439591bdee0bbde9c1b1cf3f48e20418da906ab7abfcc42cf';
 
     before(async () => {
