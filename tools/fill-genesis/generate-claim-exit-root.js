@@ -14,7 +14,6 @@ function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
 
 const networkIDMainnet = 0;
 const networkIDRollup = 1;
-const batchNum = 1;
 
 async function main() {
     const claimAddress = '0xc949254d682d8c9ad5682521675b8f43b102aec4';
@@ -36,7 +35,6 @@ async function main() {
     const rollupExitRoot = ethers.constants.HashZero;
 
     const globalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
-    const globalExitRootNum = batchNum;
     const index = 0;
     const proof = merkleTree.getProofTreeByIndex(index);
 
@@ -49,7 +47,6 @@ async function main() {
             destinationAddress,
             proof,
             index,
-            globalExitRootNum,
             rootJSMainnet,
             rollupExitRoot,
         },
