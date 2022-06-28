@@ -19,7 +19,7 @@ const {
 } = require('./state-utils');
 const { h4toString, stringToH4 } = require('./smt-utils');
 
-const common = Common.custom({ chainId: Constants.DEFAULT_SEQ_CHAINID }, { hardfork: Hardfork.Berlin });
+const common = Common.custom({ chainId: Constants.ZKEVM_CHAINID }, { hardfork: Hardfork.Berlin });
 
 class ZkEVMDB {
     constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt) {
@@ -39,23 +39,21 @@ class ZkEVMDB {
      * Return a new Processor with the current RollupDb state
      * @param {Number} timestamp - Timestamp of the batch
      * @param {String} sequencerAddress - ethereum address represented as hex
-     * @param {Number} seqChainID - sequencer chainID
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      */
-    async buildBatch(timestamp, sequencerAddress, seqChainID, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX) {
+    async buildBatch(timestamp, sequencerAddress, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX) {
         return new Processor(
             this.db,
             this.lastBatch + 1,
             this.poseidon,
             maxNTx,
-            seqChainID,
             this.stateRoot,
             sequencerAddress,
             this.localExitRoot,
             globalExitRoot,
             timestamp,
-            clone(this.vm)
+            clone(this.vm),
         );
     }
 

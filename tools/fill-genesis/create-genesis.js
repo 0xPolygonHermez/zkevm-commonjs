@@ -46,7 +46,6 @@ async function main() {
     const {
         genesis,
         txs,
-        chainIdSequencer,
         sequencerAddress,
         timestamp,
     } = genesisGenerator;
@@ -129,7 +128,7 @@ async function main() {
         }
         rawTxs.push(customRawTx);
     }
-    const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, smtUtils.stringToH4(globalExitRoot));
+    const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
     for (let j = 0; j < rawTxs.length; j++) {
         batch.addRawTx(rawTxs[j]);
     }

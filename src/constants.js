@@ -6,12 +6,11 @@ module.exports.DB_LAST_BATCH = ethers.utils.id(('ZKEVM_DB_LAST_BATCH'));
 module.exports.DB_STATE_ROOT = ethers.utils.id(('ZKEVM_DB_STATE_ROOT'));
 module.exports.DB_LOCAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_DB_LOCAL_EXIT_ROOT'));
 module.exports.DB_GLOBAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_GLOBAL_EXIT_ROOT'));
-module.exports.DB_SEQ_CHAINID = ethers.utils.id(('ZKEVM_DB_SEQ_CHAINID'));
 module.exports.DB_ADDRESS_STORAGE = ethers.utils.id(('ZKEVM_DB_ADDRESS_STORAGE'));
 module.exports.DB_TOUCHED_ACCOUNTS = ethers.utils.id(('ZKEVM_DB_TOUCHED_ACCOUNTS'));
 
 // Default values and global constants
-module.exports.DEFAULT_SEQ_CHAINID = 1000;
+module.exports.ZKEVM_CHAINID = 1000;
 module.exports.DEFAULT_MAX_TX = 100;
 module.exports.SIGNATURE_BYTES = 32 + 32 + 1;
 module.exports.FrSNARK = Scalar.e('21888242871839275222246405745257275088548364400416034343698204186575808495617');
