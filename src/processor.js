@@ -498,7 +498,7 @@ module.exports = class Processor {
         const batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
             globalExitRoot,
-            this.timestamp,
+            this.sequencerAddress,
         );
 
         const inputHash = calculateStarkInput(
