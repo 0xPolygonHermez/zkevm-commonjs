@@ -9,6 +9,8 @@ const { FrSNARK } = require('./constants');
  * @param {String} newStateRoot - New State root once the batch is processed
  * @param {String} newLocalExitRoot - New local exit root once the batch is processed
  * @param {String} batchHashData - Batch hash data
+ * @param {Number} numBatch - Batch number
+ * @param {Number} timestamp - Block timestamp
  * @returns {String} - global hash in hex encoding
  */
 function calculateStarkInput(
@@ -17,6 +19,8 @@ function calculateStarkInput(
     newStateRoot,
     newLocalExitRoot,
     batchHashData,
+    numBatch,
+    timestamp,
 ) {
     const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
     const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
@@ -24,13 +28,15 @@ function calculateStarkInput(
     const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
+        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64'],
         [
             currentStateRootHex,
             currentLocalExitRootHex,
             newStateRootHex,
             newLocalExitRootHex,
             batchHashData,
+            numBatch,
+            timestamp,
         ],
     );
 
@@ -44,6 +50,8 @@ function calculateStarkInput(
  * @param {String} newStateRoot - New State root once the batch is processed
  * @param {String} newLocalExitRoot - New local exit root once the batch is processed
  * @param {String} batchHashData - Batch hash data
+ * @param {Number} numBatch - Batch number
+ * @param {Number} timestamp - Block timestamp
  * @returns {String} - global hash % FrSNARK in hex encoding
  */
 function calculateSnarkInput(
@@ -52,6 +60,8 @@ function calculateSnarkInput(
     newStateRoot,
     newLocalExitRoot,
     batchHashData,
+    numBatch,
+    timestamp,
 ) {
     const hashKeccak = calculateStarkInput(
         currentStateRoot,
@@ -59,6 +69,8 @@ function calculateSnarkInput(
         newStateRoot,
         newLocalExitRoot,
         batchHashData,
+        numBatch,
+        timestamp,
     );
 
     return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), FrSNARK).toString(16).padStart(64, '0')}`;
@@ -69,30 +81,21 @@ function calculateSnarkInput(
  * @param {String} transactions - All raw transaction data concatenated
  * @param {String} globalExitRoot - Global Exit Root
  * @param {String} sequencerAddress - Sequencer address
- * @param {Number} timestamp - Block timestamp
- * @param {Number} batchChainID - Batch chain ID
- * @param {Number} numBatch - Batch number
  * @returns {String} - Batch hash data
  */
 function calculateBatchHashData(
     transactions,
     globalExitRoot,
-    timestamp,
     sequencerAddress,
-    batchChainID,
-    numBatch,
 ) {
     const globalExitRootHex = `0x${Scalar.e(globalExitRoot).toString(16).padStart(64, '0')}`;
 
     return ethers.utils.solidityKeccak256(
-        ['bytes', 'bytes32', 'uint64', 'address', 'uint64', 'uint64'],
+        ['bytes', 'bytes32', 'address'],
         [
             transactions,
             globalExitRootHex,
-            timestamp,
             sequencerAddress,
-            batchChainID,
-            numBatch,
         ],
     );
 }

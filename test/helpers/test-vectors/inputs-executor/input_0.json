@@ -1,6 +1,6 @@
 {
   "oldStateRoot": "0xbdde84a5932a2f0a1a4c6c51f3b64ea265d4f1461749298cfdd09b31122ce0d6",
-  "chainId": 1001,
+  "chainId": 1000,
   "db": {
     "0xbdde84a5932a2f0a1a4c6c51f3b64ea265d4f1461749298cfdd09b31122ce0d6": [
       "1a0d795be0685727",

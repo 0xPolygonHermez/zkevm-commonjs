@@ -25,7 +25,6 @@ module.exports = class Processor {
      * @param {Number} batchNumber - batch number
      * @param {Object} poseidon - hash function
      * @param {Number} maxNTx - maximum number of transaction allowed
-     * @param {Number} seqChainID - sequencer own chain ID
      * @param {Array[Field]} root - state root
      * @param {String} sequencerAddress . sequencer address
      * @param {Array[Field]} localExitRoot - local exit root
@@ -38,7 +37,6 @@ module.exports = class Processor {
         batchNumber,
         poseidon,
         maxNTx,
-        seqChainID,
         root,
         sequencerAddress,
         localExitRoot,
@@ -50,7 +48,6 @@ module.exports = class Processor {
         this.batchNumber = batchNumber;
         this.poseidon = poseidon;
         this.maxNTx = maxNTx;
-        this.seqChainID = seqChainID;
         this.F = poseidon.F;
         this.tmpSmtDB = new TmpSmtDB(db);
         this.smt = new SMT(this.tmpSmtDB, poseidon, poseidon.F);
@@ -63,13 +60,15 @@ module.exports = class Processor {
         this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;
-        this.sequencerAddress = sequencerAddress;
         this.oldLocalExitRoot = localExitRoot;
+        this.newLocalExitRoot = localExitRoot;
         this.globalExitRoot = globalExitRoot;
+
+        this.sequencerAddress = sequencerAddress;
         this.timestamp = timestamp;
+
         this.vm = vm;
         this.evmSteps = [];
-        this.newLocalExitRoot = localExitRoot;
         this.updatedAccounts = {};
     }
 
@@ -147,7 +146,7 @@ module.exports = class Processor {
             txDecoded.chainID = Number(txDecoded.chainID);
 
             // B: Valid chainID
-            if (txDecoded.chainID !== this.seqChainID && txDecoded.chainID !== Constants.DEFAULT_SEQ_CHAINID) {
+            if (txDecoded.chainID !== Constants.ZKEVM_CHAINID) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Chain ID does not match', tx: txDecoded });
                 continue;
             }
@@ -227,8 +226,8 @@ module.exports = class Processor {
      */
     async _setGlobalExitRoot() {
         const newStorageEntry = {};
-        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [this.batchNumber, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-        newStorageEntry[globalExitRootPos] = smtUtils.h4toString(this.globalExitRoot);
+        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [smtUtils.h4toString(this.globalExitRoot), Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+        newStorageEntry[globalExitRootPos] = this.batchNumber;
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
             this.smt,
@@ -240,7 +239,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(smtUtils.h4toString(this.globalExitRoot)),
+            toBuffer(this.batchNumber),
         );
 
         // store data in internal DB
@@ -500,9 +499,6 @@ module.exports = class Processor {
             this.getBatchL2Data(),
             globalExitRoot,
             this.timestamp,
-            this.sequencerAddress,
-            this.seqChainID,
-            this.batchNumber,
         );
 
         const inputHash = calculateStarkInput(
@@ -511,11 +507,12 @@ module.exports = class Processor {
             newStateRoot,
             newLocalExitRoot, // should be the new exit root, but it's not modified in this version
             batchHashData,
+            this.batchNumber,
+            this.timestamp,
         );
 
         this.starkInput = {
             oldStateRoot,
-            chainId: this.seqChainID,
             db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
             sequencerAddr: this.sequencerAddress,
             batchL2Data: this.getBatchL2Data(),
@@ -545,10 +542,7 @@ module.exports = class Processor {
         const batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
             globalExitRoot,
-            this.timestamp,
             this.sequencerAddress,
-            this.seqChainID,
-            this.batchNumber,
         );
 
         this.snarkInput = calculateSnarkInput(
@@ -557,6 +551,8 @@ module.exports = class Processor {
             newStateRoot,
             newLocalExitRoot,
             batchHashData,
+            this.batchNumber,
+            this.timestamp,
         );
     }
 

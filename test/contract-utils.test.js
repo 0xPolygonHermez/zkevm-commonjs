@@ -11,9 +11,9 @@ describe('contractUtils', function () {
     this.timeout(10000);
     let testVector;
 
-    const expectedBatchHashData = '0x3d53e7e5be04b00f66af647512af6d17e4e767a5e41fa1293010b885c9fe06db';
-    const expectedSnarkInputHash = '0x287827a698e2398038390886d802b1261160628c80738e7050790fa949cd1c9d';
-    const expectedStarkHashExecutor = '0x58dc76197a13d9a9f0894e3d5984098339944ad4fa2cff01945b053d39cd1c9e';
+    const expectedBatchHashData = '0xa4e1166ff3f7ecf8c8ff3049fc2e28b03091d3bf0db4bce702d954840196f79d';
+    const expectedSnarkInputHash = '0x12bcbec575263760c8b89071ddb92de1cab523639aad606b2142c052dfcc42cd';
+    const expectedStarkHashExecutor = '0x73855bab378977b439591bdee0bbde9c1b1cf3f48e20418da906ab7abfcc42cf';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_0.json')));
@@ -21,16 +21,13 @@ describe('contractUtils', function () {
 
     it('calculateBatchHashData', async () => {
         const {
-            batchL2Data, globalExitRoot, timestamp, sequencerAddr, chainId, numBatch,
+            batchL2Data, globalExitRoot, sequencerAddr,
 
         } = testVector;
         const computedBatchHashData = await contractUtils.calculateBatchHashData(
             batchL2Data,
             globalExitRoot,
-            timestamp,
             sequencerAddr,
-            chainId,
-            numBatch,
         );
 
         expect(computedBatchHashData).to.be.equal(expectedBatchHashData);
@@ -42,6 +39,8 @@ describe('contractUtils', function () {
             newLocalExitRoot,
             oldStateRoot,
             newStateRoot,
+            numBatch,
+            timestamp,
         } = testVector;
 
         const computedGlobalHash = await contractUtils.calculateSnarkInput(
@@ -50,6 +49,8 @@ describe('contractUtils', function () {
             newStateRoot,
             newLocalExitRoot,
             expectedBatchHashData,
+            numBatch,
+            timestamp,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedSnarkInputHash);
@@ -61,6 +62,8 @@ describe('contractUtils', function () {
             newLocalExitRoot,
             oldStateRoot,
             newStateRoot,
+            numBatch,
+            timestamp,
         } = testVector;
 
         const computedGlobalHash = await contractUtils.calculateStarkInput(
@@ -69,6 +72,8 @@ describe('contractUtils', function () {
             newStateRoot,
             newLocalExitRoot,
             expectedBatchHashData,
+            numBatch,
+            timestamp,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedStarkHashExecutor);
