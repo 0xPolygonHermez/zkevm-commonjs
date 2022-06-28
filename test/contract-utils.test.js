@@ -50,7 +50,7 @@ describe('contractUtils', function () {
             newLocalExitRoot,
             expectedBatchHashData,
             numBatch,
-            timestamp
+            timestamp,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedSnarkInputHash);

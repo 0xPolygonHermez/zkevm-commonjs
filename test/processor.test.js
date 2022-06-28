@@ -65,7 +65,6 @@ describe('Processor', async function () {
                 expectedOldRoot,
                 txs,
                 expectedNewRoot,
-                chainIdSequencer,
                 sequencerAddress,
                 expectedNewLeafs,
                 batchL2Data,
@@ -230,7 +229,7 @@ describe('Processor', async function () {
                 txProcessed.push(txData);
             }
 
-            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, smtUtils.stringToH4(globalExitRoot));
+            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }

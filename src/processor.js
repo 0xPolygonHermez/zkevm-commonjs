@@ -25,7 +25,6 @@ module.exports = class Processor {
      * @param {Number} batchNumber - batch number
      * @param {Object} poseidon - hash function
      * @param {Number} maxNTx - maximum number of transaction allowed
-     * @param {Number} seqChainID - sequencer own chain ID
      * @param {Array[Field]} root - state root
      * @param {String} sequencerAddress . sequencer address
      * @param {Array[Field]} localExitRoot - local exit root
@@ -38,19 +37,17 @@ module.exports = class Processor {
         batchNumber,
         poseidon,
         maxNTx,
-        seqChainID,
         root,
         sequencerAddress,
         localExitRoot,
         globalExitRoot,
         timestamp,
-        vm
+        vm,
     ) {
         this.db = db;
         this.batchNumber = batchNumber;
         this.poseidon = poseidon;
         this.maxNTx = maxNTx;
-        this.seqChainID = seqChainID;
         this.F = poseidon.F;
         this.tmpSmtDB = new TmpSmtDB(db);
         this.smt = new SMT(this.tmpSmtDB, poseidon, poseidon.F);
@@ -149,7 +146,7 @@ module.exports = class Processor {
             txDecoded.chainID = Number(txDecoded.chainID);
 
             // B: Valid chainID
-            if (txDecoded.chainID !== this.seqChainID && txDecoded.chainID !== Constants.DEFAULT_SEQ_CHAINID) {
+            if (txDecoded.chainID !== Constants.ZKEVM_CHAINID) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Chain ID does not match', tx: txDecoded });
                 continue;
             }
@@ -516,7 +513,6 @@ module.exports = class Processor {
 
         this.starkInput = {
             oldStateRoot,
-            chainId: this.seqChainID,
             db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
             sequencerAddr: this.sequencerAddress,
             batchL2Data: this.getBatchL2Data(),
@@ -556,7 +552,7 @@ module.exports = class Processor {
             newLocalExitRoot,
             batchHashData,
             this.batchNumber,
-            this.timestamp
+            this.timestamp,
         );
     }
 

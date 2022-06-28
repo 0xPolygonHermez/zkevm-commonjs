@@ -61,7 +61,7 @@ function calculateSnarkInput(
     newLocalExitRoot,
     batchHashData,
     numBatch,
-    timestamp
+    timestamp,
 ) {
     const hashKeccak = calculateStarkInput(
         currentStateRoot,
@@ -70,7 +70,7 @@ function calculateSnarkInput(
         newLocalExitRoot,
         batchHashData,
         numBatch,
-        timestamp
+        timestamp,
     );
 
     return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), FrSNARK).toString(16).padStart(64, '0')}`;
@@ -111,7 +111,7 @@ function generateSolidityInputs(
     publicSignals,
 ) {
     const proofA = [proof.pi_a[0],
-    proof.pi_a[1],
+        proof.pi_a[1],
     ];
     const proofB = [
         [
@@ -124,7 +124,7 @@ function generateSolidityInputs(
         ],
     ];
     const proofC = [proof.pi_c[0],
-    proof.pi_c[1],
+        proof.pi_c[1],
     ];
     const input = publicSignals;
 

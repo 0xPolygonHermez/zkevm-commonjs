@@ -51,7 +51,6 @@ describe('Block info tests', function () {
                 genesis,
                 expectedOldRoot,
                 batches,
-                chainIdSequencer,
                 sequencerAddress,
                 oldLocalExitRoot,
                 bridgeDeployed,
@@ -216,7 +215,7 @@ describe('Block info tests', function () {
                     txProcessed.push(txData);
                 }
 
-                const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, chainIdSequencer, smtUtils.stringToH4(globalExitRoot));
+                const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
                 for (let j = 0; j < rawTxs.length; j++) {
                     batch.addRawTx(rawTxs[j]);
                 }
