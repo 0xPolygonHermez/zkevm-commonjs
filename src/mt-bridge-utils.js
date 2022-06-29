@@ -38,19 +38,20 @@ function verifyMerkleProof(leaf, smtProof, index, root) {
 
 /**
  * Calculate leaf value
- * @param {Number} originalNetwork - Original network
- * @param {String} tokenAddress - Token address
- * @param {BigNumber} amount - Amount of tokens
+ * @param {Number} originNetwork - Original network
+ * @param {String} originTokenAddress - Token address
  * @param {Number} destinationNetwork - Destination network
  * @param {String} destinationAddress - Destination address
+ * @param {BigNumber} amount - Amount of tokens
+ * @param {BigNumber} metadataHash - Hash of the metadata
  * @returns {Boolean} - Leaf value
  */
-function calculateLeafValue(originalNetwork, tokenAddress, amount, destinationNetwork, destinationAddress) {
-    return ethers.utils.solidityKeccak256(['uint32', 'address', 'uint256', 'uint32', 'address'], [originalNetwork, tokenAddress, amount, destinationNetwork, destinationAddress]);
+function getLeafValue(originNetwork, originTokenAddress, destinationNetwork, destinationAddress, amount, metadataHash) {
+    return ethers.utils.solidityKeccak256(['uint32', 'address', 'uint32', 'address', 'uint256', 'bytes32'], [originNetwork, originTokenAddress, destinationNetwork, destinationAddress, amount, metadataHash]);
 }
 
 module.exports = {
     generateZeroHashes,
     verifyMerkleProof,
-    calculateLeafValue,
+    getLeafValue,
 };

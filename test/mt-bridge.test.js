@@ -42,7 +42,7 @@ describe('Merkle Bridge', () => {
         expect(verification).to.be.equal(true);
     });
 
-    it('Check add 1 leaf to the merkle tree', async () => {
+    it('Check add multipple leafs to the merkle tree', async () => {
         const height = 32;
         const merkleTree = new MTBridge(height);
 
