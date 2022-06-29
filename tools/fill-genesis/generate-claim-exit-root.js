@@ -5,7 +5,7 @@ const ethers = require('ethers');
 const MerkleTreeBridge = require('../../index').MTBridge;
 const {
     verifyMerkleProof,
-    calculateLeafValue,
+    getLeafValue,
 } = require('../../index').mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
@@ -28,7 +28,7 @@ async function main() {
     // pre compute root merkle tree in Js
     const height = 32;
     const merkleTree = new MerkleTreeBridge(height);
-    const leafValue = calculateLeafValue(originalNetwork, tokenAddress, amount, destinationNetwork, destinationAddress);
+    const leafValue = getLeafValue(originalNetwork, tokenAddress, amount, destinationNetwork, destinationAddress);
     merkleTree.add(leafValue);
 
     const rootJSMainnet = merkleTree.getRoot();
