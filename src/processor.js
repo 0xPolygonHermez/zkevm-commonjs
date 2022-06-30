@@ -391,9 +391,8 @@ module.exports = class Processor {
                         Scalar.e(accountSeq.nonce),
                     );
 
-                    // Consolidate transacttions to refresh touchedAccounts
-                    await this.vm.stateManager.checkpoint();
-                    await this.vm.stateManager.commit();
+                    // Clear touched accounts
+                    this.vm.stateManager._customTouched.clear();
 
                     continue;
                 }
@@ -477,9 +476,8 @@ module.exports = class Processor {
                     }
                 }
 
-                // Consolidate transacttions to refresh touchedAccounts
-                await this.vm.stateManager.checkpoint();
-                await this.vm.stateManager.commit();
+                // Clear touched accounts
+                this.vm.stateManager._customTouched.clear();
             }
         }
     }
