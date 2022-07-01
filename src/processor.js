@@ -461,6 +461,32 @@ module.exports = class Processor {
                         }
                     } else {
                         // handle self-destruct
+                        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+                        if (Object.keys(sto).length > 0) {
+                            const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
+                            const oldSto = await this.db.getValue(keyDumpStorage);
+
+                            const storage = {};
+                            const keys = Object.keys(sto).map((v) => `0x${v}`);
+                            const values = Object.values(sto).map((v) => `0x${v}`);
+                            for (let k = 0; k < keys.length; k++) {
+                                storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+                            }
+                            if (oldSto) {
+                                for (const key of Object.keys(oldSto)) {
+                                    const value = storage[key];
+                                    if (!value) { storage[key] = '0x00'; }
+                                }
+                            }
+                            this.currentStateRoot = await stateUtils.setContractStorage(
+                                address,
+                                this.smt,
+                                this.currentStateRoot,
+                                storage,
+                            );
+                            await this.db.setValue(keyDumpStorage, storage);
+                        }
+
                         const oldHashBytecode = await stateUtils.getContractHashBytecode(address, this.smt, this.currentStateRoot);
 
                         if (oldHashBytecode !== Constants.BYTECODE_EMPTY) {
