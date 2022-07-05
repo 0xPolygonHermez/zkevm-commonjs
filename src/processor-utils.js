@@ -19,8 +19,8 @@ function unarrayifyInteger(data, offset, length) {
 }
 
 /**
- * Convert a custom rawTx  [rlp(nonce,gasprice,gaslimit,to,value,data,0,0)|r|s|v]
- * to a standar raw tx [rlp(nonce,gasprice,gaslimit,to,value,data,r,s,v)]
+ * Convert a custom rawTx  [rlp(nonce, gasprice, gaslimit, to, value, data, chainId, 0, 0)|r|s|v]
+ * to a standard raw tx [rlp(nonce, gasprice, gaslimit, to, value, data, r, s, v)]
  * @param {String} customRawTx -  Custom raw transaction
  * @returns {String} - Standar raw transaction
  */
