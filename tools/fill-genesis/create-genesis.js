@@ -25,6 +25,8 @@ const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants,
 } = require('../../index');
 
+// Example of use: node create-genesis.js --gen genesis-gen.json --out genesis.json
+
 async function main() {
     // load generator
     const inputPath = (typeof argv.gen === 'undefined') ? undefined : argv.gen;

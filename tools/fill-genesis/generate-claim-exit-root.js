@@ -5,7 +5,7 @@ const ethers = require('ethers');
 const MerkleTreeBridge = require('../../index').MTBridge;
 const {
     verifyMerkleProof,
-    calculateLeafValue,
+    getLeafValue,
 } = require('../../index').mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
@@ -19,16 +19,19 @@ async function main() {
     const claimAddress = '0xc949254d682d8c9ad5682521675b8f43b102aec4';
 
     // Add a claim leaf to rollup exit tree
-    const originalNetwork = networkIDMainnet;
+    const originNetwork = networkIDMainnet;
     const tokenAddress = ethers.constants.AddressZero; // ether
     const amount = ethers.utils.parseEther('10');
     const destinationNetwork = networkIDRollup;
     const destinationAddress = claimAddress;
 
+    const metadata = '0x';// since is ether does not have metadata
+    const metadataHash = ethers.utils.solidityKeccak256(['bytes'], [metadata]);
+
     // pre compute root merkle tree in Js
     const height = 32;
     const merkleTree = new MerkleTreeBridge(height);
-    const leafValue = calculateLeafValue(originalNetwork, tokenAddress, amount, destinationNetwork, destinationAddress);
+    const leafValue = getLeafValue(originNetwork, tokenAddress, destinationNetwork, destinationAddress, amount, metadataHash);
     merkleTree.add(leafValue);
 
     const rootJSMainnet = merkleTree.getRoot();
@@ -40,15 +43,16 @@ async function main() {
 
     const output = {
         claimCallData: {
-            tokenAddress,
-            amount,
-            originalNetwork,
-            destinationNetwork,
-            destinationAddress,
             proof,
             index,
             rootJSMainnet,
             rollupExitRoot,
+            originNetwork,
+            tokenAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata,
         },
         globalExitRoot,
     };
