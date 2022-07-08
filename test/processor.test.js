@@ -281,8 +281,10 @@ describe('Processor', async function () {
 
                 const storage = await zkEVMDB.dumpStorage(address);
                 const hashBytecode = await zkEVMDB.getHashBytecode(address);
+                const bytecodeLength = await zkEVMDB.getLength(address);
                 newLeafs[address].storage = storage;
                 newLeafs[address].hashBytecode = hashBytecode;
+                newLeafs[address].bytecodeLength = bytecodeLength;
             }
             for (const leaf of genesis) {
                 if (!newLeafs[leaf.address.toLowerCase()]) {
