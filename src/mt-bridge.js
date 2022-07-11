@@ -1,12 +1,13 @@
 const ethers = require('ethers');
-const { expect } = require('chai');
 const {
     generateZeroHashes,
 } = require('./mt-bridge-utils');
 
 class MTBridge {
     constructor(height) {
-        expect(height).to.be.greaterThan(1);
+        if (height <= 1) {
+            throw new Error('MT height is not greater than 1');
+        }
         this.height = height;
         this.zeroHashes = generateZeroHashes(height);
         const tree = [];
