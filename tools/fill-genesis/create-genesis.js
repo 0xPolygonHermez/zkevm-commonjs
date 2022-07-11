@@ -6,6 +6,7 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable guard-for-in */
+/* eslint-disable import/no-extraneous-dependencies */
 
 const { Scalar } = require('ffjavascript');
 const fs = require('fs');
