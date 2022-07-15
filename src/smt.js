@@ -345,7 +345,7 @@ class SMT {
             isOld0,
             insKey,
             insValue,
-            proofHashCounter: nodeIsZero(root, F) ? 0 : (siblings.length + (F.isZero(value) ? 0 : 2)),
+            proofHashCounter: nodeIsZero(root, F) ? 0 : (siblings.length + ((F.isZero(value) && isOld0 !== false) ? 0 : 2)),
         };
     }
 
