@@ -11,12 +11,13 @@ describe('contractUtils', function () {
     this.timeout(10000);
     let testVector;
 
-    const expectedBatchHashData = '0xa4e1166ff3f7ecf8c8ff3049fc2e28b03091d3bf0db4bce702d954840196f79d';
-    const expectedSnarkInputHash = '0x0b0a9c614cdc5473f2a9251d171230e92e5ae31fab0b165b13586100dad3a2c0';
-    const expectedStarkHashExecutor = '0x73855bab378977b439591bdee0bbde9c1b1cf3f48e20418da906ab7abfcc42cf';
+    const expectedBatchHashData = '0x9370689d3c20a5a4739f902a31e2ea20c7d7be121a0fc19468a2e1b5d87f4111';
+    // input taken from pil-stark
+    const expectedSnarkInputHash = '14918438705377636817563619860509474434188349281706594260803853913155748736842';
+    const expectedStarkHashExecutor = '0xd072c5e95f2a1aa8dee6f1e0667f72f9e66ed47f7ff5f5e3ad6f504379c73c26';
 
     before(async () => {
-        testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_0.json')));
+        testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
     });
 
     it('calculateBatchHashData', async () => {
@@ -34,7 +35,7 @@ describe('contractUtils', function () {
     });
 
     it('calculateSnarkInput', async () => {
-        const aggregatorAddress = '0x123456789ABCDDEF123456789ABCDDEF12345678';
+        const aggregatorAddress = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
 
         const {
             oldLocalExitRoot,
@@ -45,7 +46,7 @@ describe('contractUtils', function () {
             timestamp,
         } = testVector;
 
-        const computedGlobalHash = await contractUtils.calculateSnarkInput(
+        const computedSnark = await contractUtils.calculateSnarkInput(
             oldStateRoot,
             oldLocalExitRoot,
             newStateRoot,
@@ -56,7 +57,7 @@ describe('contractUtils', function () {
             aggregatorAddress,
         );
 
-        expect(computedGlobalHash).to.be.equal(expectedSnarkInputHash);
+        expect(computedSnark.toString()).to.be.equal(expectedSnarkInputHash.toString());
     });
 
     it('calculateStarkInput', async () => {

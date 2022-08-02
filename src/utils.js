@@ -1,4 +1,8 @@
 /* eslint-disable no-restricted-syntax */
+const crypto = require('crypto');
+const { Scalar } = require('ffjavascript');
+const { FrSNARK } = require('./constants');
+
 /**
  * Log2 function
  * @param {Number} V - value
@@ -48,8 +52,38 @@ function hexString2byteArray(_hex) {
     return byteArray;
 }
 
+/**
+ * Pad a string hex number with 0
+ * @param {String} str - String input
+ * @param {Number} length - Length of the resulting string
+ * @returns {String} Resulting string
+ */
+function padZeros(str, length) {
+    if (length > str.length) {
+        str = '0'.repeat(length - str.length) + str;
+    }
+
+    return str;
+}
+
+/**
+ * (Hash Sha256 of an hexadecimal string) % (Snark field)
+ * @param {String} str - String input in hexadecimal encoding
+ * @returns {Scalar} Resulting sha256 hash
+ */
+function sha256Snark(str) {
+    const hash = crypto.createHash('sha256')
+        .update(str, 'hex')
+        .digest('hex');
+    const h = Scalar.mod(Scalar.fromString(hash, 16), FrSNARK);
+
+    return h;
+}
+
 module.exports = {
     log2,
     byteArray2HexString,
     hexString2byteArray,
+    sha256Snark,
+    padZeros,
 };

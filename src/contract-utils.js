@@ -1,6 +1,8 @@
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
-const { FrSNARK } = require('./constants');
+const { sha256Snark, padZeros } = require('./utils');
+const { string2fea } = require('./smt-utils');
+const getPoseidon = require('./poseidon');
 
 /**
  * Compute globalHash for STARK circuit
@@ -55,7 +57,7 @@ function calculateStarkInput(
  * @param {String} aggregatorAddress - Aggregator Ethereum address in hex string
  * @returns {String} - sha256(globalHash, aggregatorAddress) % FrSNARK in hex encoding
  */
-function calculateSnarkInput(
+async function calculateSnarkInput(
     currentStateRoot,
     currentLocalExitRoot,
     newStateRoot,
@@ -65,6 +67,9 @@ function calculateSnarkInput(
     timestamp,
     aggregatorAddress,
 ) {
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
+
     const hashKeccak = calculateStarkInput(
         currentStateRoot,
         currentLocalExitRoot,
@@ -75,15 +80,20 @@ function calculateSnarkInput(
         timestamp,
     );
 
-    const hashSha256 = ethers.utils.soliditySha256(
-        ['bytes32', 'address'],
-        [
-            hashKeccak,
-            aggregatorAddress,
-        ],
+    // 20 bytes agggregator adsress
+    const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
+
+    // 8 bytes each field element
+    const feaHashKeccak = string2fea(F, hashKeccak);
+    const strFea = feaHashKeccak.reduce(
+        (previousValue, currentValue) => previousValue + padZeros(currentValue.toString(16), 16),
+        '',
     );
 
-    return `0x${Scalar.mod(Scalar.fromString(hashSha256, 16), FrSNARK).toString(16).padStart(64, '0')}`;
+    // build final bytes sha256
+    const finalStr = strAggregatorAddress.concat(strFea);
+
+    return sha256Snark(finalStr);
 }
 
 /**
