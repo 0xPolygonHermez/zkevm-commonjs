@@ -56,13 +56,15 @@ module.exports = class Processor {
         this.decodedTxs = [];
         this.builded = false;
         this.starkInput = {};
-        this.snarkInput = '0x';
         this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;
         this.oldLocalExitRoot = localExitRoot;
         this.newLocalExitRoot = localExitRoot;
         this.globalExitRoot = globalExitRoot;
+
+        this.batchHashData = '0x';
+        this.inputHash = '0x';
 
         this.sequencerAddress = sequencerAddress;
         this.timestamp = timestamp;
@@ -107,7 +109,6 @@ module.exports = class Processor {
 
         // Calculate stark and snark input
         await this._computeStarkInput();
-        await this._computeSnarkInput();
 
         this.builded = true;
     }
@@ -519,18 +520,18 @@ module.exports = class Processor {
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
         const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
 
-        const batchHashData = calculateBatchHashData(
+        this.batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
             globalExitRoot,
             this.sequencerAddress,
         );
 
-        const inputHash = calculateStarkInput(
+        this.inputHash = calculateStarkInput(
             oldStateRoot,
             oldLocalExitRoot,
             newStateRoot,
-            newLocalExitRoot, // should be the new exit root, but it's not modified in this version
-            batchHashData,
+            newLocalExitRoot,
+            this.batchHashData,
             this.batchNumber,
             this.timestamp,
         );
@@ -544,8 +545,8 @@ module.exports = class Processor {
             oldLocalExitRoot,
             newLocalExitRoot,
             globalExitRoot,
-            batchHashData,
-            inputHash,
+            batchHashData: this.batchHashData,
+            inputHash: this.inputHash,
             numBatch: this.batchNumber,
             timestamp: this.timestamp,
             contractsBytecode: this.contractsBytecode,
@@ -553,30 +554,26 @@ module.exports = class Processor {
     }
 
     /**
-     * Compute stark input
+     * Compute snark input
+     * @param {String} aggregatorAddress - aggregator ethereum address
+     * @returns {String} Snark input
      */
-    _computeSnarkInput() {
+    _computeSnarkInput(aggregatorAddress) {
         // compute circuit inputs
         const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
         const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
-        const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
 
-        const batchHashData = calculateBatchHashData(
-            this.getBatchL2Data(),
-            globalExitRoot,
-            this.sequencerAddress,
-        );
-
-        this.snarkInput = calculateSnarkInput(
+        return calculateSnarkInput(
             oldStateRoot,
             oldLocalExitRoot,
             newStateRoot,
             newLocalExitRoot,
-            batchHashData,
+            this.batchHashData,
             this.batchNumber,
             this.timestamp,
+            aggregatorAddress,
         );
     }
 
@@ -598,11 +595,12 @@ module.exports = class Processor {
 
     /**
      * Return snark input
+     * @param {String} aggregatorAddress - aggregator Ethereum address
      */
-    getSnarkInput() {
+    getSnarkInput(aggregatorAddress) {
         this._isBuilded();
 
-        return this.snarkInput;
+        return this._computeSnarkInput(aggregatorAddress);
     }
 
     /**

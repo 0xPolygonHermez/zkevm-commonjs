@@ -44,7 +44,7 @@ function calculateStarkInput(
 }
 
 /**
- * Compute globalHash for SNARK circuit
+ * Compute input for SNARK circuit
  * @param {String} currentStateRoot - Current state Root
  * @param {String} currentLocalExitRoot - Current local exit root
  * @param {String} newStateRoot - New State root once the batch is processed
@@ -52,7 +52,8 @@ function calculateStarkInput(
  * @param {String} batchHashData - Batch hash data
  * @param {Number} numBatch - Batch number
  * @param {Number} timestamp - Block timestamp
- * @returns {String} - global hash % FrSNARK in hex encoding
+ * @param {String} aggregatorAddress - Aggregator Ethereum address in hex string
+ * @returns {String} - sha256(globalHash, aggregatorAddress) % FrSNARK in hex encoding
  */
 function calculateSnarkInput(
     currentStateRoot,
@@ -62,6 +63,7 @@ function calculateSnarkInput(
     batchHashData,
     numBatch,
     timestamp,
+    aggregatorAddress,
 ) {
     const hashKeccak = calculateStarkInput(
         currentStateRoot,
@@ -73,7 +75,15 @@ function calculateSnarkInput(
         timestamp,
     );
 
-    return `0x${Scalar.mod(Scalar.fromString(hashKeccak, 16), FrSNARK).toString(16).padStart(64, '0')}`;
+    const hashSha256 = ethers.utils.soliditySha256(
+        ['bytes32', 'address'],
+        [
+            hashKeccak,
+            aggregatorAddress,
+        ],
+    );
+
+    return `0x${Scalar.mod(Scalar.fromString(hashSha256, 16), FrSNARK).toString(16).padStart(64, '0')}`;
 }
 
 /**

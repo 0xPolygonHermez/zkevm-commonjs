@@ -12,7 +12,7 @@ describe('contractUtils', function () {
     let testVector;
 
     const expectedBatchHashData = '0xa4e1166ff3f7ecf8c8ff3049fc2e28b03091d3bf0db4bce702d954840196f79d';
-    const expectedSnarkInputHash = '0x12bcbec575263760c8b89071ddb92de1cab523639aad606b2142c052dfcc42cd';
+    const expectedSnarkInputHash = '0x0b0a9c614cdc5473f2a9251d171230e92e5ae31fab0b165b13586100dad3a2c0';
     const expectedStarkHashExecutor = '0x73855bab378977b439591bdee0bbde9c1b1cf3f48e20418da906ab7abfcc42cf';
 
     before(async () => {
@@ -34,6 +34,8 @@ describe('contractUtils', function () {
     });
 
     it('calculateSnarkInput', async () => {
+        const aggregatorAddress = '0x123456789ABCDDEF123456789ABCDDEF12345678';
+
         const {
             oldLocalExitRoot,
             newLocalExitRoot,
@@ -51,6 +53,7 @@ describe('contractUtils', function () {
             expectedBatchHashData,
             numBatch,
             timestamp,
+            aggregatorAddress,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedSnarkInputHash);
