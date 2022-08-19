@@ -43,8 +43,19 @@ async function setAccountState(ethAddr, smt, root, balance, nonce) {
     const keyBalance = await smtUtils.keyEthAddrBalance(ethAddr);
     const keyNonce = await smtUtils.keyEthAddrNonce(ethAddr);
 
+    console.log(`Set to address: ${ethAddr} with balance ${Scalar.e(balance)}`);
+    console.log(`       previous root: ${(smtUtils.h4toScalar(root)).toString()}`);
+    console.log(`       smt key path: ${(smtUtils.h4toScalar(keyBalance)).toString()}`);
+    console.log(`       value: ${Scalar.e(balance)}`);
     let auxRes = await smt.set(root, keyBalance, Scalar.e(balance));
+    console.log(`       next root: ${(smtUtils.h4toScalar(auxRes.newRoot)).toString()}\n\n`);
+
+    console.log(`Set to address: ${ethAddr} with nonce ${Scalar.e(nonce)}`);
+    console.log(`       previous root: ${(smtUtils.h4toScalar(auxRes.newRoot)).toString()}`);
+    console.log(`       smt key path: ${(smtUtils.h4toScalar(keyNonce)).toString()}`);
+    console.log(`       value: ${Scalar.e(nonce)}`);
     auxRes = await smt.set(auxRes.newRoot, keyNonce, Scalar.e(nonce));
+    console.log(`       next root: ${(smtUtils.h4toScalar(auxRes.newRoot)).toString()}\n\n`);
 
     return auxRes.newRoot;
 }
@@ -100,8 +111,22 @@ async function setContractBytecode(ethAddr, smt, root, bytecode, flagDelete) {
         let parsedBytecode = bytecode.startsWith('0x') ? bytecode.slice(2) : bytecode.slice();
         parsedBytecode = (parsedBytecode.length % 2) ? `0${parsedBytecode}` : parsedBytecode;
         const bytecodeLength = parsedBytecode.length / 2;
+
+        console.log(`Set to address: ${ethAddr} with contract code ${bytecode}`);
+        console.log(`       previous root: ${(smtUtils.h4toScalar(root)).toString()}`);
+        console.log(`       smt key path: ${(smtUtils.h4toScalar(keyContractCode)).toString()}`);
+        console.log(`       value (hasBytecode): ${Scalar.fromString(hashByteCode, 16)}`);
         res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
+        console.log(`       next root: ${(smtUtils.h4toScalar(res.newRoot)).toString()}\n\n`);
+
+        res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
+
+        console.log(`Set to address: ${ethAddr} with contract length ${bytecodeLength}`);
+        console.log(`       previous root: ${(smtUtils.h4toScalar(res.newRoot)).toString()}`);
+        console.log(`       smt key path: ${(smtUtils.h4toScalar(keyContractLength)).toString()}`);
+        console.log(`       value: ${bytecodeLength}`);
         res = await smt.set(res.newRoot, keyContractLength, bytecodeLength);
+        console.log(`       next root: ${(smtUtils.h4toScalar(res.newRoot)).toString()}\n\n`);
     }
 
     return res.newRoot;
@@ -147,8 +172,13 @@ async function setContractStorage(ethAddr, smt, root, storage) {
 
         const keyStoragePos = await smtUtils.keyContractStorage(ethAddr, pos);
 
+        console.log(`Set to address: ${ethAddr} with storage position (key storage) ${pos}`);
+        console.log(`       previous root: ${(smtUtils.h4toScalar(tmpRoot)).toString()}`);
+        console.log(`       smt key path: ${(smtUtils.h4toScalar(keyStoragePos)).toString()}`);
+        console.log(`       value (value storage): ${Scalar.e(value)}`);
         const auxRes = await smt.set(tmpRoot, keyStoragePos, Scalar.e(value));
         tmpRoot = auxRes.newRoot;
+        console.log(`       next root: ${(smtUtils.h4toScalar(tmpRoot)).toString()}\n\n`);
     }
 
     return tmpRoot;
