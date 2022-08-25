@@ -23,7 +23,7 @@ const artifactsPath = path.join(__dirname, '../../test/artifacts/contracts');
 const { argv } = require('yargs');
 const contractsPolygonHermez = require('@0xpolygonhermez/contracts-zkevm');
 const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants,
+    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
 } = require('../../index');
 
 // Example of use: node create-genesis.js --gen genesis-gen.json --out genesis.json
@@ -141,8 +141,31 @@ async function main() {
     // consolidate state
     await zkEVMDB.consolidate(batch);
 
-    const newRoot = batch.currentStateRoot;
-    genesisOutput.root = smtUtils.h4toString(newRoot);
+    // clean address 0 batch, clean globalExitRoot
+    let newRoot = batch.currentStateRoot;
+
+    // clean address 0 state root
+    const batchNumber = 0;
+    const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [batchNumber, Constants.STATE_ROOT_STORAGE_POS]);
+    let newStorageEntry = {};
+    newStorageEntry[stateRootPos] = '0x00';
+
+    newRoot = await stateUtils.setContractStorage(
+        Constants.ADDRESS_SYSTEM,
+        batch.smt,
+        newRoot,
+        newStorageEntry,
+    );
+    // cleanglobal exit root
+    newStorageEntry = {};
+    const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [ethers.constants.HashZero, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+    newStorageEntry[globalExitRootPos] = 0;
+    newRoot = await stateUtils.setContractStorage(
+        Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+        batch.smt,
+        newRoot,
+        newStorageEntry,
+    );
 
     const updatedAccounts = batch.getUpdatedAccountsBatch();
     const currentVM = batch.vm;
@@ -185,6 +208,7 @@ async function main() {
         }
     }
 
+    genesisOutput.root = smtUtils.h4toString(newRoot);
     genesisOutput.genesis = accountsOutput;
     const genesisOutputPath = path.join(__dirname, outPath);
     await fs.writeFileSync(genesisOutputPath, JSON.stringify(genesisOutput, null, 2));
