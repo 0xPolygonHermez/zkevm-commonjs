@@ -84,24 +84,28 @@ async function main() {
         };
 
         // Contract deployment from tx
-        let bytecode;
+        let bytecode, abi;
         if (contractsPolygonHermez[currentTx.contractName]) {
-            bytecode = contractsPolygonHermez[currentTx.contractName].bytecode;
+            ({ bytecode, abi } = contractsPolygonHermez[currentTx.contractName]);
         } else {
-            ({ bytecode } = require(`${artifactsPath}/${currentTx.contractName}.sol/${currentTx.contractName}.json`));
+            ({ bytecode, abi } = require(`${artifactsPath}/${currentTx.contractName}.sol/${currentTx.contractName}.json`));
         }
 
-        if (currentTx.paramsDeploy) {
-            const params = defaultAbiCoder.encode(currentTx.paramsDeploy.types, currentTx.paramsDeploy.values);
-            tx.data = bytecode + params.slice(2);
+        if (currentTx.function) {
+            const interfaceContract = new ethers.utils.Interface(abi);
+            tx.data = interfaceContract.encodeFunctionData(currentTx.function, currentTx.paramsFunction);
         } else {
-            tx.data = bytecode;
+            if (currentTx.paramsDeploy) {
+                const params = defaultAbiCoder.encode(currentTx.paramsDeploy.types, currentTx.paramsDeploy.values);
+                tx.data = bytecode + params.slice(2);
+            } else {
+                tx.data = bytecode;
+            }
+            const addressContract = await ethers.utils.getContractAddress(
+                { from: currentTx.from, nonce: currentTx.nonce },
+            );
+            addressToContractName[addressContract.toLowerCase()] = currentTx.contractName;
         }
-
-        const addressContract = await ethers.utils.getContractAddress(
-            { from: currentTx.from, nonce: currentTx.nonce },
-        );
-        addressToContractName[addressContract.toLowerCase()] = currentTx.contractName;
 
         let customRawTx;
         const address = genesis.find((o) => o.address === currentTx.from);

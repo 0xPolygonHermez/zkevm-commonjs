@@ -14,6 +14,12 @@
       "pvtKey": "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f",
       "balance": "0",
       "nonce": "0"
+    },
+    {
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "pvtKey": "0x00",
+      "balance": "100000000000000000000000",
+      "nonce": "0"
     }
   ],
   "txs": [
@@ -42,17 +48,22 @@
       "gasLimit": 10000000,
       "gasPrice": "0",
       "chainId": 1000,
-      "paramsDeploy": {
-        "types": [
-          "uint32",
-          "address"
-        ],
-        "values": [
-          1,
-          "0xAE4bB80bE56B819606589DE61d5ec3b522EEB032"
-        ]
-      },
       "contractName": "Bridge"
+      },
+      {
+        "from": "0xC949254d682D8c9ad5682521675b8F43b102aec4",
+        "to": "0x9D98DeAbC42dd696Deb9e40b4f1CAB7dDBF55988",
+        "nonce": 2,
+        "value": "0",
+        "gasLimit": 10000000,
+        "gasPrice": "0",
+        "chainId": 1000,
+        "function": "initialize",
+        "paramsFunction": [
+            1,
+            "0xAE4bB80bE56B819606589DE61d5ec3b522EEB032"
+        ],
+        "contractName": "Bridge"
       }
   ],
   "timestamp": 1944498031
