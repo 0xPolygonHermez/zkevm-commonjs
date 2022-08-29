@@ -84,7 +84,8 @@ async function main() {
         };
 
         // Contract deployment from tx
-        let bytecode, abi;
+        let bytecode; let
+            abi;
         if (contractsPolygonHermez[currentTx.contractName]) {
             ({ bytecode, abi } = contractsPolygonHermez[currentTx.contractName]);
         } else {
