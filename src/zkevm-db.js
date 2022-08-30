@@ -17,7 +17,7 @@ const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
     getContractBytecodeLength,
 } = require('./state-utils');
-const { h4toString, stringToH4 } = require('./smt-utils');
+const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
 
 const common = Common.custom({ chainId: Constants.ZKEVM_CHAINID }, { hardfork: Hardfork.Berlin });
 
@@ -226,7 +226,9 @@ class ZkEVMDB {
                 if (bytecode) {
                     await newVm.stateManager.putContractCode(addressInstance, toBuffer(bytecode));
                     const evmBytecode = await newVm.stateManager.getContractCode(addressInstance);
-                    newStateRoot = await setContractBytecode(address, newSmt, newStateRoot, `0x${evmBytecode.toString('hex')}`);
+                    newStateRoot = await setContractBytecode(address, newSmt, newStateRoot, evmBytecode.toString('hex'));
+                    const hashByteCode = await hashContractBytecode(bytecode);
+                    db.setValue(hashByteCode, evmBytecode.toString('hex'));
                 }
 
                 if (storage) {
