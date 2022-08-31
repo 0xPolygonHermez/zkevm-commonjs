@@ -358,7 +358,11 @@ module.exports = class Processor {
                     if (txResult.execResult.returnValue.toString()) {
                         const abiCoder = ethers.utils.defaultAbiCoder;
                         const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
-                        [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
+                        try {
+                            [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
+                        } catch (e) {
+                            currentDecodedTx.reason = txResult.execResult.exceptionError;
+                        }
                     } else currentDecodedTx.reason = txResult.execResult.exceptionError;
 
                     // UPDATE sender account adding the nonce and substracting the gas spended
