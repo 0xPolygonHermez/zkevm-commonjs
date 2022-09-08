@@ -1,7 +1,7 @@
 {
   "name": "@0xpolygonhermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "0.0.40",
+  "version": "0.0.42",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
@@ -50,7 +50,7 @@
     "@ethereumjs/block": "^3.6.2",
     "@ethereumjs/common": "^2.6.0",
     "@ethereumjs/tx": "^3.4.0",
-    "@polygon-hermez/vm": "5.7.21",
+    "@polygon-hermez/vm": "5.7.22",
     "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.46",
