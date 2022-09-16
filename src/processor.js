@@ -432,7 +432,6 @@ module.exports = class Processor {
                             this.smt,
                             this.currentStateRoot,
                             smCode.toString('hex'),
-                            false,
                         );
                         // Set bytecode at db when smart contract is called
                         const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
@@ -462,38 +461,6 @@ module.exports = class Processor {
                             storage,
                         );
                         await this.db.setValue(keyDumpStorage, storage);
-                    } else {
-                        // handle self-destruct
-                        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
-                        if (Object.keys(sto).length > 0) {
-                            const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
-                            const storage = {};
-                            const keys = Object.keys(sto).map((v) => `0x${v}`);
-                            const values = Object.values(sto).map((v) => `0x${v}`);
-                            for (let k = 0; k < keys.length; k++) {
-                                storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
-                            }
-                            this.currentStateRoot = await stateUtils.setContractStorage(
-                                address,
-                                this.smt,
-                                this.currentStateRoot,
-                                storage,
-                            );
-                            await this.db.setValue(keyDumpStorage, storage);
-                        }
-
-                        const oldHashBytecode = await stateUtils.getContractHashBytecode(address, this.smt, this.currentStateRoot);
-
-                        if (oldHashBytecode !== Constants.BYTECODE_EMPTY) {
-                            // delete leaf bytecode
-                            this.currentStateRoot = await stateUtils.setContractBytecode(
-                                address,
-                                this.smt,
-                                this.currentStateRoot,
-                                '0x',
-                                true,
-                            );
-                        }
                     }
                 }
 
