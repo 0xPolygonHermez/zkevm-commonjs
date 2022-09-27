@@ -1,20 +1,20 @@
+const { Client } = require('pg');
 const { Scalar } = require('ffjavascript');
 const { h4toString } = require('./smt-utils');
-const { Client } = require('pg');
 
 class Database {
     /**
      * Constructor Database
      * @param {Field} F - Field element
      * @param {Object} db - Initial database to load in memory
-     */    
+     */
     constructor(F, db) {
         this.F = F;    
         this.useRemoteDB = false;
         this.connected = false;
-        this.dbtable = "state.merkletree";
+        this.dbtable = 'state.merkletree';
         if (db) this.db = db;
-        else this.db = {};        
+        else this.db = {};    
     }
 
     _checkUseRemoteDB() {
@@ -22,14 +22,14 @@ class Database {
             throw new Error('SQL database is not configured');
         }
     }
-  
+
     _checkConnected() {
         if (!this.connected) {
             throw new Error('SQL database is not connected');
         }
-    }    
-   
-    async _insertDB (hash, data) {
+    }
+
+    async _insertDB(hash, data) {
         this._checkConnected();
 
         //Remove initial "0x"
@@ -43,7 +43,7 @@ class Database {
         await this.client.query(query);
     }
     
-    async _selectDB (hash) {
+    async _selectDB(hash) {
         this._checkConnected();
 
         //Remove initial "0x"
@@ -66,7 +66,7 @@ class Database {
     /**
      * Connect to the database
      * @param {String} connectionString - Connection string for the database. If the value is "local" or "memdb" no remote SQL database will be used, data will be stored only in memory
-     */    
+     */
     async connect(connectionString, dbtable) {
         if (!["local", "memdb"].includes(connectionString)) {       
             this.useRemoteDB = true;
@@ -79,7 +79,7 @@ class Database {
 
     /**
      * Disconnect from the remote SQL database
-     */    
+     */
      async disconnect() {
         this._checkUseRemoteDB();
 

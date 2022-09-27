@@ -55,6 +55,7 @@
     "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.55",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "pg": "^8.7.1"
   }
 }
