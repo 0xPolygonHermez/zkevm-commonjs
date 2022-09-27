@@ -9,12 +9,12 @@ class Database {
      * @param {Object} db - Initial database to load in memory
      */
     constructor(F, db) {
-        this.F = F;    
+        this.F = F;
         this.useRemoteDB = false;
         this.connected = false;
         this.dbtable = 'state.merkletree';
         if (db) this.db = db;
-        else this.db = {};    
+        else this.db = {};
     }
 
     _checkUseRemoteDB() {
@@ -32,35 +32,30 @@ class Database {
     async _insertDB(hash, data) {
         this._checkConnected();
 
-        //Remove initial "0x"
-        const h = (hash.startsWith("0x")?hash.slice(2):hash);
+        // Remove initial "0x"
+        const h = (hash.startsWith('0x') ? hash.slice(2) : hash);
 
-        const query = `
-            INSERT INTO ` + this.dbtable + ` ( hash, data ) 
-            VALUES ( E'\\\\x` + h + `', E'\\\\x` + data + `' ) 
-            ON CONFLICT (hash) DO NOTHING;`;
+        const query = `INSERT INTO ${this.dbtable} ( hash, data ) VALUES ( E'\\\\x${h}', E'\\\\x${data}' ) ON CONFLICT (hash) DO NOTHING;`;
 
         await this.client.query(query);
     }
-    
+
     async _selectDB(hash) {
         this._checkConnected();
 
-        //Remove initial "0x"
-        const h = (hash.startsWith("0x")?hash.slice(2):hash);
+        // Remove initial "0x"
+        const h = (hash.startsWith('0x') ? hash.slice(2) : hash);
 
-        const query = `
-           SELECT *
-           FROM ` + this.dbtable + ` WHERE hash = E'\\\\x` + h + `';`;
+        const query = `SELECT * FROM ${this.dbtable} WHERE hash = E'\\\\x${h}';`;
 
         const res = await this.client.query(query);
 
-        if (res.rows.length == 0) {
-            return null;   
-        } else {
-            const dataS = Buffer.from(res.rows[0].data).toString('hex');
-            return dataS;
-        }        
+        if (res.rows.length === 0) {
+            return null;
+        }
+
+        const dataS = Buffer.from(res.rows[0].data).toString('hex');
+        return dataS;
     }
 
     /**
@@ -68,10 +63,10 @@ class Database {
      * @param {String} connectionString - Connection string for the database. If the value is "local" or "memdb" no remote SQL database will be used, data will be stored only in memory
      */
     async connect(connectionString, dbtable) {
-        if (!["local", "memdb"].includes(connectionString)) {       
+        if (!['local', 'memdb'].includes(connectionString)) {
             this.useRemoteDB = true;
             if (dbtable) this.dbtable = dbtable;
-            this.client = new Client({connectionString,});
+            this.client = new Client({ connectionString });
             await this.client.connect();
             this.connected = true;
         }
@@ -80,7 +75,7 @@ class Database {
     /**
      * Disconnect from the remote SQL database
      */
-     async disconnect() {
+    async disconnect() {
         this._checkUseRemoteDB();
 
         await this.client.end();
@@ -103,16 +98,15 @@ class Database {
         if (typeof this.db[keyS] === 'undefined') {
             if (this.useRemoteDB) {
                 const dataS = await this._selectDB(keyS);
-                if (dataS != null) {
-                    if (dataS.length%16 != 0) {
-                        throw new Error('Found incorrect DATA value size: ' + dataS.length);                
-                    }            
-        
-                    for (let i=0; i<dataS.length; i+=16)
-                    {
-                        this.db[keyS].push(dataS.substring(i, i+16));
-                    }   
-                    
+                if (dataS !== null) {
+                    if (dataS.length % 16 != 0) {
+                        throw new Error('Found incorrect DATA value size: ${dataS.length}');
+                    }
+
+                    for (let i = 0; i < dataS.length; i += 16) {
+                        this.db[keyS].push(dataS.substring(i, i + 16));
+                    }
+
                     found = true;
                 }
             }
@@ -129,7 +123,8 @@ class Database {
             }
 
             return data;
-        } else return null;
+        }
+        return null;
     }
 
     /**
@@ -151,7 +146,7 @@ class Database {
         }
 
         if (this.useRemoteDB) {
-            let dataS = "";
+            let dataS = '';
             for (let i = 0; i < this.db[keyS].length; i++) {
                 dataS += this.db[keyS][i];
             }
@@ -164,15 +159,15 @@ class Database {
      * @param {String | Scalar} key - key in scalar or hex representation
      * @param {Any} value - value to insert into the DB (JSON valid format)
      */
-     async setValue(key, value) {
+    async setValue(key, value) {
         const keyS = Scalar.e(key).toString(16).padStart(64, '0');
         const jsonS = JSON.stringify(value);
 
-        this.db[keyS] = Buffer.from(jsonS,'utf8').toString('hex');
+        this.db[keyS] = Buffer.from(jsonS, 'utf8').toString('hex');
 
         if (this.useRemoteDB) {
             await this._insertDB(keyS, this.db[keyS]);
-        }          
+        }
     }
 
     /**
@@ -200,7 +195,8 @@ class Database {
             }
 
             return JSON.parse(Buffer.from(this.db[keyS], 'hex').toString('utf-8'));
-        } else return null;
+        }
+        return null;
     }
 
     /**
@@ -215,7 +211,7 @@ class Database {
 
         const keyS = h4toString(key);
         let found = false;
-        
+
         if (typeof this.db[keyS] === 'undefined') {
             if (this.useRemoteDB) {
                 const dataS = await this._selectDB(keyS);
@@ -230,9 +226,10 @@ class Database {
             if (this.capturing) {
                 this.capturing[keyS] = this.db[keyS];
             }
-    
+
             return Array.prototype.slice.call(Buffer.from(this.db[keyS], 'hex'));
-        } else return null;
+        }
+        return null;
     }
 
     /**
@@ -251,7 +248,7 @@ class Database {
 
         if (this.useRemoteDB) {
             await this._insertDB(keyS, this.db[keyS]);
-        }        
+        }
     }
 
     startCapture() {
