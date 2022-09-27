@@ -55,6 +55,7 @@ class Database {
         }
 
         const dataS = Buffer.from(res.rows[0].data).toString('hex');
+
         return dataS;
     }
 
@@ -99,8 +100,8 @@ class Database {
             if (this.useRemoteDB) {
                 const dataS = await this._selectDB(keyS);
                 if (dataS !== null) {
-                    if (dataS.length % 16 != 0) {
-                        throw new Error('Found incorrect DATA value size: ${dataS.length}');
+                    if (dataS.length % 16 !== 0) {
+                        throw new Error(`Found incorrect DATA value size: ${dataS.length}`);
                     }
 
                     for (let i = 0; i < dataS.length; i += 16) {
@@ -124,6 +125,7 @@ class Database {
 
             return data;
         }
+
         return null;
     }
 
@@ -196,6 +198,7 @@ class Database {
 
             return JSON.parse(Buffer.from(this.db[keyS], 'hex').toString('utf-8'));
         }
+
         return null;
     }
 
@@ -229,6 +232,7 @@ class Database {
 
             return Array.prototype.slice.call(Buffer.from(this.db[keyS], 'hex'));
         }
+
         return null;
     }
 

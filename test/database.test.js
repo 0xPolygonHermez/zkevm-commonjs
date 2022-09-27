@@ -17,7 +17,7 @@ describe('Database', () => {
 
     it('create new instance', async () => {
         db = new Database(F);
-        await db.connect("postgresql://statedb:statedb@127.0.0.1:5432/testdb");
+        // await db.connect('postgresql://statedb:statedb@127.0.0.1:5432/testdb');
     });
 
     it('getSmtNode: no value', async () => {
