@@ -17,18 +17,29 @@ class Database {
         else this.db = {};
     }
 
+    /**
+     * Check if a remote connection to a SQL database is used
+     */
     _checkUseRemoteDB() {
         if (!this.useRemoteDB) {
             throw new Error('SQL database is not configured');
         }
     }
 
+    /**
+     * Check if connected to the SQL database
+     */
     _checkConnected() {
         if (!this.connected) {
             throw new Error('SQL database is not connected');
         }
     }
 
+    /**
+     * Insert data in the SQL database for a specific hash value
+     * @param {String} hash - hash value
+     * @param {String} data - data value
+     */
     async _insertDB(hash, data) {
         this._checkConnected();
 
@@ -40,6 +51,10 @@ class Database {
         await this.client.query(query);
     }
 
+    /**
+     * Retrieve data from the SQL database for a specific hash value
+     * @param {String} hash - hash value
+     */
     async _selectDB(hash) {
         this._checkConnected();
 
@@ -60,8 +75,9 @@ class Database {
     }
 
     /**
-     * Connect to the database
+     * Connect to the SQL database
      * @param {String} connectionString - Connection string for the database. If the value is "local" or "memdb" no remote SQL database will be used, data will be stored only in memory
+     * @param {String} dbTable - Name of the table used to store/read data. Default is "state.merkletree"
      */
     async connect(connectionString, dbtable) {
         if (!['local', 'memdb'].includes(connectionString)) {
@@ -74,7 +90,7 @@ class Database {
     }
 
     /**
-     * Disconnect from the remote SQL database
+     * Disconnect from the SQL database
      */
     async disconnect() {
         this._checkUseRemoteDB();
@@ -175,7 +191,7 @@ class Database {
     /**
      * Get value
      * @param {String | Scalar} key - key in scalar or hex representation
-     * @returns {Any} - value retirved from database
+     * @returns {Any} - value retrieved from database
      */
     async getValue(key) {
         const keyS = Scalar.e(key).toString(16).padStart(64, '0');
@@ -255,10 +271,16 @@ class Database {
         }
     }
 
+    /**
+     * Enable capture of data read from the SQL database
+     */
     startCapture() {
         this.capturing = {};
     }
 
+    /**
+     * Stop capturing data read from the SQL database
+     */
     endCapture() {
         const res = this.capturing;
         delete this.capturing;
