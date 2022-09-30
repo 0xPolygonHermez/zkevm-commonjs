@@ -39,6 +39,7 @@ describe('ZkEVMDB', function () {
         const timestamp = 1;
         const genesis = [];
         const db = new MemDB(F);
+        const chainID = 1000;
 
         // create a zkEVMDB and build a batch
         const zkEVMDB = await ZkEVMDB.newZkEVM(
@@ -47,6 +48,9 @@ describe('ZkEVMDB', function () {
             genesisRoot,
             localExitRoot,
             genesis,
+            null,
+            null,
+            chainID,
         );
 
         // build an empty batch
@@ -86,6 +90,9 @@ describe('ZkEVMDB', function () {
             null,
             null,
             null,
+            null,
+            null,
+            chainID,
         );
 
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(zkEVMDBImported.getCurrentNumBatch());
@@ -104,6 +111,7 @@ describe('ZkEVMDB', function () {
             globalExitRoot,
             timestamp,
             newLocalExitRoot,
+            chainID,
         } = testVectors[0];
 
         const db = new MemDB(F);
@@ -212,7 +220,11 @@ describe('ZkEVMDB', function () {
             genesisRoot,
             smtUtils.stringToH4(oldLocalExitRoot),
             genesis,
+            null,
+            null,
+            chainID,
         );
+
         const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
         for (let j = 0; j < rawTxs.length; j++) {
             batch.addRawTx(rawTxs[j]);
