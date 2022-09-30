@@ -13,6 +13,7 @@ const getPoseidon = require('./poseidon');
  * @param {String} batchHashData - Batch hash data
  * @param {Number} numBatch - Batch number
  * @param {Number} timestamp - Block timestamp
+ * @param {Number} chainID - L2 chainID
  * @returns {String} - global hash in hex encoding
  */
 function calculateStarkInput(
@@ -23,6 +24,7 @@ function calculateStarkInput(
     batchHashData,
     numBatch,
     timestamp,
+    chainID,
 ) {
     const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
     const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
@@ -30,7 +32,7 @@ function calculateStarkInput(
     const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64'],
+        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64', 'uint64'],
         [
             currentStateRootHex,
             currentLocalExitRootHex,
@@ -39,6 +41,7 @@ function calculateStarkInput(
             batchHashData,
             numBatch,
             timestamp,
+            chainID,
         ],
     );
 
@@ -54,6 +57,7 @@ function calculateStarkInput(
  * @param {String} batchHashData - Batch hash data
  * @param {Number} numBatch - Batch number
  * @param {Number} timestamp - Block timestamp
+ * @param {Number} chainID - L2 chainID
  * @param {String} aggregatorAddress - Aggregator Ethereum address in hex string
  * @returns {String} - sha256(globalHash, aggregatorAddress) % FrSNARK in hex encoding
  */
@@ -65,6 +69,7 @@ async function calculateSnarkInput(
     batchHashData,
     numBatch,
     timestamp,
+    chainID,
     aggregatorAddress,
 ) {
     const poseidon = await getPoseidon();
@@ -78,6 +83,7 @@ async function calculateSnarkInput(
         batchHashData,
         numBatch,
         timestamp,
+        chainID,
     );
 
     // 20 bytes agggregator adsress

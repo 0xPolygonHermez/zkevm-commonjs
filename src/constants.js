@@ -10,8 +10,7 @@ module.exports.DB_ADDRESS_STORAGE = ethers.utils.id(('ZKEVM_DB_ADDRESS_STORAGE')
 module.exports.DB_TOUCHED_ACCOUNTS = ethers.utils.id(('ZKEVM_DB_TOUCHED_ACCOUNTS'));
 
 // Default values and global constants
-module.exports.ZKEVM_CHAINID = 1000;
-module.exports.DEFAULT_MAX_TX = 100;
+module.exports.DEFAULT_MAX_TX = 1000;
 module.exports.SIGNATURE_BYTES = 32 + 32 + 1;
 module.exports.FrSNARK = Scalar.e('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 module.exports.FrSTARK = Scalar.e('18446744069414584321');

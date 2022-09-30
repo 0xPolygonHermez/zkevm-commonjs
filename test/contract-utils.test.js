@@ -13,8 +13,8 @@ describe('contractUtils', function () {
 
     const expectedBatchHashData = '0x9370689d3c20a5a4739f902a31e2ea20c7d7be121a0fc19468a2e1b5d87f4111';
     // input taken from pil-stark
-    const expectedSnarkInputHash = '14918438705377636817563619860509474434188349281706594260803853913155748736842';
-    const expectedStarkHashExecutor = '0xd072c5e95f2a1aa8dee6f1e0667f72f9e66ed47f7ff5f5e3ad6f504379c73c26';
+    const expectedSnarkInputHash = '10255818422543031151914919891467894274520264482506602925880735498991910195507';
+    const expectedStarkHashExecutor = '0x55f4c373d62dd577ef6160a1980130db83f0686dab8afe5e32e641ca6abeab4c';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
@@ -44,6 +44,7 @@ describe('contractUtils', function () {
             newStateRoot,
             numBatch,
             timestamp,
+            chainID,
         } = testVector;
 
         const computedSnark = await contractUtils.calculateSnarkInput(
@@ -54,6 +55,7 @@ describe('contractUtils', function () {
             expectedBatchHashData,
             numBatch,
             timestamp,
+            chainID,
             aggregatorAddress,
         );
 
@@ -68,6 +70,7 @@ describe('contractUtils', function () {
             newStateRoot,
             numBatch,
             timestamp,
+            chainID,
         } = testVector;
 
         const computedGlobalHash = await contractUtils.calculateStarkInput(
@@ -78,6 +81,7 @@ describe('contractUtils', function () {
             expectedBatchHashData,
             numBatch,
             timestamp,
+            chainID,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedStarkHashExecutor);
