@@ -19,10 +19,8 @@ const {
 } = require('./state-utils');
 const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
 
-const common = Common.custom({ chainId: Constants.ZKEVM_CHAINID }, { hardfork: Hardfork.Berlin });
-
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt) {
+    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt, chainID) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
@@ -30,6 +28,7 @@ class ZkEVMDB {
 
         this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.chainID = chainID;
 
         this.smt = smt;
         this.vm = vm;
@@ -53,6 +52,7 @@ class ZkEVMDB {
             this.localExitRoot,
             globalExitRoot,
             timestamp,
+            this.chainID,
             clone(this.vm),
         );
     }
@@ -195,9 +195,12 @@ class ZkEVMDB {
      * @param {Object} genesis - genesis block accounts (address, nonce, balance, bytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
+     * @param {Number} chainID - L2 chainID
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt) {
+    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt, chainID) {
+        const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
+
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
@@ -266,6 +269,7 @@ class ZkEVMDB {
                 poseidon,
                 newVm,
                 newSmt,
+                chainID,
             );
         }
 
@@ -281,6 +285,7 @@ class ZkEVMDB {
             poseidon,
             vm,
             smt,
+            chainID,
         );
     }
 }

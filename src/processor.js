@@ -30,6 +30,7 @@ module.exports = class Processor {
      * @param {Array[Field]} localExitRoot - local exit root
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Number} timestamp - Timestamp of the batch
+     * @param {Number} chainID - L2 chainID
      * @param {Object} vm - vm instance
      */
     constructor(
@@ -42,6 +43,7 @@ module.exports = class Processor {
         localExitRoot,
         globalExitRoot,
         timestamp,
+        chainID,
         vm,
     ) {
         this.db = db;
@@ -68,6 +70,7 @@ module.exports = class Processor {
 
         this.sequencerAddress = sequencerAddress;
         this.timestamp = timestamp;
+        this.chainID = chainID;
 
         this.vm = vm;
         this.evmSteps = [];
@@ -147,7 +150,7 @@ module.exports = class Processor {
             txDecoded.chainID = Number(txDecoded.chainID);
 
             // B: Valid chainID
-            if (txDecoded.chainID !== Constants.ZKEVM_CHAINID) {
+            if (txDecoded.chainID !== this.chainID) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Chain ID does not match', tx: txDecoded });
                 continue;
             }
@@ -528,6 +531,7 @@ module.exports = class Processor {
             this.batchHashData,
             this.batchNumber,
             this.timestamp,
+            this.chainID,
         );
 
         this.starkInput = {
@@ -543,6 +547,7 @@ module.exports = class Processor {
             inputHash: this.inputHash,
             numBatch: this.batchNumber,
             timestamp: this.timestamp,
+            chainID: this.chainID,
             contractsBytecode: this.contractsBytecode,
         };
     }
@@ -567,6 +572,7 @@ module.exports = class Processor {
             this.batchHashData,
             this.batchNumber,
             this.timestamp,
+            this.chainID,
             aggregatorAddress,
         );
     }
