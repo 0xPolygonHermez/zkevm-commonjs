@@ -193,11 +193,10 @@ class SMT {
                 if (uKey >= 0) {
                     mode = 'deleteFound';
                     siblings[level + 1] = await self.db.getSmtNode(siblings[level].slice(uKey * 4, uKey * 4 + 4));
-                    proofHashCounter += 1;
                     if (isOneSiblings(siblings[level + 1], F)) {
                         const valH = siblings[level + 1].slice(4, 8);
                         const valA = (await self.db.getSmtNode(valH)).slice(0, 8);
-                        proofHashCounter += 1;
+                        proofHashCounter += 2;
                         const rKey = siblings[level + 1].slice(0, 4);
 
                         const val = fea2scalar(F, valA);
