@@ -1,7 +1,7 @@
 {
   "name": "@0xpolygonhermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "0.4.0.0",
+  "version": "0.4.0.1",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
