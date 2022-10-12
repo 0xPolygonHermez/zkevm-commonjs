@@ -120,6 +120,7 @@ class Database {
                         throw new Error(`Found incorrect DATA value size: ${dataS.length}`);
                     }
 
+                    this.db[keyS] = [];
                     for (let i = 0; i < dataS.length; i += 16) {
                         this.db[keyS].push(dataS.substring(i, i + 16));
                     }
