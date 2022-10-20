@@ -31,7 +31,7 @@ async function main() {
     // pre compute root merkle tree in Js
     const height = 32;
     const merkleTree = new MerkleTreeBridge(height);
-    const leafValue = getLeafValue(originNetwork, tokenAddress, destinationNetwork, destinationAddress, amount, metadataHash);
+    const leafValue = getLeafValue(0, originNetwork, tokenAddress, destinationNetwork, destinationAddress, amount, metadataHash);
     merkleTree.add(leafValue);
 
     const rootJSMainnet = merkleTree.getRoot();
