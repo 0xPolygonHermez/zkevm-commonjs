@@ -34,7 +34,7 @@ describe('ZkEVMDB', function () {
     it('Check zkEVMDB basic functions', async () => {
         const sequencerAddress = '0x0000000000000000000000000000000000000000';
         const genesisRoot = [F.zero, F.zero, F.zero, F.zero];
-        const localExitRoot = [F.zero, F.zero, F.zero, F.zero];
+        const accHashInput = [F.zero, F.zero, F.zero, F.zero];
         const globalExitRoot = [F.zero, F.zero, F.zero, F.zero];
         const timestamp = 1;
         const genesis = [];
@@ -46,7 +46,7 @@ describe('ZkEVMDB', function () {
             db,
             poseidon,
             genesisRoot,
-            localExitRoot,
+            accHashInput,
             genesis,
             null,
             null,
@@ -107,10 +107,12 @@ describe('ZkEVMDB', function () {
             txs,
             expectedNewRoot,
             sequencerAddress,
-            oldLocalExitRoot,
             globalExitRoot,
             timestamp,
             newLocalExitRoot,
+            oldAccInputHash,
+            expectedNewAccInputHash,
+            localExitRoot,
             chainID,
         } = testVectors[0];
 
@@ -218,7 +220,7 @@ describe('ZkEVMDB', function () {
             db,
             poseidon,
             genesisRoot,
-            smtUtils.stringToH4(oldLocalExitRoot),
+            smtUtils.stringToH4(oldAccInputHash),
             genesis,
             null,
             null,
@@ -234,11 +236,14 @@ describe('ZkEVMDB', function () {
         await batch.executeTxs();
 
         const newRoot = batch.currentStateRoot;
+        const { newAccInputHash } = batch;
 
         if (update) {
             testVectors[0].expectedNewRoot = smtUtils.h4toString(newRoot);
+            testVectors[0].expectedNewAccInputHash = smtUtils.h4toString(newAccInputHash);
         } else {
             expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
+            expect(smtUtils.h4toString(newAccInputHash)).to.be.equal(expectedNewAccInputHash);
         }
 
         // checks previous consolidate zkEVMDB
@@ -260,6 +265,7 @@ describe('ZkEVMDB', function () {
         if (!update) {
             expect(smtUtils.h4toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(expectedNewRoot);
             expect(smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot())).to.be.equal(newLocalExitRoot);
+            expect(smtUtils.h4toString(zkEVMDB.getCurrentAccInpuHash())).to.be.equal(expectedNewAccInputHash);
         }
 
         const lastBatchDB = await db.getValue(Constants.DB_LAST_BATCH);
@@ -270,6 +276,9 @@ describe('ZkEVMDB', function () {
 
         const localExitRootDB = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatchDB));
         expect(localExitRootDB).to.be.deep.equal(smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot()));
+
+        const accHashInputDB = await db.getValue(Scalar.add(Constants.DB_ACC_INPUT_HASH, lastBatchDB));
+        expect(accHashInputDB).to.be.deep.equal(smtUtils.h4toString(zkEVMDB.getCurrentAccInpuHash()));
 
         if (update) {
             await fs.writeFileSync(pathZkevmDbTest, JSON.stringify(testVectors, null, 2));

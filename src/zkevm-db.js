@@ -20,13 +20,14 @@ const {
 const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt, chainID) {
+    constructor(db, lastBatch, stateRoot, accInputHash, localExitRoot, poseidon, vm, smt, chainID) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
         this.F = poseidon.F;
 
         this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.accInputHash = accInputHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.chainID = chainID;
 
@@ -49,7 +50,7 @@ class ZkEVMDB {
             maxNTx,
             this.stateRoot,
             sequencerAddress,
-            this.localExitRoot,
+            this.accInputHash,
             globalExitRoot,
             timestamp,
             this.chainID,
@@ -62,7 +63,7 @@ class ZkEVMDB {
      * @param {Object} processor - Processor object
      */
     async consolidate(processor) {
-        if (processor.batchNumber !== this.lastBatch + 1) {
+        if (processor.newNumBatch !== this.lastBatch + 1) {
             throw new Error('Updating the wrong batch');
         }
 
@@ -75,31 +76,38 @@ class ZkEVMDB {
 
         // set state root
         await this.db.setValue(
-            Scalar.add(Constants.DB_STATE_ROOT, processor.batchNumber),
+            Scalar.add(Constants.DB_STATE_ROOT, processor.newNumBatch),
             h4toString(processor.currentStateRoot),
+        );
+
+        // Set accumulate hash input
+        await this.db.setValue(
+            Scalar.add(Constants.DB_ACC_INPUT_HASH, processor.newNumBatch),
+            h4toString(processor.newAccInputHash),
         );
 
         // Set local exit root
         await this.db.setValue(
-            Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, processor.batchNumber),
+            Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, processor.newNumBatch),
             h4toString(processor.newLocalExitRoot),
         );
 
         // Set last batch number
         await this.db.setValue(
             Constants.DB_LAST_BATCH,
-            Scalar.toNumber(processor.batchNumber),
+            Scalar.toNumber(processor.newNumBatch),
         );
 
         // Set all concatenated touched address
         await this.db.setValue(
-            Scalar.add(Constants.DB_TOUCHED_ACCOUNTS, processor.batchNumber),
+            Scalar.add(Constants.DB_TOUCHED_ACCOUNTS, processor.newNumBatch),
             processor.getUpdatedAccountsBatch(),
         );
 
         // Update ZKEVMDB variables
-        this.lastBatch = processor.batchNumber;
+        this.lastBatch = processor.newNumBatch;
         this.stateRoot = processor.currentStateRoot;
+        this.accInputHash = processor.newAccInputHash;
         this.localExitRoot = processor.newLocalExitRoot;
         this.vm = processor.vm;
     }
@@ -135,6 +143,14 @@ class ZkEVMDB {
      */
     getCurrentLocalExitRoot() {
         return this.localExitRoot;
+    }
+
+    /**
+     * Get the current local exit root
+     * @returns {String} local exit root
+     */
+    getCurrentAccInpuHash() {
+        return this.accInputHash;
     }
 
     /**
@@ -191,14 +207,14 @@ class ZkEVMDB {
      * @param {Object} db - Mem db object
      * @param {Object} poseidon - Poseidon object
      * @param {Array[Fields]} stateRoot - state merkle root
-     * @param {Array[Fields]} localExitRoot - exit merkle root
+     * @param {Array[Fields]} accHashInput - accumulate hash input
      * @param {Object} genesis - genesis block accounts (address, nonce, balance, bytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
      * @param {Number} chainID - L2 chainID
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt, chainID) {
+    static async newZkEVM(db, poseidon, stateRoot, accHashInput, genesis, vm, smt, chainID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
         common.setEIPs([3607]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
@@ -265,7 +281,8 @@ class ZkEVMDB {
                 db,
                 0,
                 newStateRoot,
-                localExitRoot,
+                accHashInput,
+                null,
                 poseidon,
                 newVm,
                 newSmt,
@@ -275,12 +292,14 @@ class ZkEVMDB {
 
         // Update current zkevm instance
         const DBStateRoot = await db.getValue(Scalar.add(Constants.DB_STATE_ROOT, lastBatch));
+        const DBAccInputHash = await db.getValue(Scalar.add(Constants.DB_ACC_INPUT_HASH, lastBatch));
         const DBLocalExitRoot = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatch));
 
         return new ZkEVMDB(
             db,
             lastBatch,
             stringToH4(DBStateRoot),
+            stringToH4(DBAccInputHash),
             stringToH4(DBLocalExitRoot),
             poseidon,
             vm,
