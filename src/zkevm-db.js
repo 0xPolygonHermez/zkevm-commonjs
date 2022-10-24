@@ -18,6 +18,7 @@ const {
     getContractBytecodeLength,
 } = require('./state-utils');
 const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
+const { calculateSnarkInput } = require('./contract-utils');
 
 class ZkEVMDB {
     constructor(db, lastBatch, stateRoot, accInputHash, localExitRoot, poseidon, vm, smt, chainID) {
@@ -104,6 +105,12 @@ class ZkEVMDB {
             processor.getUpdatedAccountsBatch(),
         );
 
+        // Set stark input
+        await this.db.setValue(
+            Scalar.add(Constants.DB_STARK_INPUT, processor.newNumBatch),
+            processor.starkInput,
+        );
+
         // Update ZKEVMDB variables
         this.lastBatch = processor.newNumBatch;
         this.stateRoot = processor.currentStateRoot;
@@ -151,6 +158,85 @@ class ZkEVMDB {
      */
     getCurrentAccInpuHash() {
         return this.accInputHash;
+    }
+
+    /**
+     * Get batchL2Data for multiples batches
+     * @param {Number} initNumBatch - initial num batch
+     * @param {Number} finalNumBatch - final num batch
+     */
+    async sequenceMultipleBatches(initNumBatch, finalNumBatch) {
+        const dataBatches = [];
+
+        for (let i = initNumBatch; i <= finalNumBatch; i++) {
+            const keyInitInput = Scalar.add(Constants.DB_STARK_INPUT, i);
+            const value = await this.db.getValue(keyInitInput);
+            if (value === null) {
+                throw new Error(`Batch ${i} does not exist`);
+            }
+
+            const dataBatch = {
+                transactions: value.batchL2Data,
+                globalExitRoot: value.globalExitRoot,
+                timestamp: value.timestamp,
+                forceBatchesTimestamp: [],
+            };
+
+            dataBatches.push(dataBatch);
+        }
+
+        return dataBatches;
+    }
+
+    /**
+     * Get batchL2Data for multiples batches
+     * @param {Number} initNumBatch - initial num batch
+     * @param {Number} finalNumBatch - final num batch
+     * @param {String} aggregatorAddress - aggregator Ethereum address
+     */
+    async verifyMultipleBatches(initNumBatch, finalNumBatch, aggregatorAddress) {
+        const dataVerify = {};
+        dataVerify.singleBatchData = [];
+
+        for (let i = initNumBatch; i <= finalNumBatch; i++) {
+            const keyInitInput = Scalar.add(Constants.DB_STARK_INPUT, i);
+            const value = await this.db.getValue(keyInitInput);
+            if (value === null) {
+                throw new Error(`Batch ${i} does not exist`);
+            }
+
+            if (i === initNumBatch) {
+                dataVerify.oldStateRoot = value.oldStateRoot;
+                dataVerify.oldAccInputHash = value.oldAccInputHash;
+                dataVerify.oldNumBatch = value.oldNumBatch;
+            }
+
+            if (i === finalNumBatch) {
+                dataVerify.newStateRoot = value.newStateRoot;
+                dataVerify.newAccInputHash = value.newAccInputHash;
+                dataVerify.newLocalExitRoot = value.newLocalExitRoot;
+                dataVerify.newNumBatch = value.newNumBatch;
+            }
+
+            dataVerify.singleBatchData.push(value);
+        }
+
+        dataVerify.chainID = this.chainID;
+        dataVerify.aggregatorAddress = aggregatorAddress;
+
+        dataVerify.inputSnark = `0x${Scalar.toString(await calculateSnarkInput(
+            dataVerify.oldStateRoot,
+            dataVerify.newStateRoot,
+            dataVerify.oldAccInputHash,
+            dataVerify.newAccInputHash,
+            dataVerify.newLocalExitRoot,
+            dataVerify.oldNumBatch,
+            dataVerify.newNumBatch,
+            dataVerify.chainID,
+            dataVerify.aggregatorAddress,
+        ), 16).padStart(64, '0')}`;
+
+        return dataVerify;
     }
 
     /**
