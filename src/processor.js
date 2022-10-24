@@ -99,9 +99,6 @@ module.exports = class Processor {
         // Check the validity of rawTxs
         await this._decodeAndCheckRawTx();
 
-        // Set oldStateRoot to system contract
-        await this._setBatchHash();
-
         // Set global exit root
         await this._setGlobalExitRoot();
 
@@ -183,47 +180,6 @@ module.exports = class Processor {
             });
             this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
         }
-    }
-
-    /**
-     * Set the old state root exit root in a specific storage slot of the system smart contract for both vm and SMT
-     * This will be performed before process the transactions
-     */
-    async _setBatchHash() {
-        const newStorageEntry = {};
-        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [this.batchNumber - 1, Constants.STATE_ROOT_STORAGE_POS]);
-        newStorageEntry[stateRootPos] = smtUtils.h4toString(this.oldStateRoot);
-
-        this.currentStateRoot = await stateUtils.setContractStorage(
-            Constants.ADDRESS_SYSTEM,
-            this.smt,
-            this.currentStateRoot,
-            newStorageEntry,
-        );
-
-        const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
-        await this.vm.stateManager.putContractStorage(
-            addressInstance,
-            toBuffer(stateRootPos),
-            toBuffer(smtUtils.h4toString(this.oldStateRoot)),
-        );
-
-        // store data in internal DB
-        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
-
-        // add address to updatedAccounts
-        const account = await this.vm.stateManager.getAccount(addressInstance);
-        this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
-
-        // update its storage
-        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
-        const storage = {};
-        const keys = Object.keys(sto).map((v) => `0x${v}`);
-        const values = Object.values(sto).map((v) => `0x${v}`);
-        for (let k = 0; k < keys.length; k++) {
-            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
-        }
-        await this.db.setValue(keyDumpStorage, storage);
     }
 
     /**
@@ -355,7 +311,6 @@ module.exports = class Processor {
                 const blockData = {};
                 blockData.header = {};
                 blockData.header.timestamp = new BN(Scalar.e(this.timestamp));
-                blockData.header.number = new BN(Scalar.e(this.batchNumber));
                 blockData.header.coinbase = new Address(toBuffer(this.sequencerAddress));
                 blockData.header.gasLimit = new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
                 blockData.header.difficulty = new BN(Scalar.e(Constants.BATCH_DIFFICULTY));
@@ -408,6 +363,8 @@ module.exports = class Processor {
                         Scalar.e(accountSeq.balance),
                         Scalar.e(accountSeq.nonce),
                     );
+
+                    await this._updateSystemStorage();
 
                     // Clear touched accounts
                     this.vm.stateManager._customTouched.clear();
@@ -477,10 +434,74 @@ module.exports = class Processor {
                     }
                 }
 
+                await this._updateSystemStorage();
+
                 // Clear touched accounts
                 this.vm.stateManager._customTouched.clear();
             }
         }
+    }
+
+    /**
+     * Updates system storage with new state root after finishing transaction
+     */
+    async _updateSystemStorage() {
+        // Set system addres storage with updated values
+        const lastTxCount = await stateUtils.getContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            [Constants.LAST_TX_STORAGE_POS], // Storage key of last tx count
+        );
+        const newTxCount = ethers.BigNumber.from(lastTxCount[0] + 1n).toHexString();
+        // Update smt with new last tx count
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            { [Constants.LAST_TX_STORAGE_POS]: newTxCount },
+        );
+        // Update vm with new last tx count
+        const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
+
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(Constants.LAST_TX_STORAGE_POS),
+            toBuffer(newTxCount.toString(16)),
+        );
+
+        // Update smt with new state root
+        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [newTxCount, Constants.STATE_ROOT_STORAGE_POS]);
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            { [stateRootPos]: smtUtils.h4toString(this.currentStateRoot) },
+        );
+
+        // Update vm with new state root
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(stateRootPos),
+            toBuffer(smtUtils.h4toString(this.currentStateRoot)),
+        );
+
+        // store data in internal DB
+        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
+
+        // add address to updatedAccounts
+        const account = await this.vm.stateManager.getAccount(addressInstance);
+        this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
+
+        // update its storage
+        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+        const storage = {};
+        const keys = Object.keys(sto).map((k) => `0x${k}`);
+        const values = Object.values(sto).map((k) => `0x${k}`);
+        for (let k = 0; k < keys.length; k++) {
+            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+        }
+        await this.db.setValue(keyDumpStorage, storage);
     }
 
     /**
