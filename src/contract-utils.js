@@ -101,13 +101,13 @@ async function calculateSnarkInput(
     // 8 bytes for oldNumBatch
     const strOldNumBatch = padZeros(Scalar.e(oldNumBatch).toString(16), 16);
 
-    // 8 bytes for oldNumBatch
+    // 8 bytes for newNumBatch
     const strNewNumBatch = padZeros(Scalar.e(newNumBatch).toString(16), 16);
 
-    // 8 bytes for oldNumBatch
+    // 8 bytes for chainID
     const strChainID = padZeros(Scalar.e(chainID).toString(16), 16);
 
-    // 20 bytes agggregator adsress
+    // 20 bytes agggregator address
     const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
 
     // build final bytes sha256
@@ -151,7 +151,7 @@ function generateSolidityInputs(
     publicSignals,
 ) {
     const proofA = [proof.pi_a[0],
-        proof.pi_a[1],
+    proof.pi_a[1],
     ];
     const proofB = [
         [
@@ -164,7 +164,7 @@ function generateSolidityInputs(
         ],
     ];
     const proofC = [proof.pi_c[0],
-        proof.pi_c[1],
+    proof.pi_c[1],
     ];
     const input = publicSignals;
 
