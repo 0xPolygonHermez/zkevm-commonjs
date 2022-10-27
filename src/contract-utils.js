@@ -96,7 +96,6 @@ async function calculateSnarkInput(
         .concat(strNewStateRoot)
         .concat(strNewAccInputHash)
         .concat(strNewLocalExitRoot)
-        .concat(strAggregatorAddress)
         .concat(strNewNumBatch);
 
     return sha256Snark(finalStr);
