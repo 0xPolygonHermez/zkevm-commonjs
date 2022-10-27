@@ -53,7 +53,7 @@
     "@polygon-hermez/vm": "5.7.22",
     "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
-    "ffjavascript": "^0.2.46",
+    "ffjavascript": "^0.2.55",
     "lodash": "^4.17.21"
   }
 }
