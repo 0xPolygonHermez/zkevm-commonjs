@@ -328,6 +328,13 @@ module.exports = class Processor {
                     continue;
                 }
 
+                const bytecodeLength = await stateUtils.getContractBytecodeLength(currenTx.from, this.smt, this.currentStateRoot);
+                if (bytecodeLength > 0) {
+                    currentDecodedTx.isInvalid = true;
+                    currentDecodedTx.reason = 'TX INVALID: EIP3607 Do not allow transactions for which tx.sender has any code deployed';
+                    continue;
+                }
+
                 // Run tx in the EVM
                 const evmTx = Transaction.fromTxData({
                     nonce: currenTx.nonce,
@@ -369,7 +376,7 @@ module.exports = class Processor {
                     } else currentDecodedTx.reason = txResult.execResult.exceptionError;
 
                     // UPDATE sender account adding the nonce and substracting the gas spended
-                    const senderAcc = await this.vm.stateManager.getAccount(txResult.execResult.runState.caller);
+                    const senderAcc = await this.vm.stateManager.getAccount(Address.fromString(currenTx.from));
                     this.updatedAccounts[currenTx.from] = senderAcc;
                     // Update smt with touched accounts
                     this.currentStateRoot = await stateUtils.setAccountState(
