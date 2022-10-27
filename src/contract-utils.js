@@ -37,7 +37,7 @@ function calculateAccInputHash(
 }
 
 /**
- * Compute input for SNARK circuit: sha256(oldStateRoot, newStateRoot, oldAccInputHash, newAccInputHash, newLocalExitRoot, oldNumBatch, newNumBatch, chainID, aggrAddress) % FrSNARK
+ * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
  * @param {String} oldStateRoot - Current state Root
  * @param {String} newStateRoot - New State root once the batch is processed
  * @param {String} oldAccInputHash - initial accumulateInputHash
@@ -60,78 +60,46 @@ async function calculateSnarkInput(
     chainID,
     aggregatorAddress,
 ) {
-    const poseidon = await getPoseidon();
-    const { F } = poseidon;
+    // 20 bytes agggregator address
+    const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
 
-    // 8 bytes each field element for oldStateRoot
-    const feaOldStateRoot = string2fea(F, oldStateRoot);
-    const strFeaOldStateRoot = feaOldStateRoot.reduce(
-        (previousValue, currentValue) => previousValue + padZeros(currentValue.toString(16), 16),
-        '',
-    );
+    // 32 bytes each field element for oldStateRoot
+    const strOldStateRoot = padZeros((Scalar.fromString(oldStateRoot, 16)).toString(16), 64);
 
-    // 8 bytes each field element for newStateRoot
-    const feaNewStateRoot = string2fea(F, newStateRoot);
-    const strFeaNewStateRoot = feaNewStateRoot.reduce(
-        (previousValue, currentValue) => previousValue + padZeros(currentValue.toString(16), 16),
-        '',
-    );
-
-    // 8 bytes each field element for oldAccInputHash
-    const feaOldAccInputHash = string2fea(F, oldAccInputHash);
-    const strFeaOldAccInputHash = feaOldAccInputHash.reduce(
-        (previousValue, currentValue) => previousValue + padZeros(currentValue.toString(16), 16),
-        '',
-    );
-
-    // 8 bytes each field element for newAccInputHash
-    const feaNewAccInputHash = string2fea(F, newAccInputHash);
-    const strFeaNewAccInputHash = feaNewAccInputHash.reduce(
-        (previousValue, currentValue) => previousValue + padZeros(currentValue.toString(16), 16),
-        '',
-    );
-
-    // 8 bytes each field element for newLocalExitRoot
-    const feaNewLocalExitRoot = string2fea(F, newLocalExitRoot);
-    const strFeaNewLocalExitRoot = feaNewLocalExitRoot.reduce(
-        (previousValue, currentValue) => previousValue + padZeros(currentValue.toString(16), 16),
-        '',
-    );
+    // 32 bytes each field element for oldStateRoot
+    const strOldAccInputHash = padZeros((Scalar.fromString(oldAccInputHash, 16)).toString(16), 64);
 
     // 8 bytes for oldNumBatch
     const strOldNumBatch = padZeros(Scalar.e(oldNumBatch).toString(16), 16);
 
-    // 8 bytes for newNumBatch
-    const strNewNumBatch = padZeros(Scalar.e(newNumBatch).toString(16), 16);
-
     // 8 bytes for chainID
     const strChainID = padZeros(Scalar.e(chainID).toString(16), 16);
 
-    // 20 bytes agggregator address
-    const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
+    // 32 bytes each field element for oldStateRoot
+    const strNewStateRoot = padZeros((Scalar.fromString(newStateRoot, 16)).toString(16), 64);
+
+    // 32 bytes each field element for oldStateRoot
+    const strNewAccInputHash = padZeros((Scalar.fromString(newAccInputHash, 16)).toString(16), 64);
+
+    // 32 bytes each field element for oldStateRoot
+    const strNewLocalExitRoot = padZeros((Scalar.fromString(newLocalExitRoot, 16)).toString(16), 64);
+
+    // 8 bytes for newNumBatch
+    const strNewNumBatch = padZeros(Scalar.e(newNumBatch).toString(16), 16);
 
     // build final bytes sha256
-    const finalStr = strFeaOldStateRoot
-        .concat(strFeaNewStateRoot)
-        .concat(strFeaOldAccInputHash)
-        .concat(strFeaNewAccInputHash)
-        .concat(strFeaNewLocalExitRoot)
+    const finalStr = strAggregatorAddress
+        .concat(strOldStateRoot)
+        .concat(strOldAccInputHash)
         .concat(strOldNumBatch)
-        .concat(strNewNumBatch)
         .concat(strChainID)
-        .concat(strAggregatorAddress);
+        .concat(strNewStateRoot)
+        .concat(strNewAccInputHash)
+        .concat(strNewLocalExitRoot)
+        .concat(strAggregatorAddress)
+        .concat(strNewNumBatch);
 
     return sha256Snark(finalStr);
-
-    // aggreAddress
-    // oldStateRoot
-    // oldaccInputHash
-    // oldBatchNum
-    // chainID
-    // newStateroot
-    // newAcc
-    // newLocalExirRoot
-    // newBatchNum
 }
 
 /**
@@ -161,7 +129,7 @@ function generateSolidityInputs(
     publicSignals,
 ) {
     const proofA = [proof.pi_a[0],
-    proof.pi_a[1],
+        proof.pi_a[1],
     ];
     const proofB = [
         [
@@ -174,7 +142,7 @@ function generateSolidityInputs(
         ],
     ];
     const proofC = [proof.pi_c[0],
-    proof.pi_c[1],
+        proof.pi_c[1],
     ];
     const input = publicSignals;
 

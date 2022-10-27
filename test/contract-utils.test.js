@@ -14,7 +14,7 @@ describe('contractUtils', function () {
     const expectedBatchHashData = '0x80cc22bc1a205c21f2b8c87e6185e1215fb60e3d83c609fd3bf3cdc586a6244b';
     // TODO: input taken from pil-stark
     const expectedStarkHashExecutor = '0x704d5cfd3e44b82028f7f8cae31168267a7422c5a447b90a65134116da5a8432';
-    const expectedSnarkInputHash = '17495784446398463565336850903556670302680818979009718931527636126247722947873';
+    const expectedSnarkInputHash = '2324046333999701271905824726747248223264560433236636264462054304814210382117';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
