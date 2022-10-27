@@ -472,6 +472,7 @@ module.exports = class Processor {
 
         // Update smt with new state root
         const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [newTxCount, Constants.STATE_ROOT_STORAGE_POS]);
+        const tmpStateRoot = smtUtils.h4toString(this.currentStateRoot)
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_SYSTEM,
             this.smt,
@@ -483,7 +484,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(stateRootPos),
-            toBuffer(smtUtils.h4toString(this.currentStateRoot)),
+            toBuffer(tmpStateRoot),
         );
 
         // store data in internal DB
