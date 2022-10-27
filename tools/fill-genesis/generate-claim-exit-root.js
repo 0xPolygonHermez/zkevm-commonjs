@@ -8,6 +8,8 @@ const {
     getLeafValue,
 } = require('../../index').mtBridgeUtils;
 
+const { Constants } = require('../../index');
+
 function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
     return ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
@@ -31,7 +33,15 @@ async function main() {
     // pre compute root merkle tree in Js
     const height = 32;
     const merkleTree = new MerkleTreeBridge(height);
-    const leafValue = getLeafValue(originNetwork, tokenAddress, destinationNetwork, destinationAddress, amount, metadataHash);
+    const leafValue = getLeafValue(
+        Constants.BRIDGE_LEAF_TYPE_ASSET,
+        originNetwork,
+        tokenAddress,
+        destinationNetwork,
+        destinationAddress,
+        amount,
+        metadataHash,
+    );
     merkleTree.add(leafValue);
 
     const rootJSMainnet = merkleTree.getRoot();
