@@ -239,15 +239,18 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     offset += decodedData.consumed;
     txDecoded.data = decodedData.result;
 
-    // chainID READ
-    const decodedChainID = decodeNextShortStringRLP(encodedTxBytes, offset);
-    offset += decodedChainID.consumed;
-    txDecoded.chainID = decodedChainID.result;
+    // Don't decode chainId if tx is legacy
+    if (txListLength + headerLength !== offset) {
+        // chainID READ
+        const decodedChainID = decodeNextShortStringRLP(encodedTxBytes, offset);
+        offset += decodedChainID.consumed;
+        txDecoded.chainID = decodedChainID.result;
 
-    if ((encodedTxBytes[offset] !== 0x80) || encodedTxBytes[offset + 1] !== 0x80) {
-        throw new Error('The last 2 values should be 0x8080');
+        if ((encodedTxBytes[offset] !== 0x80) || encodedTxBytes[offset + 1] !== 0x80) {
+            throw new Error('The last 2 values should be 0x8080');
+        }
+        offset += 2;
     }
-    offset += 2;
 
     if (txListLength + headerLength !== offset) {
         throw new Error('Invalid list length');

@@ -86,23 +86,16 @@ async function getContractBytecodeLength(ethAddr, smt, root) {
  * @param {Bool} flagDelete flag to set bytecode to 0
  * @returns {Array[Field]} new state root
  */
-async function setContractBytecode(ethAddr, smt, root, bytecode, flagDelete) {
+async function setContractBytecode(ethAddr, smt, root, bytecode) {
     const keyContractCode = await smtUtils.keyContractCode(ethAddr);
     const keyContractLength = await smtUtils.keyContractLength(ethAddr);
 
-    let res;
-
-    if (flagDelete === true) {
-        res = await smt.set(root, keyContractCode, Scalar.e(0));
-        res = await smt.set(res.newRoot, keyContractLength, Scalar.e(0));
-    } else {
-        const hashByteCode = await smtUtils.hashContractBytecode(bytecode);
-        let parsedBytecode = bytecode.startsWith('0x') ? bytecode.slice(2) : bytecode.slice();
-        parsedBytecode = (parsedBytecode.length % 2) ? `0${parsedBytecode}` : parsedBytecode;
-        const bytecodeLength = parsedBytecode.length / 2;
-        res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
-        res = await smt.set(res.newRoot, keyContractLength, bytecodeLength);
-    }
+    const hashByteCode = await smtUtils.hashContractBytecode(bytecode);
+    let parsedBytecode = bytecode.startsWith('0x') ? bytecode.slice(2) : bytecode.slice();
+    parsedBytecode = (parsedBytecode.length % 2) ? `0${parsedBytecode}` : parsedBytecode;
+    const bytecodeLength = parsedBytecode.length / 2;
+    let res = await smt.set(root, keyContractCode, Scalar.fromString(hashByteCode, 16));
+    res = await smt.set(res.newRoot, keyContractLength, bytecodeLength);
 
     return res.newRoot;
 }

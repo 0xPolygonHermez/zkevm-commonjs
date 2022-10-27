@@ -75,6 +75,7 @@ module.exports = class Processor {
         this.vm = vm;
         this.evmSteps = [];
         this.updatedAccounts = {};
+        this.isLegacyTx = false;
     }
 
     /**
@@ -147,10 +148,11 @@ module.exports = class Processor {
                 continue;
             }
             txDecoded.from = undefined;
-            txDecoded.chainID = Number(txDecoded.chainID);
 
-            // B: Valid chainID
-            if (txDecoded.chainID !== this.chainID) {
+            // B: Valid chainID if EIP-155
+            this.isLegacyTx = typeof txDecoded.chainID === 'undefined';
+            txDecoded.chainID = this.isLegacyTx ? txDecoded.chainID : Number(txDecoded.chainID);
+            if (!this.isLegacyTx && txDecoded.chainID !== this.chainID) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Chain ID does not match', tx: txDecoded });
                 continue;
             }
@@ -327,6 +329,7 @@ module.exports = class Processor {
                     currentDecodedTx.reason = 'TX INVALID: Not enough funds to pay total transaction cost';
                     continue;
                 }
+                const v = this.isLegacyTx ? currenTx.v : Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35;
 
                 const bytecodeLength = await stateUtils.getContractBytecodeLength(currenTx.from, this.smt, this.currentStateRoot);
                 if (bytecodeLength > 0) {
@@ -343,7 +346,7 @@ module.exports = class Processor {
                     to: currenTx.to,
                     value: currenTx.value,
                     data: currenTx.data,
-                    v: Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35,
+                    v,
                     r: currenTx.r,
                     s: currenTx.s,
                 });
@@ -442,7 +445,6 @@ module.exports = class Processor {
                             this.smt,
                             this.currentStateRoot,
                             smCode.toString('hex'),
-                            false,
                         );
                         // Set bytecode at db when smart contract is called
                         const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
@@ -454,8 +456,8 @@ module.exports = class Processor {
                         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
 
                         const storage = {};
-                        const keys = Object.keys(sto).map((v) => `0x${v}`);
-                        const values = Object.values(sto).map((v) => `0x${v}`);
+                        const keys = Object.keys(sto).map((k) => `0x${k}`);
+                        const values = Object.values(sto).map((k) => `0x${k}`);
                         for (let k = 0; k < keys.length; k++) {
                             storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
                         }
@@ -472,38 +474,6 @@ module.exports = class Processor {
                             storage,
                         );
                         await this.db.setValue(keyDumpStorage, storage);
-                    } else {
-                        // handle self-destruct
-                        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
-                        if (Object.keys(sto).length > 0) {
-                            const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
-                            const storage = {};
-                            const keys = Object.keys(sto).map((v) => `0x${v}`);
-                            const values = Object.values(sto).map((v) => `0x${v}`);
-                            for (let k = 0; k < keys.length; k++) {
-                                storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
-                            }
-                            this.currentStateRoot = await stateUtils.setContractStorage(
-                                address,
-                                this.smt,
-                                this.currentStateRoot,
-                                storage,
-                            );
-                            await this.db.setValue(keyDumpStorage, storage);
-                        }
-
-                        const oldHashBytecode = await stateUtils.getContractHashBytecode(address, this.smt, this.currentStateRoot);
-
-                        if (oldHashBytecode !== Constants.BYTECODE_EMPTY) {
-                            // delete leaf bytecode
-                            this.currentStateRoot = await stateUtils.setContractBytecode(
-                                address,
-                                this.smt,
-                                this.currentStateRoot,
-                                '0x',
-                                true,
-                            );
-                        }
                     }
                 }
 
