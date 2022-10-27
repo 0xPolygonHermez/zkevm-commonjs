@@ -200,7 +200,7 @@ class ZkEVMDB {
      */
     static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt, chainID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
-
+        common.setEIPs([3607]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
