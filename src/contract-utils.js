@@ -122,6 +122,16 @@ async function calculateSnarkInput(
         .concat(strAggregatorAddress);
 
     return sha256Snark(finalStr);
+
+    // aggreAddress
+    // oldStateRoot
+    // oldaccInputHash
+    // oldBatchNum
+    // chainID
+    // newStateroot
+    // newAcc
+    // newLocalExirRoot
+    // newBatchNum
 }
 
 /**
