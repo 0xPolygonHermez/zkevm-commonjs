@@ -39,3 +39,7 @@ module.exports.BATCH_GAS_LIMIT = 30000000;
 module.exports.BATCH_DIFFICULTY = 0;
 module.exports.ADDRESS_SYSTEM = '0x0000000000000000000000000000000000000000';
 module.exports.STATE_ROOT_STORAGE_POS = 0;
+
+// Bridge Leaf Types
+module.exports.BRIDGE_LEAF_TYPE_ASSET = 0;
+module.exports.BRIDGE_LEAF_TYPE_MESSAGE = 1;
