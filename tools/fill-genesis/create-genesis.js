@@ -40,28 +40,33 @@ async function main() {
     const genesisGenerator = require(path.join(__dirname, inputPath));
 
     const genesisOutput = {};
-
-    const globalExitRoot = ethers.constants.HashZero;
-    const localExitRoot = ethers.constants.HashZero;
-
     const poseidon = await getPoseidon();
     const { F } = poseidon;
+
+    const genesisRoot = [F.zero, F.zero, F.zero, F.zero];
+    const accHashInput = [F.zero, F.zero, F.zero, F.zero];
+    const globalExitRoot = ethers.constants.HashZero;
+
     const {
         genesis,
         txs,
         sequencerAddress,
         timestamp,
+        defaultChainId
     } = genesisGenerator;
 
     const db = new MemDB(F);
 
-    // create a zkEVMDB to compile the sc
+    // create a zkEVMDB and build a batch
     const zkEVMDB = await ZkEVMDB.newZkEVM(
         db,
         poseidon,
-        [F.zero, F.zero, F.zero, F.zero],
-        smtUtils.stringToH4(localExitRoot),
+        genesisRoot,
+        accHashInput,
         genesis,
+        null,
+        null,
+        defaultChainId,
     );
 
     /*
@@ -199,7 +204,7 @@ async function main() {
             currentAccountOutput.bytecode = `0x${smCode.toString('hex')}`;
             currentAccountOutput.storage = storage;
             currentAccountOutput.contractName = addressToContractName[address];
-        } else if (address !== Constants.ADDRESS_SYSTEM && address !== Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2) {
+        } else if (address !== Constants.ADDRESS_SYSTEM && address.toLowerCase() !== Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2.toLowerCase()) {
             currentAccountOutput.pvtKey = (genesis.find((o) => o.address.toLowerCase() === address.toLowerCase())).pvtKey;
         }
         accountsOutput.push(currentAccountOutput);
