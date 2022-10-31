@@ -453,7 +453,7 @@ module.exports = class Processor {
             this.currentStateRoot,
             [Constants.LAST_TX_STORAGE_POS], // Storage key of last tx count
         );
-        const newTxCount = ethers.BigNumber.from(lastTxCount[0] + 1n).toHexString();
+        const newTxCount = Number(Scalar.add(lastTxCount[Constants.LAST_TX_STORAGE_POS], 1n));
         // Update smt with new last tx count
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_SYSTEM,
@@ -466,12 +466,13 @@ module.exports = class Processor {
 
         await this.vm.stateManager.putContractStorage(
             addressInstance,
-            toBuffer(Constants.LAST_TX_STORAGE_POS),
-            toBuffer(newTxCount.toString(16)),
+            toBuffer(`0x${Constants.LAST_TX_STORAGE_POS.toString(16).padStart(64, '0')}`),
+            toBuffer(Number(newTxCount)),
         );
 
         // Update smt with new state root
         const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [newTxCount, Constants.STATE_ROOT_STORAGE_POS]);
+        const tmpStateRoot = smtUtils.h4toString(this.currentStateRoot);
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_SYSTEM,
             this.smt,
@@ -483,7 +484,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(stateRootPos),
-            toBuffer(smtUtils.h4toString(this.currentStateRoot)),
+            toBuffer(tmpStateRoot),
         );
 
         // store data in internal DB
