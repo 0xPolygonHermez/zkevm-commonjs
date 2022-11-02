@@ -52,7 +52,7 @@ async function main() {
         txs,
         sequencerAddress,
         timestamp,
-        defaultChainId
+        defaultChainId,
     } = genesisGenerator;
 
     const db = new MemDB(F);
@@ -157,7 +157,7 @@ async function main() {
     // clean address 0 state root
     const batchNumber = 0;
     const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [batchNumber, Constants.STATE_ROOT_STORAGE_POS]);
-    let newStorageEntry = {};
+    let newStorageEntry = { [Constants.LAST_TX_STORAGE_POS]: '0x00' };
     newStorageEntry[stateRootPos] = '0x00';
 
     newRoot = await stateUtils.setContractStorage(
@@ -166,6 +166,7 @@ async function main() {
         newRoot,
         newStorageEntry,
     );
+
     // cleanglobal exit root
     newStorageEntry = {};
     const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [ethers.constants.HashZero, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);

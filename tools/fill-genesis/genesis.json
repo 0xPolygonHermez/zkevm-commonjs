@@ -1,11 +1,6 @@
 {
-  "root": "0x8ddd4d2542d8f3ddd0bcf7ab122eac7b1ed81e2fe2f12acc8d6c2182eff0007c",
+  "root": "0x0ff5ce7f1ce0eda793ec264b9b147fe991fbf2ef840f7249eb8de9171df16555",
   "genesis": [
-    {
-      "balance": "0",
-      "nonce": "0",
-      "address": "0x0000000000000000000000000000000000000000"
-    },
     {
       "balance": "0",
       "nonce": "1",
@@ -65,6 +60,11 @@
       "nonce": "3",
       "address": "0xc949254d682d8c9ad5682521675b8f43b102aec4",
       "pvtKey": "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f"
+    },
+    {
+      "balance": "0",
+      "nonce": "0",
+      "address": "0x0000000000000000000000000000000000000000"
     },
     {
       "balance": "0",
