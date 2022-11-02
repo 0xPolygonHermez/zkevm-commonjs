@@ -48,14 +48,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99900000000000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "200100000000000000000",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -197,35 +197,35 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99900021000000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "200100000000000000000",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0xeb17ce701e9d92724aa2abada7e4b28830597dd9": {
         "balance": "98999979000000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x187bd40226a7073b49163b1f6c2b73d8f2aa8478": {
         "balance": "1000000000000000000",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0xabcced19d7f290b84608fec510bee872cc8f5112": {
         "balance": "0",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -529,14 +529,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99999979000000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "200000021000000000000",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -647,14 +647,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99899979000000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "200100021000000000000",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -726,14 +726,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "100000000000000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "200000000000000000000",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -818,14 +818,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "499999000000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "199500001000000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -937,14 +937,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99799916000000000000",
         "nonce": "4",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "200200084000000000000",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -1050,14 +1050,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99900026624000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "200099973376000000000",
         "nonce": "1",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -1169,14 +1169,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99900000000000000000",
         "nonce": "2",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "1000000000000000",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -1294,14 +1294,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99900000000000000000",
         "nonce": "2",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "1",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
@@ -1421,14 +1421,14 @@
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99900000000000000000",
         "nonce": "3",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
       "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
         "balance": "1",
         "nonce": "0",
-        "storage": null,
+        "storage": {},
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
       },
