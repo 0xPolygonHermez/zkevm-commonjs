@@ -402,37 +402,55 @@ module.exports = class Processor {
                             this.smt,
                             this.currentStateRoot,
                             smCode.toString('hex'),
+                            false,
                         );
                         // Set bytecode at db when smart contract is called
                         const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
                         this.db.setValue(hashedBytecode, smCode.toString('hex'));
                         this.contractsBytecode[hashedBytecode] = smCode.toString('hex');
-                    }
 
-                    //Set storage
-                    const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
-                    const oldSto = await this.db.getValue(keyDumpStorage);
-                    const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+                        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
+                        const oldSto = await this.db.getValue(keyDumpStorage);
+                        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
 
-                    const storage = {};
-                    const keys = Object.keys(sto).map((k) => `0x${k}`);
-                    const values = Object.values(sto).map((k) => `0x${k}`);
-                    for (let k = 0; k < keys.length; k++) {
-                        storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
-                    }
-                    if (oldSto) {
-                        for (const key of Object.keys(oldSto)) {
-                            const value = storage[key];
-                            if (!value) { storage[key] = '0x00'; }
+                        const storage = {};
+                        const keys = Object.keys(sto).map((k) => `0x${k}`);
+                        const values = Object.values(sto).map((k) => `0x${k}`);
+                        for (let k = 0; k < keys.length; k++) {
+                            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+                        }
+                        if (oldSto) {
+                            for (const key of Object.keys(oldSto)) {
+                                const value = storage[key];
+                                if (!value) { storage[key] = '0x00'; }
+                            }
+                        }
+                        this.currentStateRoot = await stateUtils.setContractStorage(
+                            address,
+                            this.smt,
+                            this.currentStateRoot,
+                            storage,
+                        );
+                        await this.db.setValue(keyDumpStorage, storage);
+                    } else {
+                        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+                        if (Object.keys(sto).length > 0) {
+                            const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
+                            const storage = {};
+                            const keys = Object.keys(sto).map((k) => `0x${k}`);
+                            const values = Object.values(sto).map((k) => `0x${k}`);
+                            for (let k = 0; k < keys.length; k++) {
+                                storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+                            }
+                            this.currentStateRoot = await stateUtils.setContractStorage(
+                                address,
+                                this.smt,
+                                this.currentStateRoot,
+                                storage,
+                            );
+                            await this.db.setValue(keyDumpStorage, storage);
                         }
                     }
-                    this.currentStateRoot = await stateUtils.setContractStorage(
-                        address,
-                        this.smt,
-                        this.currentStateRoot,
-                        storage,
-                    );
-                    await this.db.setValue(keyDumpStorage, storage);
                 }
 
                 await this._updateSystemStorage();
