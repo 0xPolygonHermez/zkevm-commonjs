@@ -205,7 +205,8 @@ async function main() {
             currentAccountOutput.bytecode = `0x${smCode.toString('hex')}`;
             currentAccountOutput.storage = storage;
             currentAccountOutput.contractName = addressToContractName[address];
-        } else if (address !== Constants.ADDRESS_SYSTEM && address.toLowerCase() !== Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2.toLowerCase()) {
+        } else if (address !== Constants.ADDRESS_SYSTEM
+             && address.toLowerCase() !== Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2.toLowerCase()) {
             currentAccountOutput.pvtKey = (genesis.find((o) => o.address.toLowerCase() === address.toLowerCase())).pvtKey;
         }
         accountsOutput.push(currentAccountOutput);

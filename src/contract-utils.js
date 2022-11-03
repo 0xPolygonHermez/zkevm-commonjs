@@ -1,8 +1,6 @@
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
 const { sha256Snark, padZeros } = require('./utils');
-const { string2fea } = require('./smt-utils');
-const getPoseidon = require('./poseidon');
 
 /**
  * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)

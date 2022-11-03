@@ -61,7 +61,7 @@ describe('contractUtils', function () {
             newAccInputHash,
             oldNumBatch,
             newNumBatch,
-            chainID
+            chainID,
         } = testVector;
 
         const computedSnark = await contractUtils.calculateSnarkInput(
