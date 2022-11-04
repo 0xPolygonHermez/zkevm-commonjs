@@ -66,6 +66,7 @@ describe('Processor', async function () {
                 expectedOldRoot,
                 txs,
                 expectedNewRoot,
+                expectedNewAccInputHash,
                 sequencerAddress,
                 expectedNewLeafs,
                 batchL2Data,
@@ -245,8 +246,10 @@ describe('Processor', async function () {
             const newRoot = batch.currentStateRoot;
             if (!update) {
                 expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
+                expect(smtUtils.h4toString(batch.newAccInputHash)).to.be.equal(expectedNewAccInputHash);
             } else {
                 testVectors[i].expectedNewRoot = smtUtils.h4toString(newRoot);
+                testVectors[i].expectedNewAccInputHash = smtUtils.h4toString(batch.newAccInputHash);
             }
 
             // Check errors on decode transactions
