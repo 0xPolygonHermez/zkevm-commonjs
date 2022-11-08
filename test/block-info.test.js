@@ -53,8 +53,8 @@ describe('Block info tests', function () {
                 expectedOldRoot,
                 batches,
                 sequencerAddress,
-                oldLocalExitRoot,
                 bridgeDeployed,
+                oldAccInputHash,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -63,7 +63,7 @@ describe('Block info tests', function () {
                 db,
                 poseidon,
                 [F.zero, F.zero, F.zero, F.zero],
-                smtUtils.stringToH4(oldLocalExitRoot),
+                smtUtils.stringToH4(oldAccInputHash),
                 genesis,
                 null,
                 null,
@@ -329,12 +329,12 @@ describe('Block info tests', function () {
                 ))[Scalar.e(globalExitRootPos)];
 
                 expect(Scalar.fromString(batchNumVm.toString('hex'), 16)).to.equal(batchNumSmt);
-                expect(batchNumSmt).to.equal(Scalar.e(batch.batchNumber));
+                expect(batchNumSmt).to.equal(Scalar.e(batch.newNumBatch));
 
                 // Check through a call in the EVM
                 if (bridgeDeployed) {
                     const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
-                    const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [batch.batchNumber]);
+                    const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [batch.newNumBatch]);
                     const globalExitRootResult = await zkEVMDB.vm.runCall({
                         to: addressInstanceGlobalExitRoot,
                         caller: Address.zero(),

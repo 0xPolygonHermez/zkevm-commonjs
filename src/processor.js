@@ -15,19 +15,19 @@ const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
-const { calculateStarkInput, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
+const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
 const { decodeCustomRawTxProverMethod } = require('./processor-utils');
 
 module.exports = class Processor {
     /**
      * constructor Processor class
      * @param {Object} db - database
-     * @param {Number} batchNumber - batch number
+     * @param {Number} numBatch - batch number
      * @param {Object} poseidon - hash function
      * @param {Number} maxNTx - maximum number of transaction allowed
      * @param {Array[Field]} root - state root
      * @param {String} sequencerAddress . sequencer address
-     * @param {Array[Field]} localExitRoot - local exit root
+     * @param {Array[Field]} accInputHash - accumulate input hash
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Number} chainID - L2 chainID
@@ -35,19 +35,20 @@ module.exports = class Processor {
      */
     constructor(
         db,
-        batchNumber,
+        numBatch,
         poseidon,
         maxNTx,
         root,
         sequencerAddress,
-        localExitRoot,
+        accInputHash,
         globalExitRoot,
         timestamp,
         chainID,
         vm,
     ) {
         this.db = db;
-        this.batchNumber = batchNumber;
+        this.newNumBatch = numBatch;
+        this.oldNumBatch = numBatch - 1;
         this.poseidon = poseidon;
         this.maxNTx = maxNTx;
         this.F = poseidon.F;
@@ -61,8 +62,7 @@ module.exports = class Processor {
         this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;
-        this.oldLocalExitRoot = localExitRoot;
-        this.newLocalExitRoot = localExitRoot;
+        this.oldAccInputHash = accInputHash;
         this.globalExitRoot = globalExitRoot;
 
         this.batchHashData = '0x';
@@ -189,7 +189,7 @@ module.exports = class Processor {
     async _setGlobalExitRoot() {
         const newStorageEntry = {};
         const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [smtUtils.h4toString(this.globalExitRoot), Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-        newStorageEntry[globalExitRootPos] = this.batchNumber;
+        newStorageEntry[globalExitRootPos] = this.newNumBatch;
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
             this.smt,
@@ -201,7 +201,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(this.batchNumber),
+            toBuffer(this.newNumBatch),
         );
 
         // store data in internal DB
@@ -402,6 +402,7 @@ module.exports = class Processor {
                             this.smt,
                             this.currentStateRoot,
                             smCode.toString('hex'),
+                            false,
                         );
                         // Set bytecode at db when smart contract is called
                         const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
@@ -431,6 +432,24 @@ module.exports = class Processor {
                             storage,
                         );
                         await this.db.setValue(keyDumpStorage, storage);
+                    } else {
+                        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+                        if (Object.keys(sto).length > 0) {
+                            const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
+                            const storage = {};
+                            const keys = Object.keys(sto).map((k) => `0x${k}`);
+                            const values = Object.values(sto).map((k) => `0x${k}`);
+                            for (let k = 0; k < keys.length; k++) {
+                                storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+                            }
+                            this.currentStateRoot = await stateUtils.setContractStorage(
+                                address,
+                                this.smt,
+                                this.currentStateRoot,
+                                storage,
+                            );
+                            await this.db.setValue(keyDumpStorage, storage);
+                        }
                     }
                 }
 
@@ -512,42 +531,40 @@ module.exports = class Processor {
         // compute circuit inputs
         const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
-        const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
+        const oldAccInputHash = smtUtils.h4toString(this.oldAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
         const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
 
         this.batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
+        );
+
+        const newAccInputHash = calculateAccInputHash(
+            oldAccInputHash,
+            this.batchHashData,
             globalExitRoot,
+            this.timestamp,
             this.sequencerAddress,
         );
 
-        this.inputHash = calculateStarkInput(
-            oldStateRoot,
-            oldLocalExitRoot,
-            newStateRoot,
-            newLocalExitRoot,
-            this.batchHashData,
-            this.batchNumber,
-            this.timestamp,
-            this.chainID,
-        );
+        this.newAccInputHash = smtUtils.stringToH4(newAccInputHash);
 
         this.starkInput = {
             oldStateRoot,
-            db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
-            sequencerAddr: this.sequencerAddress,
-            batchL2Data: this.getBatchL2Data(),
-            newStateRoot,
-            oldLocalExitRoot,
-            newLocalExitRoot,
-            globalExitRoot,
-            batchHashData: this.batchHashData,
-            inputHash: this.inputHash,
-            numBatch: this.batchNumber,
-            timestamp: this.timestamp,
+            newStateRoot, // output
+            oldAccInputHash,
+            newAccInputHash, // output
+            newLocalExitRoot, // output
+            oldNumBatch: this.oldNumBatch,
+            newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
+            batchL2Data: this.getBatchL2Data(),
+            globalExitRoot,
+            timestamp: this.timestamp,
+            sequencerAddr: this.sequencerAddress,
+            batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
+            db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
         };
     }
 
@@ -560,17 +577,18 @@ module.exports = class Processor {
         // compute circuit inputs
         const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
-        const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
+        const oldAccInputHash = smtUtils.h4toString(this.oldAccInputHash);
+        const newAccInputHash = smtUtils.h4toString(this.newAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
 
         return calculateSnarkInput(
             oldStateRoot,
-            oldLocalExitRoot,
             newStateRoot,
+            oldAccInputHash,
+            newAccInputHash,
             newLocalExitRoot,
-            this.batchHashData,
-            this.batchNumber,
-            this.timestamp,
+            this.oldNumBatch,
+            this.newNumBatch,
             this.chainID,
             aggregatorAddress,
         );

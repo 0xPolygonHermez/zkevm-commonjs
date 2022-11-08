@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* eslint-disable global-require */
 /* eslint-disable import/no-dynamic-require */
 /* eslint-disable no-unused-expressions */
@@ -59,16 +60,17 @@ describe('Processor', async function () {
 
     it('Check test vectors', async () => {
         for (let i = 0; i < testVectors.length; i++) {
-            const {
+            let {
                 id,
                 genesis,
                 expectedOldRoot,
                 txs,
                 expectedNewRoot,
+                expectedNewAccInputHash,
                 sequencerAddress,
                 expectedNewLeafs,
                 batchL2Data,
-                oldLocalExitRoot,
+                oldAccInputHash,
                 newLocalExitRoot,
                 globalExitRoot,
                 batchHashData,
@@ -84,7 +86,7 @@ describe('Processor', async function () {
                 db,
                 poseidon,
                 [F.zero, F.zero, F.zero, F.zero],
-                smtUtils.stringToH4(oldLocalExitRoot),
+                smtUtils.stringToH4(oldAccInputHash),
                 genesis,
                 null,
                 null,
@@ -244,8 +246,10 @@ describe('Processor', async function () {
             const newRoot = batch.currentStateRoot;
             if (!update) {
                 expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
+                expect(smtUtils.h4toString(batch.newAccInputHash)).to.be.equal(expectedNewAccInputHash);
             } else {
                 testVectors[i].expectedNewRoot = smtUtils.h4toString(newRoot);
+                testVectors[i].expectedNewAccInputHash = smtUtils.h4toString(batch.newAccInputHash);
             }
 
             // Check errors on decode transactions
@@ -322,9 +326,15 @@ describe('Processor', async function () {
 
             if (Scalar.eq(localExitRootSmt, Scalar.e(0))) {
                 expect(localExitRootVm.toString('hex')).to.equal('');
+                if (update) {
+                    newLocalExitRoot = ethers.constants.HashZero;
+                }
                 expect(newLocalExitRoot).to.equal(ethers.constants.HashZero);
             } else {
                 expect(localExitRootVm.toString('hex')).to.equal(localExitRootSmt.toString(16).padStart(64, '0'));
+                if (update) {
+                    newLocalExitRoot = `0x${localExitRootVm.toString('hex')}`;
+                }
                 expect(localExitRootVm.toString('hex')).to.equal(newLocalExitRoot.slice(2));
             }
 
@@ -341,7 +351,7 @@ describe('Processor', async function () {
             ))[Scalar.e(globalExitRootPos)];
 
             expect(Scalar.fromString(batchNumVm.toString('hex'), 16)).to.equal(batchNumSmt);
-            expect(batchNumSmt).to.equal(Scalar.e(batch.batchNumber));
+            expect(batchNumSmt).to.equal(Scalar.e(batch.newNumBatch));
 
             // Check through a call in the EVM
             if (bridgeDeployed) {
@@ -352,7 +362,7 @@ describe('Processor', async function () {
                     caller: Address.zero(),
                     data: Buffer.from(encodedData.slice(2), 'hex'),
                 });
-                expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(ethers.utils.hexZeroPad(batch.batchNumber, 32).slice(2));
+                expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(ethers.utils.hexZeroPad(batch.newNumBatch, 32).slice(2));
             }
 
             // Check the circuit input
