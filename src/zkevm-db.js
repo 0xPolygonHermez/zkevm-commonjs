@@ -2,11 +2,11 @@
 /* eslint-disable no-restricted-syntax */
 const { Scalar } = require('ffjavascript');
 const VM = require('@polygon-hermez/vm').default;
-const Common = require('@ethereumjs/common').default;
+const Common = require('@polygon-hermez/common').default;
 const {
     Address, Account, BN, toBuffer,
 } = require('ethereumjs-util');
-const { Hardfork } = require('@ethereumjs/common');
+const { Hardfork } = require('@polygon-hermez/common');
 
 const ethers = require('ethers');
 const clone = require('lodash/clone');
@@ -302,7 +302,7 @@ class ZkEVMDB {
      */
     static async newZkEVM(db, poseidon, stateRoot, accHashInput, genesis, vm, smt, chainID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
-        common.setEIPs([3607]);
+        common.setEIPs([3607, 3198]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
