@@ -12,7 +12,8 @@ class Database {
         this.F = F;
         this.useRemoteDB = false;
         this.connected = false;
-        this.dbtable = 'state.merkletree';
+        this.dbNodesTable = 'state.nodes';
+        this.dbProgramTable = 'state.program';
         if (db) this.db = db;
         else this.db = {};
     }
@@ -37,31 +38,33 @@ class Database {
 
     /**
      * Insert data in the SQL database for a specific hash value
+     * @param {String} tableName - name of the table where to insert the data
      * @param {String} hash - hash value
      * @param {String} data - data value
      */
-    async _insertDB(hash, data) {
+    async _insertDB(tableName, hash, data) {
         this._checkConnected();
 
         // Remove initial "0x"
         const h = (hash.startsWith('0x') ? hash.slice(2) : hash);
 
-        const query = `INSERT INTO ${this.dbtable} ( hash, data ) VALUES ( E'\\\\x${h}', E'\\\\x${data}' ) ON CONFLICT (hash) DO NOTHING;`;
+        const query = `INSERT INTO ${tableName} ( hash, data ) VALUES ( E'\\\\x${h}', E'\\\\x${data}' ) ON CONFLICT (hash) DO NOTHING;`;
 
         await this.client.query(query);
     }
 
     /**
      * Retrieve data from the SQL database for a specific hash value
+     * @param {String} tableName - name of the table from where to retrieve data
      * @param {String} hash - hash value
      */
-    async _selectDB(hash) {
+    async _selectDB(tableName, hash) {
         this._checkConnected();
 
         // Remove initial "0x"
         const h = (hash.startsWith('0x') ? hash.slice(2) : hash);
 
-        const query = `SELECT * FROM ${this.dbtable} WHERE hash = E'\\\\x${h}';`;
+        const query = `SELECT * FROM ${tableName} WHERE hash = E'\\\\x${h}';`;
 
         const res = await this.client.query(query);
 
@@ -77,12 +80,14 @@ class Database {
     /**
      * Connect to the SQL database
      * @param {String} connectionString - Connection string for the database. If the value is "local" or "memdb" no remote SQL database will be used, data will be stored only in memory
-     * @param {String} dbTable - Name of the table used to store/read data. Default is "state.merkletree"
+     * @param {String} dbNodesTable - Name of the table used to store/read nodes data. Default is "state.nodes"
+     * @param {String} dbProgramTable - Name of the table used to store/read program data. Default is "state.program"
      */
-    async connect(connectionString, dbtable) {
+    async connect(connectionString, dbNodesTable, dbProgramTable) {
         if (!['local', 'memdb'].includes(connectionString)) {
             this.useRemoteDB = true;
-            if (dbtable) this.dbtable = dbtable;
+            if (dbNodesTable) this.dbNodesTable = dbNodesTable;
+            if (dbProgramTable) this.dbProgramTable = dbProgramTable;
             this.client = new Client({ connectionString });
             await this.client.connect();
             this.connected = true;
@@ -114,7 +119,7 @@ class Database {
 
         if (typeof this.db[keyS] === 'undefined') {
             if (this.useRemoteDB) {
-                const dataS = await this._selectDB(keyS);
+                const dataS = await this._selectDB(this.dbNodesTable, keyS);
                 if (dataS !== null) {
                     if (dataS.length % 16 !== 0) {
                         throw new Error(`Found incorrect DATA value size: ${dataS.length}`);
@@ -169,7 +174,7 @@ class Database {
             for (let i = 0; i < this.db[keyS].length; i++) {
                 dataS += this.db[keyS][i];
             }
-            await this._insertDB(keyS, dataS);
+            await this._insertDB(this.dbNodesTable, keyS, dataS);
         }
     }
 
@@ -185,7 +190,7 @@ class Database {
         this.db[keyS] = Buffer.from(jsonS, 'utf8').toString('hex');
 
         if (this.useRemoteDB) {
-            await this._insertDB(keyS, this.db[keyS]);
+            await this._insertDB(this.dbProgramTable, keyS, this.db[keyS]);
         }
     }
 
@@ -200,7 +205,7 @@ class Database {
 
         if (typeof this.db[keyS] === 'undefined') {
             if (this.useRemoteDB) {
-                const dataS = await this._selectDB(keyS);
+                const dataS = await this._selectDB(this.dbProgramTable, keyS);
                 if (dataS != null) {
                     this.db[keyS] = dataS;
                     found = true;
@@ -234,7 +239,7 @@ class Database {
 
         if (typeof this.db[keyS] === 'undefined') {
             if (this.useRemoteDB) {
-                const dataS = await this._selectDB(keyS);
+                const dataS = await this._selectDB(this.dbProgramTable, keyS);
                 if (dataS != null) {
                     this.db[keyS] = dataS;
                     found = true;
@@ -268,7 +273,7 @@ class Database {
         this.db[keyS] = Buffer.from(value).toString('hex');
 
         if (this.useRemoteDB) {
-            await this._insertDB(keyS, this.db[keyS]);
+            await this._insertDB(this.dbProgramTable, keyS, this.db[keyS]);
         }
     }
 
