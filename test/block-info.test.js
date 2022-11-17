@@ -317,19 +317,19 @@ describe('Block info tests', function () {
                 }
 
                 // Check global exit root
-                const batchNumVm = await zkEVMDB.vm.stateManager.getContractStorage(
+                const timestampVm = await zkEVMDB.vm.stateManager.getContractStorage(
                     addressInstanceGlobalExitRoot,
                     globalExitRootPosBuffer,
                 );
-                const batchNumSmt = (await stateUtils.getContractStorage(
+                const timestampSmt = (await stateUtils.getContractStorage(
                     Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
                     zkEVMDB.smt,
                     zkEVMDB.stateRoot,
                     [globalExitRootPos],
                 ))[Scalar.e(globalExitRootPos)];
 
-                expect(Scalar.fromString(batchNumVm.toString('hex'), 16)).to.equal(batchNumSmt);
-                expect(batchNumSmt).to.equal(Scalar.e(batch.newNumBatch));
+                expect(Scalar.fromString(timestampVm.toString('hex'), 16)).to.equal(timestampSmt);
+                expect(timestampSmt).to.equal(Scalar.e(batch.timestamp));
 
                 // Check through a call in the EVM
                 if (bridgeDeployed) {

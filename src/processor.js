@@ -184,12 +184,17 @@ module.exports = class Processor {
 
     /**
      * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT
+     * Not store global exit root if it is zero
      * This will be performed before process the transactions
      */
     async _setGlobalExitRoot() {
+        if (Scalar.eq(smtUtils.h4toScalar(this.globalExitRoot), Scalar.e(0))) {
+            return;
+        }
+
         const newStorageEntry = {};
         const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [smtUtils.h4toString(this.globalExitRoot), Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-        newStorageEntry[globalExitRootPos] = this.newNumBatch;
+        newStorageEntry[globalExitRootPos] = this.timestamp;
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
             this.smt,
@@ -201,7 +206,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(this.newNumBatch),
+            toBuffer(this.timestamp),
         );
 
         // store data in internal DB
