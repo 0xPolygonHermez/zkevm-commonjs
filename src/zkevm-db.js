@@ -227,9 +227,9 @@ class ZkEVMDB {
         dataVerify.inputSnark = `0x${Scalar.toString(await calculateSnarkInput(
             dataVerify.oldStateRoot,
             dataVerify.newStateRoot,
+            dataVerify.newLocalExitRoot,
             dataVerify.oldAccInputHash,
             dataVerify.newAccInputHash,
-            dataVerify.newLocalExitRoot,
             dataVerify.oldNumBatch,
             dataVerify.newNumBatch,
             dataVerify.chainID,
