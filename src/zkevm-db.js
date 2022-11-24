@@ -43,7 +43,7 @@ class ZkEVMDB {
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      */
-    async buildBatch(timestamp, sequencerAddress, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX, skipUpdateSystemStorage = false) {
+    async buildBatch(timestamp, sequencerAddress, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX, options = {}) {
         return new Processor(
             this.db,
             this.lastBatch + 1,
@@ -56,7 +56,7 @@ class ZkEVMDB {
             timestamp,
             this.chainID,
             clone(this.vm),
-            skipUpdateSystemStorage,
+            options,
         );
     }
 

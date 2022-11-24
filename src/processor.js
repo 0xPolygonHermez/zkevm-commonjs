@@ -45,7 +45,7 @@ module.exports = class Processor {
         timestamp,
         chainID,
         vm,
-        skipUpdateSystemStorage,
+        options,
     ) {
         this.db = db;
         this.newNumBatch = numBatch;
@@ -77,7 +77,7 @@ module.exports = class Processor {
         this.evmSteps = [];
         this.updatedAccounts = {};
         this.isLegacyTx = false;
-        this.skipUpdateSystemStorage = skipUpdateSystemStorage;
+        this.options = options;
     }
 
     /**
@@ -473,7 +473,7 @@ module.exports = class Processor {
      * Updates system storage with new state root after finishing transaction
      */
     async _updateSystemStorage() {
-        if (this.skipUpdateSystemStorage) return;
+        if (this.options.skipUpdateSystemStorage) return;
 
         // Set system addres storage with updated values
         const lastTxCount = await stateUtils.getContractStorage(
