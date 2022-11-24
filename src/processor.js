@@ -32,6 +32,8 @@ module.exports = class Processor {
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Number} chainID - L2 chainID
      * @param {Object} vm - vm instance
+     * @param {Object} options - batch options
+     * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
      */
     constructor(
         db,
