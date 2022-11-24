@@ -32,6 +32,8 @@ module.exports = class Processor {
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Number} chainID - L2 chainID
      * @param {Object} vm - vm instance
+     * @param {Object} options - batch options
+     * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
      */
     constructor(
         db,
@@ -45,6 +47,7 @@ module.exports = class Processor {
         timestamp,
         chainID,
         vm,
+        options,
     ) {
         this.db = db;
         this.newNumBatch = numBatch;
@@ -76,6 +79,7 @@ module.exports = class Processor {
         this.evmSteps = [];
         this.updatedAccounts = {};
         this.isLegacyTx = false;
+        this.options = options;
     }
 
     /**
@@ -195,6 +199,7 @@ module.exports = class Processor {
         const newStorageEntry = {};
         const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [smtUtils.h4toString(this.globalExitRoot), Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
         newStorageEntry[globalExitRootPos] = this.timestamp;
+
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
             this.smt,
@@ -470,6 +475,8 @@ module.exports = class Processor {
      * Updates system storage with new state root after finishing transaction
      */
     async _updateSystemStorage() {
+        if (this.options.skipUpdateSystemStorage) return;
+
         // Set system addres storage with updated values
         const lastTxCount = await stateUtils.getContractStorage(
             Constants.ADDRESS_SYSTEM,
