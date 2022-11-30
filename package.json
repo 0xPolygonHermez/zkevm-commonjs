@@ -1,7 +1,7 @@
 {
   "name": "@0xpolygonhermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "0.5.0.2",
+  "version": "0.5.1.0",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/0xPolygonHermez/zkevm-commonjs#readme",
   "devDependencies": {
-    "@0xpolygonhermez/contracts-zkevm": "github:0xPolygonHermez/zkevm-contracts#v0.5.0.0",
+    "@0xpolygonhermez/zkevm-contracts": "github:0xPolygonHermez/zkevm-contracts#v0.5.0.0",
     "@ethersproject/abi": "^5.6.4",
     "@nomiclabs/hardhat-ethers": "^2.1.0",
     "@nomiclabs/hardhat-waffle": "^2.0.2",

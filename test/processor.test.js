@@ -23,7 +23,7 @@ const lodash = require('lodash');
 
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
-const contractsPolygonHermez = require('@0xpolygonhermez/contracts-zkevm');
+const contractsPolygonHermez = require('@0xpolygonhermez/zkevm-contracts');
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
 } = require('../index');
