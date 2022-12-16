@@ -343,60 +343,69 @@ module.exports = class Processor {
                 blockData.header.difficulty = new BN(Scalar.e(Constants.BATCH_DIFFICULTY));
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
-                const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
+                try {
+                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
 
-                this.evmSteps.push(txResult.execResult.evmSteps);
+                    this.evmSteps.push(txResult.execResult.evmSteps);
 
-                // Check transaction completed
-                if (txResult.execResult.exceptionError) {
-                    currentDecodedTx.isInvalid = true;
-                    if (txResult.execResult.returnValue.toString()) {
-                        const abiCoder = ethers.utils.defaultAbiCoder;
-                        const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
-                        try {
-                            [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
-                        } catch (e) {
-                            currentDecodedTx.reason = txResult.execResult.exceptionError;
-                        }
-                    } else currentDecodedTx.reason = txResult.execResult.exceptionError;
+                    // Check transaction completed
+                    if (txResult.execResult.exceptionError) {
+                        currentDecodedTx.isInvalid = true;
+                        if (txResult.execResult.returnValue.toString()) {
+                            const abiCoder = ethers.utils.defaultAbiCoder;
+                            const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
+                            try {
+                                [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
+                            } catch (e) {
+                                currentDecodedTx.reason = txResult.execResult.exceptionError;
+                            }
+                        } else currentDecodedTx.reason = txResult.execResult.exceptionError;
 
-                    // UPDATE sender account adding the nonce and substracting the gas spended
-                    const senderAcc = await this.vm.stateManager.getAccount(Address.fromString(currenTx.from));
-                    this.updatedAccounts[currenTx.from] = senderAcc;
-                    // Update smt with touched accounts
-                    this.currentStateRoot = await stateUtils.setAccountState(
-                        currenTx.from,
-                        this.smt,
-                        this.currentStateRoot,
-                        Scalar.e(senderAcc.balance),
-                        Scalar.e(senderAcc.nonce),
-                    );
+                        // UPDATE sender account adding the nonce and substracting the gas spended
+                        const senderAcc = await this.vm.stateManager.getAccount(Address.fromString(currenTx.from));
+                        this.updatedAccounts[currenTx.from] = senderAcc;
+                        // Update smt with touched accounts
+                        this.currentStateRoot = await stateUtils.setAccountState(
+                            currenTx.from,
+                            this.smt,
+                            this.currentStateRoot,
+                            Scalar.e(senderAcc.balance),
+                            Scalar.e(senderAcc.nonce),
+                        );
 
-                    /*
-                     * UPDATE miner Acc
-                     * Get touched evm account
-                     */
-                    const addressSeq = Address.fromString(this.sequencerAddress);
-                    const accountSeq = await this.vm.stateManager.getAccount(addressSeq);
+                        /*
+                         * UPDATE miner Acc
+                         * Get touched evm account
+                         */
+                        const addressSeq = Address.fromString(this.sequencerAddress);
+                        const accountSeq = await this.vm.stateManager.getAccount(addressSeq);
 
-                    // Update batch touched stack
-                    this.updatedAccounts[this.sequencerAddress] = accountSeq;
+                        // Update batch touched stack
+                        this.updatedAccounts[this.sequencerAddress] = accountSeq;
 
-                    // Update smt with touched accounts
-                    this.currentStateRoot = await stateUtils.setAccountState(
-                        this.sequencerAddress,
-                        this.smt,
-                        this.currentStateRoot,
-                        Scalar.e(accountSeq.balance),
-                        Scalar.e(accountSeq.nonce),
-                    );
+                        // Update smt with touched accounts
+                        this.currentStateRoot = await stateUtils.setAccountState(
+                            this.sequencerAddress,
+                            this.smt,
+                            this.currentStateRoot,
+                            Scalar.e(accountSeq.balance),
+                            Scalar.e(accountSeq.nonce),
+                        );
 
-                    await this._updateSystemStorage();
+                        await this._updateSystemStorage();
 
-                    // Clear touched accounts
-                    this.vm.stateManager._customTouched.clear();
+                        // Clear touched accounts
+                        this.vm.stateManager._customTouched.clear();
 
-                    continue;
+                        continue;
+                    }
+                } catch (e) {
+                    // If base fee exceeds the gas limit, it is an instrisic error and the state will not be affected
+                    if (e.toString().includes('base fee exceeds gas limit')) {
+                        continue;
+                    } else {
+                        throw Error(e);
+                    }
                 }
 
                 // PROCESS TX in the smt updating the touched accounts from the EVM
