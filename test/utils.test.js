@@ -11,6 +11,6 @@ describe('utils', async function () {
         const inputArray = utils.hexString2byteArray(inputHex);
         const outputHex = utils.byteArray2HexString(inputArray);
 
-        expect(outputHex).to.be.equal(inputHex.slice(2));
+        expect(outputHex).to.be.equal(inputHex);
     });
 });

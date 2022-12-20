@@ -27,7 +27,7 @@ function byteArray2HexString(byteArray) {
         s += byte.toString(16).padStart(2, '0');
     }
 
-    return s;
+    return `0x${s}`;
 }
 
 /**

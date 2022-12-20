@@ -88,9 +88,9 @@ class MemDB {
     }
 
     /**
-     * Get program value
-     * @param {Array[Field]} key - key in Array Field representation
-     * @returns {Array[Byte] | null} Node childs if found, otherwise return null
+     * Get smart contract bytecode
+     * @param {Array[Field]} key - key in array Field representation
+     * @returns {String} Smart contract bytecode represented as an hex string, otherwise return null
      */
     async getProgram(key) {
         if (key.length !== 4) {
@@ -111,17 +111,21 @@ class MemDB {
     }
 
     /**
-     * Set program node
-     * @param {Array[Field]} key - key in Field representation
-     * @param {Array[byte]} value - child array
+     * Set smart contract bytecode
+     * @param {Array[Field]} key - key in Array Field representation
+     * @param {String} bytecode - Smart contract bytecode represented as an hex string
      */
-    async setProgram(key, value) {
+    async setProgram(key, bytecode) {
         if (key.length !== 4) {
-            throw Error('Program key must be an array of 4 Fields');
+            throw Error('Bytecode key must be an array of 4 Fields');
+        }
+
+        if (typeof bytecode !== 'string') {
+            throw Error('Bytecode must be a string');
         }
 
         const keyS = h4toString(key);
-        this.db[keyS] = value;
+        this.db[keyS] = bytecode;
     }
 
     startCapture() {

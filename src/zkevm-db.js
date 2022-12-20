@@ -261,7 +261,7 @@ class ZkEVMDB {
     async getBytecode(address) {
         const hashByteCode = await this.getHashBytecode(address);
 
-        return this.db.getValue(hashByteCode);
+        return this.db.getProgram(stringToH4(hashByteCode));
     }
 
     /**
@@ -336,7 +336,7 @@ class ZkEVMDB {
                     const evmBytecode = await newVm.stateManager.getContractCode(addressInstance);
                     newStateRoot = await setContractBytecode(address, newSmt, newStateRoot, evmBytecode.toString('hex'));
                     const hashByteCode = await hashContractBytecode(bytecode);
-                    db.setValue(hashByteCode, evmBytecode.toString('hex'));
+                    await db.setProgram(stringToH4(hashByteCode), `0x${evmBytecode.toString('hex')}`);
                 }
 
                 if (storage) {

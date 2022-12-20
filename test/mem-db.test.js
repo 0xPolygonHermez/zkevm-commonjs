@@ -53,4 +53,13 @@ describe('MemDB', () => {
         const res = await db.getSmtNode(key);
         expect(value).to.be.deep.equal(res);
     });
+
+    it('setProgram & getProgram', async () => {
+        const key = [F.e(1), F.e(2), F.e(3), F.e(4)];
+        const bytecode = '010203040506070809';
+
+        await db.setProgram(key, bytecode);
+        const res = await db.getProgram(key);
+        expect(bytecode).to.be.deep.equal(res);
+    });
 });

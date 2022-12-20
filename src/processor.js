@@ -440,10 +440,11 @@ module.exports = class Processor {
                             smCode.toString('hex'),
                             false,
                         );
+
                         // Set bytecode at db when smart contract is called
                         const hashedBytecode = await smtUtils.hashContractBytecode(smCode.toString('hex'));
-                        this.db.setValue(hashedBytecode, smCode.toString('hex'));
-                        this.contractsBytecode[hashedBytecode] = smCode.toString('hex');
+                        this.db.setProgram(smtUtils.stringToH4(hashedBytecode), `0x${smCode.toString('hex')}`);
+                        this.contractsBytecode[hashedBytecode] = `0x${smCode.toString('hex')}`;
 
                         const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
                         const oldSto = await this.db.getValue(keyDumpStorage);
