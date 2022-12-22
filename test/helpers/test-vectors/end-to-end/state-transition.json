@@ -20,7 +20,7 @@
         "storage": {
           "0x0000000000000000000000000000000000000000000000000000000000000002": "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
         },
-        "contractName": "GlobalExitRootManagerL2"
+        "contractName": "PolygonZkEVMGlobalExitRootL2"
       },
       {
         "balance": "100000000000000000000000",
@@ -64,7 +64,7 @@
           "0x000000000000000000000000000000000000000000000000000000000000003f": "0x93237c50ba75ee485f4c22adf2f741400bdf8d6a9cc7df7ecae576221665d735",
           "0x0000000000000000000000000000000000000000000000000000000000000040": "0x8448818bb4ae4562849e949e17ac16e0be16688e156b5cf15e098c627c0056a9"
         },
-        "contractName": "Bridge"
+        "contractName": "PolygonZkEVMBridge"
       },
       {
         "balance": "0",
@@ -95,7 +95,7 @@
         "to": "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988",
         "nonce": 3,
         "value": "0",
-        "contractName": "Bridge",
+        "contractName": "PolygonZkEVMBridge",
         "function": "claimAsset",
         "params": [
           [
@@ -155,7 +155,7 @@
         "to": "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988",
         "nonce": 4,
         "value": "1000000000000000000",
-        "contractName": "Bridge",
+        "contractName": "PolygonZkEVMBridge",
         "function": "bridgeAsset",
         "params": [
           "0x0000000000000000000000000000000000000000",
