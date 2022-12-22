@@ -1,47 +1,33 @@
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
 const { sha256Snark, padZeros } = require('./utils');
-const { string2fea } = require('./smt-utils');
-const getPoseidon = require('./poseidon');
 
 /**
- * Compute globalHash for STARK circuit
- * @param {String} currentStateRoot - Current state Root
- * @param {String} currentLocalExitRoot - Current local exit root
- * @param {String} newStateRoot - New State root once the batch is processed
- * @param {String} newLocalExitRoot - New local exit root once the batch is processed
+ * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
+ * @param {String} oldAccInputHash - old accumulateInputHash
  * @param {String} batchHashData - Batch hash data
- * @param {Number} numBatch - Batch number
+ * @param {String} globalExitRoot - Global Exit Root
  * @param {Number} timestamp - Block timestamp
- * @param {Number} chainID - L2 chainID
- * @returns {String} - global hash in hex encoding
+ * @param {String} sequencerAddress - Sequencer address
+ * @returns {String} - accumulateInputHash in hex encoding
  */
-function calculateStarkInput(
-    currentStateRoot,
-    currentLocalExitRoot,
-    newStateRoot,
-    newLocalExitRoot,
+function calculateAccInputHash(
+    oldAccInputHash,
     batchHashData,
-    numBatch,
+    globalExitRoot,
     timestamp,
-    chainID,
+    sequencerAddress,
 ) {
-    const currentStateRootHex = `0x${Scalar.e(currentStateRoot).toString(16).padStart(64, '0')}`;
-    const currentLocalExitRootHex = `0x${Scalar.e(currentLocalExitRoot).toString(16).padStart(64, '0')}`;
-    const newStateRootHex = `0x${Scalar.e(newStateRoot).toString(16).padStart(64, '0')}`;
-    const newLocalExitRootHex = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
+    const oldAccInputHashHex = `0x${Scalar.e(oldAccInputHash).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64', 'uint64'],
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address'],
         [
-            currentStateRootHex,
-            currentLocalExitRootHex,
-            newStateRootHex,
-            newLocalExitRootHex,
+            oldAccInputHashHex,
             batchHashData,
-            numBatch,
+            globalExitRoot,
             timestamp,
-            chainID,
+            sequencerAddress,
         ],
     );
 
@@ -49,55 +35,66 @@ function calculateStarkInput(
 }
 
 /**
- * Compute input for SNARK circuit
- * @param {String} currentStateRoot - Current state Root
- * @param {String} currentLocalExitRoot - Current local exit root
+ * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
+ * @param {String} oldStateRoot - Current state Root
  * @param {String} newStateRoot - New State root once the batch is processed
- * @param {String} newLocalExitRoot - New local exit root once the batch is processed
- * @param {String} batchHashData - Batch hash data
- * @param {Number} numBatch - Batch number
- * @param {Number} timestamp - Block timestamp
+ * @param {String} oldAccInputHash - initial accumulateInputHash
+ * @param {String} newAccInputHash - final accumulateInputHash
+ * @param {String} newLocalExitRoot - New local exit root once the all batches is processed
+ * @param {Number} oldNumBatch - initial batch number
+ * @param {Number} newNumBatch - final batch number
  * @param {Number} chainID - L2 chainID
  * @param {String} aggregatorAddress - Aggregator Ethereum address in hex string
- * @returns {String} - sha256(globalHash, aggregatorAddress) % FrSNARK in hex encoding
+ * @returns {String} - input snark in hex encoding
  */
 async function calculateSnarkInput(
-    currentStateRoot,
-    currentLocalExitRoot,
+    oldStateRoot,
     newStateRoot,
     newLocalExitRoot,
-    batchHashData,
-    numBatch,
-    timestamp,
+    oldAccInputHash,
+    newAccInputHash,
+    oldNumBatch,
+    newNumBatch,
     chainID,
     aggregatorAddress,
 ) {
-    const poseidon = await getPoseidon();
-    const { F } = poseidon;
-
-    const hashKeccak = calculateStarkInput(
-        currentStateRoot,
-        currentLocalExitRoot,
-        newStateRoot,
-        newLocalExitRoot,
-        batchHashData,
-        numBatch,
-        timestamp,
-        chainID,
-    );
-
-    // 20 bytes agggregator adsress
+    // 20 bytes agggregator address
     const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
 
-    // 8 bytes each field element
-    const feaHashKeccak = string2fea(F, hashKeccak);
-    const strFea = feaHashKeccak.reduce(
-        (previousValue, currentValue) => previousValue + padZeros(currentValue.toString(16), 16),
-        '',
-    );
+    // 32 bytes each field element for oldStateRoot
+    const strOldStateRoot = padZeros((Scalar.fromString(oldStateRoot, 16)).toString(16), 64);
+
+    // 32 bytes each field element for oldStateRoot
+    const strOldAccInputHash = padZeros((Scalar.fromString(oldAccInputHash, 16)).toString(16), 64);
+
+    // 8 bytes for oldNumBatch
+    const strOldNumBatch = padZeros(Scalar.e(oldNumBatch).toString(16), 16);
+
+    // 8 bytes for chainID
+    const strChainID = padZeros(Scalar.e(chainID).toString(16), 16);
+
+    // 32 bytes each field element for oldStateRoot
+    const strNewStateRoot = padZeros((Scalar.fromString(newStateRoot, 16)).toString(16), 64);
+
+    // 32 bytes each field element for oldStateRoot
+    const strNewAccInputHash = padZeros((Scalar.fromString(newAccInputHash, 16)).toString(16), 64);
+
+    // 32 bytes each field element for oldStateRoot
+    const strNewLocalExitRoot = padZeros((Scalar.fromString(newLocalExitRoot, 16)).toString(16), 64);
+
+    // 8 bytes for newNumBatch
+    const strNewNumBatch = padZeros(Scalar.e(newNumBatch).toString(16), 16);
 
     // build final bytes sha256
-    const finalStr = strAggregatorAddress.concat(strFea);
+    const finalStr = strAggregatorAddress
+        .concat(strOldStateRoot)
+        .concat(strOldAccInputHash)
+        .concat(strOldNumBatch)
+        .concat(strChainID)
+        .concat(strNewStateRoot)
+        .concat(strNewAccInputHash)
+        .concat(strNewLocalExitRoot)
+        .concat(strNewNumBatch);
 
     return sha256Snark(finalStr);
 }
@@ -105,23 +102,15 @@ async function calculateSnarkInput(
 /**
  * Batch hash data
  * @param {String} transactions - All raw transaction data concatenated
- * @param {String} globalExitRoot - Global Exit Root
- * @param {String} sequencerAddress - Sequencer address
  * @returns {String} - Batch hash data
  */
 function calculateBatchHashData(
     transactions,
-    globalExitRoot,
-    sequencerAddress,
 ) {
-    const globalExitRootHex = `0x${Scalar.e(globalExitRoot).toString(16).padStart(64, '0')}`;
-
     return ethers.utils.solidityKeccak256(
-        ['bytes', 'bytes32', 'address'],
+        ['bytes'],
         [
             transactions,
-            globalExitRootHex,
-            sequencerAddress,
         ],
     );
 }
@@ -160,7 +149,7 @@ function generateSolidityInputs(
 }
 
 module.exports = {
-    calculateStarkInput,
+    calculateAccInputHash,
     calculateSnarkInput,
     calculateBatchHashData,
     generateSolidityInputs,

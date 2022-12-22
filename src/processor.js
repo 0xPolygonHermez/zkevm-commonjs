@@ -15,39 +15,43 @@ const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
-const { calculateStarkInput, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
+const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
 const { decodeCustomRawTxProverMethod } = require('./processor-utils');
 
 module.exports = class Processor {
     /**
      * constructor Processor class
      * @param {Object} db - database
-     * @param {Number} batchNumber - batch number
+     * @param {Number} numBatch - batch number
      * @param {Object} poseidon - hash function
      * @param {Number} maxNTx - maximum number of transaction allowed
      * @param {Array[Field]} root - state root
      * @param {String} sequencerAddress . sequencer address
-     * @param {Array[Field]} localExitRoot - local exit root
+     * @param {Array[Field]} accInputHash - accumulate input hash
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Number} chainID - L2 chainID
      * @param {Object} vm - vm instance
+     * @param {Object} options - batch options
+     * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
      */
     constructor(
         db,
-        batchNumber,
+        numBatch,
         poseidon,
         maxNTx,
         root,
         sequencerAddress,
-        localExitRoot,
+        accInputHash,
         globalExitRoot,
         timestamp,
         chainID,
         vm,
+        options,
     ) {
         this.db = db;
-        this.batchNumber = batchNumber;
+        this.newNumBatch = numBatch;
+        this.oldNumBatch = numBatch - 1;
         this.poseidon = poseidon;
         this.maxNTx = maxNTx;
         this.F = poseidon.F;
@@ -61,8 +65,7 @@ module.exports = class Processor {
         this.contractsBytecode = {};
         this.oldStateRoot = root;
         this.currentStateRoot = root;
-        this.oldLocalExitRoot = localExitRoot;
-        this.newLocalExitRoot = localExitRoot;
+        this.oldAccInputHash = accInputHash;
         this.globalExitRoot = globalExitRoot;
 
         this.batchHashData = '0x';
@@ -75,6 +78,8 @@ module.exports = class Processor {
         this.vm = vm;
         this.evmSteps = [];
         this.updatedAccounts = {};
+        this.isLegacyTx = false;
+        this.options = options;
     }
 
     /**
@@ -97,9 +102,6 @@ module.exports = class Processor {
 
         // Check the validity of rawTxs
         await this._decodeAndCheckRawTx();
-
-        // Set oldStateRoot to system contract
-        await this._setBatchHash();
 
         // Set global exit root
         await this._setGlobalExitRoot();
@@ -147,10 +149,11 @@ module.exports = class Processor {
                 continue;
             }
             txDecoded.from = undefined;
-            txDecoded.chainID = Number(txDecoded.chainID);
 
-            // B: Valid chainID
-            if (txDecoded.chainID !== this.chainID) {
+            // B: Valid chainID if EIP-155
+            this.isLegacyTx = typeof txDecoded.chainID === 'undefined';
+            txDecoded.chainID = this.isLegacyTx ? txDecoded.chainID : Number(txDecoded.chainID);
+            if (!this.isLegacyTx && txDecoded.chainID !== this.chainID) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Chain ID does not match', tx: txDecoded });
                 continue;
             }
@@ -184,54 +187,36 @@ module.exports = class Processor {
     }
 
     /**
-     * Set the old state root exit root in a specific storage slot of the system smart contract for both vm and SMT
-     * This will be performed before process the transactions
-     */
-    async _setBatchHash() {
-        const newStorageEntry = {};
-        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [this.batchNumber - 1, Constants.STATE_ROOT_STORAGE_POS]);
-        newStorageEntry[stateRootPos] = smtUtils.h4toString(this.oldStateRoot);
-
-        this.currentStateRoot = await stateUtils.setContractStorage(
-            Constants.ADDRESS_SYSTEM,
-            this.smt,
-            this.currentStateRoot,
-            newStorageEntry,
-        );
-
-        const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
-        await this.vm.stateManager.putContractStorage(
-            addressInstance,
-            toBuffer(stateRootPos),
-            toBuffer(smtUtils.h4toString(this.oldStateRoot)),
-        );
-
-        // store data in internal DB
-        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
-
-        // add address to updatedAccounts
-        const account = await this.vm.stateManager.getAccount(addressInstance);
-        this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
-
-        // update its storage
-        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
-        const storage = {};
-        const keys = Object.keys(sto).map((v) => `0x${v}`);
-        const values = Object.values(sto).map((v) => `0x${v}`);
-        for (let k = 0; k < keys.length; k++) {
-            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
-        }
-        await this.db.setValue(keyDumpStorage, storage);
-    }
-
-    /**
      * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT
+     * Not store global exit root if it is zero
+     * Not overwrite storage position if timestamp is already set
      * This will be performed before process the transactions
      */
     async _setGlobalExitRoot() {
-        const newStorageEntry = {};
+        // return if globalExitRoot is 0
+        if (Scalar.eq(smtUtils.h4toScalar(this.globalExitRoot), Scalar.e(0))) {
+            return;
+        }
+
+        // check if timestamp is already set
         const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [smtUtils.h4toString(this.globalExitRoot), Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-        newStorageEntry[globalExitRootPos] = this.batchNumber;
+        const globalExitRootPosScalar = Scalar.e(globalExitRootPos).toString();
+
+        const resTimestamp = await stateUtils.getContractStorage(
+            Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+            this.smt,
+            this.currentStateRoot,
+            [globalExitRootPos],
+        );
+
+        if (Scalar.neq(resTimestamp[globalExitRootPosScalar], Scalar.e(0))) {
+            return;
+        }
+
+        // Set globalExitRoot - timestamp
+        const newStorageEntry = {};
+        newStorageEntry[globalExitRootPos] = this.timestamp;
+
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
             this.smt,
@@ -243,7 +228,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(this.batchNumber),
+            toBuffer(this.timestamp),
         );
 
         // store data in internal DB
@@ -327,6 +312,14 @@ module.exports = class Processor {
                     currentDecodedTx.reason = 'TX INVALID: Not enough funds to pay total transaction cost';
                     continue;
                 }
+                const v = this.isLegacyTx ? currenTx.v : Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35;
+
+                const bytecodeLength = await stateUtils.getContractBytecodeLength(currenTx.from, this.smt, this.currentStateRoot);
+                if (bytecodeLength > 0) {
+                    currentDecodedTx.isInvalid = true;
+                    currentDecodedTx.reason = 'TX INVALID: EIP3607 Do not allow transactions for which tx.sender has any code deployed';
+                    continue;
+                }
 
                 // Run tx in the EVM
                 const evmTx = Transaction.fromTxData({
@@ -336,7 +329,7 @@ module.exports = class Processor {
                     to: currenTx.to,
                     value: currenTx.value,
                     data: currenTx.data,
-                    v: Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35,
+                    v,
                     r: currenTx.r,
                     s: currenTx.s,
                 });
@@ -345,64 +338,74 @@ module.exports = class Processor {
                 const blockData = {};
                 blockData.header = {};
                 blockData.header.timestamp = new BN(Scalar.e(this.timestamp));
-                blockData.header.number = new BN(Scalar.e(this.batchNumber));
                 blockData.header.coinbase = new Address(toBuffer(this.sequencerAddress));
                 blockData.header.gasLimit = new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
                 blockData.header.difficulty = new BN(Scalar.e(Constants.BATCH_DIFFICULTY));
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
-                const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
+                try {
+                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
 
-                this.evmSteps.push(txResult.execResult.evmSteps);
+                    this.evmSteps.push(txResult.execResult.evmSteps);
 
-                // Check transaction completed
-                if (txResult.execResult.exceptionError) {
-                    currentDecodedTx.isInvalid = true;
-                    if (txResult.execResult.returnValue.toString()) {
-                        const abiCoder = ethers.utils.defaultAbiCoder;
-                        const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
-                        try {
-                            [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
-                        } catch (e) {
-                            currentDecodedTx.reason = txResult.execResult.exceptionError;
-                        }
-                    } else currentDecodedTx.reason = txResult.execResult.exceptionError;
+                    // Check transaction completed
+                    if (txResult.execResult.exceptionError) {
+                        currentDecodedTx.isInvalid = true;
+                        if (txResult.execResult.returnValue.toString()) {
+                            const abiCoder = ethers.utils.defaultAbiCoder;
+                            const revertReasonHex = `0x${txResult.execResult.returnValue.toString('hex').slice(8)}`;
+                            try {
+                                [currentDecodedTx.reason] = abiCoder.decode(['string'], revertReasonHex);
+                            } catch (e) {
+                                currentDecodedTx.reason = txResult.execResult.exceptionError;
+                            }
+                        } else currentDecodedTx.reason = txResult.execResult.exceptionError;
 
-                    // UPDATE sender account adding the nonce and substracting the gas spended
-                    const senderAcc = await this.vm.stateManager.getAccount(txResult.execResult.runState.caller);
-                    this.updatedAccounts[currenTx.from] = senderAcc;
-                    // Update smt with touched accounts
-                    this.currentStateRoot = await stateUtils.setAccountState(
-                        currenTx.from,
-                        this.smt,
-                        this.currentStateRoot,
-                        Scalar.e(senderAcc.balance),
-                        Scalar.e(senderAcc.nonce),
-                    );
+                        // UPDATE sender account adding the nonce and substracting the gas spended
+                        const senderAcc = await this.vm.stateManager.getAccount(Address.fromString(currenTx.from));
+                        this.updatedAccounts[currenTx.from] = senderAcc;
+                        // Update smt with touched accounts
+                        this.currentStateRoot = await stateUtils.setAccountState(
+                            currenTx.from,
+                            this.smt,
+                            this.currentStateRoot,
+                            Scalar.e(senderAcc.balance),
+                            Scalar.e(senderAcc.nonce),
+                        );
 
-                    /*
-                     * UPDATE miner Acc
-                     * Get touched evm account
-                     */
-                    const addressSeq = Address.fromString(this.sequencerAddress);
-                    const accountSeq = await this.vm.stateManager.getAccount(addressSeq);
+                        /*
+                         * UPDATE miner Acc
+                         * Get touched evm account
+                         */
+                        const addressSeq = Address.fromString(this.sequencerAddress);
+                        const accountSeq = await this.vm.stateManager.getAccount(addressSeq);
 
-                    // Update batch touched stack
-                    this.updatedAccounts[this.sequencerAddress] = accountSeq;
+                        // Update batch touched stack
+                        this.updatedAccounts[this.sequencerAddress] = accountSeq;
 
-                    // Update smt with touched accounts
-                    this.currentStateRoot = await stateUtils.setAccountState(
-                        this.sequencerAddress,
-                        this.smt,
-                        this.currentStateRoot,
-                        Scalar.e(accountSeq.balance),
-                        Scalar.e(accountSeq.nonce),
-                    );
+                        // Update smt with touched accounts
+                        this.currentStateRoot = await stateUtils.setAccountState(
+                            this.sequencerAddress,
+                            this.smt,
+                            this.currentStateRoot,
+                            Scalar.e(accountSeq.balance),
+                            Scalar.e(accountSeq.nonce),
+                        );
 
-                    // Clear touched accounts
-                    this.vm.stateManager._customTouched.clear();
+                        await this._updateSystemStorage();
 
-                    continue;
+                        // Clear touched accounts
+                        this.vm.stateManager._customTouched.clear();
+
+                        continue;
+                    }
+                } catch (e) {
+                    // If base fee exceeds the gas limit, it is an instrisic error and the state will not be affected
+                    if (e.toString().includes('base fee exceeds gas limit')) {
+                        continue;
+                    } else {
+                        throw Error(e);
+                    }
                 }
 
                 // PROCESS TX in the smt updating the touched accounts from the EVM
@@ -447,8 +450,8 @@ module.exports = class Processor {
                         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
 
                         const storage = {};
-                        const keys = Object.keys(sto).map((v) => `0x${v}`);
-                        const values = Object.values(sto).map((v) => `0x${v}`);
+                        const keys = Object.keys(sto).map((k) => `0x${k}`);
+                        const values = Object.values(sto).map((k) => `0x${k}`);
                         for (let k = 0; k < keys.length; k++) {
                             storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
                         }
@@ -466,13 +469,12 @@ module.exports = class Processor {
                         );
                         await this.db.setValue(keyDumpStorage, storage);
                     } else {
-                        // handle self-destruct
                         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
                         if (Object.keys(sto).length > 0) {
                             const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
                             const storage = {};
-                            const keys = Object.keys(sto).map((v) => `0x${v}`);
-                            const values = Object.values(sto).map((v) => `0x${v}`);
+                            const keys = Object.keys(sto).map((k) => `0x${k}`);
+                            const values = Object.values(sto).map((k) => `0x${k}`);
                             for (let k = 0; k < keys.length; k++) {
                                 storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
                             }
@@ -484,26 +486,80 @@ module.exports = class Processor {
                             );
                             await this.db.setValue(keyDumpStorage, storage);
                         }
-
-                        const oldHashBytecode = await stateUtils.getContractHashBytecode(address, this.smt, this.currentStateRoot);
-
-                        if (oldHashBytecode !== Constants.BYTECODE_EMPTY) {
-                            // delete leaf bytecode
-                            this.currentStateRoot = await stateUtils.setContractBytecode(
-                                address,
-                                this.smt,
-                                this.currentStateRoot,
-                                '0x',
-                                true,
-                            );
-                        }
                     }
                 }
+
+                await this._updateSystemStorage();
 
                 // Clear touched accounts
                 this.vm.stateManager._customTouched.clear();
             }
         }
+    }
+
+    /**
+     * Updates system storage with new state root after finishing transaction
+     */
+    async _updateSystemStorage() {
+        if (this.options.skipUpdateSystemStorage) return;
+
+        // Set system addres storage with updated values
+        const lastTxCount = await stateUtils.getContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            [Constants.LAST_TX_STORAGE_POS], // Storage key of last tx count
+        );
+        const newTxCount = Number(Scalar.add(lastTxCount[Constants.LAST_TX_STORAGE_POS], 1n));
+        // Update smt with new last tx count
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            { [Constants.LAST_TX_STORAGE_POS]: newTxCount },
+        );
+        // Update vm with new last tx count
+        const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
+
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(`0x${Constants.LAST_TX_STORAGE_POS.toString(16).padStart(64, '0')}`),
+            toBuffer(Number(newTxCount)),
+        );
+
+        // Update smt with new state root
+        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [newTxCount, Constants.STATE_ROOT_STORAGE_POS]);
+        const tmpStateRoot = smtUtils.h4toString(this.currentStateRoot);
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            { [stateRootPos]: smtUtils.h4toString(this.currentStateRoot) },
+        );
+
+        // Update vm with new state root
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(stateRootPos),
+            toBuffer(tmpStateRoot),
+        );
+
+        // store data in internal DB
+        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
+
+        // add address to updatedAccounts
+        const account = await this.vm.stateManager.getAccount(addressInstance);
+        this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
+
+        // update its storage
+        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+        const storage = {};
+        const keys = Object.keys(sto).map((k) => `0x${k}`);
+        const values = Object.values(sto).map((k) => `0x${k}`);
+        for (let k = 0; k < keys.length; k++) {
+            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+        }
+        await this.db.setValue(keyDumpStorage, storage);
     }
 
     /**
@@ -513,42 +569,40 @@ module.exports = class Processor {
         // compute circuit inputs
         const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
-        const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
+        const oldAccInputHash = smtUtils.h4toString(this.oldAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
         const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
 
         this.batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
+        );
+
+        const newAccInputHash = calculateAccInputHash(
+            oldAccInputHash,
+            this.batchHashData,
             globalExitRoot,
+            this.timestamp,
             this.sequencerAddress,
         );
 
-        this.inputHash = calculateStarkInput(
-            oldStateRoot,
-            oldLocalExitRoot,
-            newStateRoot,
-            newLocalExitRoot,
-            this.batchHashData,
-            this.batchNumber,
-            this.timestamp,
-            this.chainID,
-        );
+        this.newAccInputHash = smtUtils.stringToH4(newAccInputHash);
 
         this.starkInput = {
             oldStateRoot,
-            db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
-            sequencerAddr: this.sequencerAddress,
-            batchL2Data: this.getBatchL2Data(),
-            newStateRoot,
-            oldLocalExitRoot,
-            newLocalExitRoot,
-            globalExitRoot,
-            batchHashData: this.batchHashData,
-            inputHash: this.inputHash,
-            numBatch: this.batchNumber,
-            timestamp: this.timestamp,
+            newStateRoot, // output
+            oldAccInputHash,
+            newAccInputHash, // output
+            newLocalExitRoot, // output
+            oldNumBatch: this.oldNumBatch,
+            newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
+            batchL2Data: this.getBatchL2Data(),
+            globalExitRoot,
+            timestamp: this.timestamp,
+            sequencerAddr: this.sequencerAddress,
+            batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
+            db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
         };
     }
 
@@ -561,17 +615,18 @@ module.exports = class Processor {
         // compute circuit inputs
         const oldStateRoot = smtUtils.h4toString(this.oldStateRoot);
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
-        const oldLocalExitRoot = smtUtils.h4toString(this.oldLocalExitRoot);
+        const oldAccInputHash = smtUtils.h4toString(this.oldAccInputHash);
+        const newAccInputHash = smtUtils.h4toString(this.newAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
 
         return calculateSnarkInput(
             oldStateRoot,
-            oldLocalExitRoot,
             newStateRoot,
+            oldAccInputHash,
+            newAccInputHash,
             newLocalExitRoot,
-            this.batchHashData,
-            this.batchNumber,
-            this.timestamp,
+            this.oldNumBatch,
+            this.newNumBatch,
             this.chainID,
             aggregatorAddress,
         );

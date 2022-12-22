@@ -2,11 +2,11 @@
 /* eslint-disable no-restricted-syntax */
 const { Scalar } = require('ffjavascript');
 const VM = require('@polygon-hermez/vm').default;
-const Common = require('@ethereumjs/common').default;
+const Common = require('@polygon-hermez/common').default;
 const {
     Address, Account, BN, toBuffer,
 } = require('ethereumjs-util');
-const { Hardfork } = require('@ethereumjs/common');
+const { Hardfork } = require('@polygon-hermez/common');
 
 const ethers = require('ethers');
 const clone = require('lodash/clone');
@@ -18,15 +18,17 @@ const {
     getContractBytecodeLength,
 } = require('./state-utils');
 const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
+const { calculateSnarkInput } = require('./contract-utils');
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt, chainID) {
+    constructor(db, lastBatch, stateRoot, accInputHash, localExitRoot, poseidon, vm, smt, chainID) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
         this.F = poseidon.F;
 
         this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.accInputHash = accInputHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.chainID = chainID;
 
@@ -40,8 +42,10 @@ class ZkEVMDB {
      * @param {String} sequencerAddress - ethereum address represented as hex
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
+     * @param {Object} options - additional batch options
+     * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smrt contract at the end of processable transactions
      */
-    async buildBatch(timestamp, sequencerAddress, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX) {
+    async buildBatch(timestamp, sequencerAddress, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX, options = {}) {
         return new Processor(
             this.db,
             this.lastBatch + 1,
@@ -49,11 +53,12 @@ class ZkEVMDB {
             maxNTx,
             this.stateRoot,
             sequencerAddress,
-            this.localExitRoot,
+            this.accInputHash,
             globalExitRoot,
             timestamp,
             this.chainID,
             clone(this.vm),
+            options,
         );
     }
 
@@ -62,7 +67,7 @@ class ZkEVMDB {
      * @param {Object} processor - Processor object
      */
     async consolidate(processor) {
-        if (processor.batchNumber !== this.lastBatch + 1) {
+        if (processor.newNumBatch !== this.lastBatch + 1) {
             throw new Error('Updating the wrong batch');
         }
 
@@ -75,31 +80,44 @@ class ZkEVMDB {
 
         // set state root
         await this.db.setValue(
-            Scalar.add(Constants.DB_STATE_ROOT, processor.batchNumber),
+            Scalar.add(Constants.DB_STATE_ROOT, processor.newNumBatch),
             h4toString(processor.currentStateRoot),
+        );
+
+        // Set accumulate hash input
+        await this.db.setValue(
+            Scalar.add(Constants.DB_ACC_INPUT_HASH, processor.newNumBatch),
+            h4toString(processor.newAccInputHash),
         );
 
         // Set local exit root
         await this.db.setValue(
-            Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, processor.batchNumber),
+            Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, processor.newNumBatch),
             h4toString(processor.newLocalExitRoot),
         );
 
         // Set last batch number
         await this.db.setValue(
             Constants.DB_LAST_BATCH,
-            Scalar.toNumber(processor.batchNumber),
+            Scalar.toNumber(processor.newNumBatch),
         );
 
         // Set all concatenated touched address
         await this.db.setValue(
-            Scalar.add(Constants.DB_TOUCHED_ACCOUNTS, processor.batchNumber),
+            Scalar.add(Constants.DB_TOUCHED_ACCOUNTS, processor.newNumBatch),
             processor.getUpdatedAccountsBatch(),
         );
 
+        // Set stark input
+        await this.db.setValue(
+            Scalar.add(Constants.DB_STARK_INPUT, processor.newNumBatch),
+            processor.starkInput,
+        );
+
         // Update ZKEVMDB variables
-        this.lastBatch = processor.batchNumber;
+        this.lastBatch = processor.newNumBatch;
         this.stateRoot = processor.currentStateRoot;
+        this.accInputHash = processor.newAccInputHash;
         this.localExitRoot = processor.newLocalExitRoot;
         this.vm = processor.vm;
     }
@@ -135,6 +153,93 @@ class ZkEVMDB {
      */
     getCurrentLocalExitRoot() {
         return this.localExitRoot;
+    }
+
+    /**
+     * Get the current local exit root
+     * @returns {String} local exit root
+     */
+    getCurrentAccInpuHash() {
+        return this.accInputHash;
+    }
+
+    /**
+     * Get batchL2Data for multiples batches
+     * @param {Number} initNumBatch - initial num batch
+     * @param {Number} finalNumBatch - final num batch
+     */
+    async sequenceMultipleBatches(initNumBatch, finalNumBatch) {
+        const dataBatches = [];
+
+        for (let i = initNumBatch; i <= finalNumBatch; i++) {
+            const keyInitInput = Scalar.add(Constants.DB_STARK_INPUT, i);
+            const value = await this.db.getValue(keyInitInput);
+            if (value === null) {
+                throw new Error(`Batch ${i} does not exist`);
+            }
+
+            const dataBatch = {
+                transactions: value.batchL2Data,
+                globalExitRoot: value.globalExitRoot,
+                timestamp: value.timestamp,
+                forceBatchesTimestamp: [],
+            };
+
+            dataBatches.push(dataBatch);
+        }
+
+        return dataBatches;
+    }
+
+    /**
+     * Get batchL2Data for multiples batches
+     * @param {Number} initNumBatch - initial num batch
+     * @param {Number} finalNumBatch - final num batch
+     * @param {String} aggregatorAddress - aggregator Ethereum address
+     */
+    async verifyMultipleBatches(initNumBatch, finalNumBatch, aggregatorAddress) {
+        const dataVerify = {};
+        dataVerify.singleBatchData = [];
+
+        for (let i = initNumBatch; i <= finalNumBatch; i++) {
+            const keyInitInput = Scalar.add(Constants.DB_STARK_INPUT, i);
+            const value = await this.db.getValue(keyInitInput);
+            if (value === null) {
+                throw new Error(`Batch ${i} does not exist`);
+            }
+
+            if (i === initNumBatch) {
+                dataVerify.oldStateRoot = value.oldStateRoot;
+                dataVerify.oldAccInputHash = value.oldAccInputHash;
+                dataVerify.oldNumBatch = value.oldNumBatch;
+            }
+
+            if (i === finalNumBatch) {
+                dataVerify.newStateRoot = value.newStateRoot;
+                dataVerify.newAccInputHash = value.newAccInputHash;
+                dataVerify.newLocalExitRoot = value.newLocalExitRoot;
+                dataVerify.newNumBatch = value.newNumBatch;
+            }
+
+            dataVerify.singleBatchData.push(value);
+        }
+
+        dataVerify.chainID = this.chainID;
+        dataVerify.aggregatorAddress = aggregatorAddress;
+
+        dataVerify.inputSnark = `0x${Scalar.toString(await calculateSnarkInput(
+            dataVerify.oldStateRoot,
+            dataVerify.newStateRoot,
+            dataVerify.newLocalExitRoot,
+            dataVerify.oldAccInputHash,
+            dataVerify.newAccInputHash,
+            dataVerify.oldNumBatch,
+            dataVerify.newNumBatch,
+            dataVerify.chainID,
+            dataVerify.aggregatorAddress,
+        ), 16).padStart(64, '0')}`;
+
+        return dataVerify;
     }
 
     /**
@@ -191,16 +296,16 @@ class ZkEVMDB {
      * @param {Object} db - Mem db object
      * @param {Object} poseidon - Poseidon object
      * @param {Array[Fields]} stateRoot - state merkle root
-     * @param {Array[Fields]} localExitRoot - exit merkle root
+     * @param {Array[Fields]} accHashInput - accumulate hash input
      * @param {Object} genesis - genesis block accounts (address, nonce, balance, bytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
      * @param {Number} chainID - L2 chainID
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, localExitRoot, genesis, vm, smt, chainID) {
+    static async newZkEVM(db, poseidon, stateRoot, accHashInput, genesis, vm, smt, chainID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
-
+        common.setEIPs([3607, 3198, 3541]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
@@ -265,7 +370,8 @@ class ZkEVMDB {
                 db,
                 0,
                 newStateRoot,
-                localExitRoot,
+                accHashInput,
+                null,
                 poseidon,
                 newVm,
                 newSmt,
@@ -275,12 +381,14 @@ class ZkEVMDB {
 
         // Update current zkevm instance
         const DBStateRoot = await db.getValue(Scalar.add(Constants.DB_STATE_ROOT, lastBatch));
+        const DBAccInputHash = await db.getValue(Scalar.add(Constants.DB_ACC_INPUT_HASH, lastBatch));
         const DBLocalExitRoot = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatch));
 
         return new ZkEVMDB(
             db,
             lastBatch,
             stringToH4(DBStateRoot),
+            stringToH4(DBAccInputHash),
             stringToH4(DBLocalExitRoot),
             poseidon,
             vm,

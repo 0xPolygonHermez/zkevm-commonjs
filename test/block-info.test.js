@@ -22,7 +22,7 @@ const lodash = require('lodash');
 
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
-const contractsPolygonHermez = require('@0xpolygonhermez/contracts-zkevm');
+const contractsPolygonHermez = require('@0xpolygonhermez/zkevm-contracts');
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
 } = require('../index');
@@ -53,8 +53,8 @@ describe('Block info tests', function () {
                 expectedOldRoot,
                 batches,
                 sequencerAddress,
-                oldLocalExitRoot,
                 bridgeDeployed,
+                oldAccInputHash,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -63,7 +63,7 @@ describe('Block info tests', function () {
                 db,
                 poseidon,
                 [F.zero, F.zero, F.zero, F.zero],
-                smtUtils.stringToH4(oldLocalExitRoot),
+                smtUtils.stringToH4(oldAccInputHash),
                 genesis,
                 null,
                 null,
@@ -269,18 +269,23 @@ describe('Block info tests', function () {
                     newLeafs[address].balance = account.balance.toString();
                     newLeafs[address].nonce = account.nonce.toString();
 
-                    if (account.isContract() || address === Constants.ADDRESS_SYSTEM
-                        || address === Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2) {
+                    if (account.isContract() || address.toLowerCase() === Constants.ADDRESS_SYSTEM.toLowerCase()
+                        || address.toLowerCase() === Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2.toLowerCase()) {
                         const storage = await zkEVMDB.dumpStorage(address);
                         newLeafs[address].storage = storage;
                     }
                 }
                 for (const leaf of genesis) {
-                    if (!newLeafs[leaf.address.toLowerCase()]) {
-                        newLeafs[leaf.address] = { ...leaf };
-                        delete newLeafs[leaf.address].address;
-                        delete newLeafs[leaf.address].bytecode;
-                        delete newLeafs[leaf.address].contractName;
+                    const address = leaf.address.toLowerCase();
+                    if (!newLeafs[address]) {
+                        newLeafs[address] = { ...leaf };
+                        const storage = await zkEVMDB.dumpStorage(address);
+                        if (storage !== null) {
+                            newLeafs[address].storage = storage;
+                        }
+                        delete newLeafs[address].address;
+                        delete newLeafs[address].bytecode;
+                        delete newLeafs[address].contractName;
                     }
                 }
 
@@ -317,24 +322,23 @@ describe('Block info tests', function () {
                 }
 
                 // Check global exit root
-                const batchNumVm = await zkEVMDB.vm.stateManager.getContractStorage(
+                const timestampVm = await zkEVMDB.vm.stateManager.getContractStorage(
                     addressInstanceGlobalExitRoot,
                     globalExitRootPosBuffer,
                 );
-                const batchNumSmt = (await stateUtils.getContractStorage(
+                const timestampSmt = (await stateUtils.getContractStorage(
                     Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
                     zkEVMDB.smt,
                     zkEVMDB.stateRoot,
                     [globalExitRootPos],
                 ))[Scalar.e(globalExitRootPos)];
 
-                expect(Scalar.fromString(batchNumVm.toString('hex'), 16)).to.equal(batchNumSmt);
-                expect(batchNumSmt).to.equal(Scalar.e(batch.batchNumber));
+                expect(Scalar.fromString(timestampVm.toString('hex'), 16)).to.equal(timestampSmt);
 
                 // Check through a call in the EVM
                 if (bridgeDeployed) {
                     const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
-                    const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [batch.batchNumber]);
+                    const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [batch.newNumBatch]);
                     const globalExitRootResult = await zkEVMDB.vm.runCall({
                         to: addressInstanceGlobalExitRoot,
                         caller: Address.zero(),
