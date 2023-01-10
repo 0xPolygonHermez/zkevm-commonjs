@@ -34,6 +34,7 @@ module.exports = class Processor {
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
+     * @param {Number} options.newBatchGasLimit New batch gas limit
      */
     constructor(
         db,
@@ -339,7 +340,8 @@ module.exports = class Processor {
                 blockData.header = {};
                 blockData.header.timestamp = new BN(Scalar.e(this.timestamp));
                 blockData.header.coinbase = new Address(toBuffer(this.sequencerAddress));
-                blockData.header.gasLimit = new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
+                blockData.header.gasLimit = this.options.newBatchGasLimit
+                    ? new BN(Scalar.e(this.options.newBatchGasLimit)) : new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
                 blockData.header.difficulty = new BN(Scalar.e(Constants.BATCH_DIFFICULTY));
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });

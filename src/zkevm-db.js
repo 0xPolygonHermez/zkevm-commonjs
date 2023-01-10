@@ -44,6 +44,7 @@ class ZkEVMDB {
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      * @param {Object} options - additional batch options
      * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smrt contract at the end of processable transactions
+     * @param {Number} options.newBatchGasLimit New batch gas limit
      */
     async buildBatch(timestamp, sequencerAddress, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX, options = {}) {
         return new Processor(
