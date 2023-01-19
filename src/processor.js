@@ -348,6 +348,9 @@ module.exports = class Processor {
 
                     this.evmSteps.push(txResult.execResult.evmSteps);
 
+                    currentDecodedTx.receipt = txResult.receipt;
+                    currentDecodedTx.createdAddress = txResult.createdAddress;
+
                     // Check transaction completed
                     if (txResult.execResult.exceptionError) {
                         currentDecodedTx.isInvalid = true;
