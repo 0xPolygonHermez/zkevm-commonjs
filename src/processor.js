@@ -31,6 +31,7 @@ module.exports = class Processor {
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Number} chainID - L2 chainID
+     * @param {Number} forkID - L2 rom fork identifier
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
@@ -47,6 +48,7 @@ module.exports = class Processor {
         globalExitRoot,
         timestamp,
         chainID,
+        forkID,
         vm,
         options,
     ) {
@@ -75,6 +77,7 @@ module.exports = class Processor {
         this.sequencerAddress = sequencerAddress;
         this.timestamp = timestamp;
         this.chainID = chainID;
+        this.forkID = forkID;
 
         this.vm = vm;
         this.evmSteps = [];
@@ -601,6 +604,7 @@ module.exports = class Processor {
             oldNumBatch: this.oldNumBatch,
             newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
+            forkID: this.forkID,
             batchL2Data: this.getBatchL2Data(),
             globalExitRoot,
             timestamp: this.timestamp,
@@ -633,6 +637,7 @@ module.exports = class Processor {
             this.oldNumBatch,
             this.newNumBatch,
             this.chainID,
+            this.forkID,
             aggregatorAddress,
         );
     }

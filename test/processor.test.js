@@ -78,6 +78,7 @@ describe('Processor', async function () {
                 timestamp,
                 bridgeDeployed,
                 chainID,
+                forkID,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -91,6 +92,7 @@ describe('Processor', async function () {
                 null,
                 null,
                 chainID,
+                forkID,
             );
 
             // Check evm contract params

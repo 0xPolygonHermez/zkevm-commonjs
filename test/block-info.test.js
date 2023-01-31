@@ -36,6 +36,7 @@ describe('Block info tests', function () {
     let F;
     let testVectors;
     const chainID = 1000;
+    const forkID = 1;
 
     before(async () => {
         poseidon = await getPoseidon();
@@ -67,7 +68,8 @@ describe('Block info tests', function () {
                 genesis,
                 null,
                 null,
-                chainID, // TODO: could be read from contracts
+                chainID, // could be read from contracts
+                forkID, // could be read from contracts
             );
 
             // Check evm contract params
