@@ -182,7 +182,7 @@ describe('Block info tests', function () {
                             processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
                             processorUtils.toHexStringRlp(tx.gasPrice),
                             processorUtils.toHexStringRlp(tx.gasLimit),
-                            processorUtils.toHexStringRlp(tx.to),
+                            processorUtils.addressToHexStringRlp(tx.to),
                             processorUtils.toHexStringRlp(tx.value),
                             processorUtils.toHexStringRlp(tx.data),
                             processorUtils.toHexStringRlp(tx.chainId),
