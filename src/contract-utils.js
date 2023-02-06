@@ -35,7 +35,7 @@ function calculateAccInputHash(
 }
 
 /**
- * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
+ * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, forkID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
  * @param {String} oldStateRoot - Current state Root
  * @param {String} newStateRoot - New State root once the batch is processed
  * @param {String} oldAccInputHash - initial accumulateInputHash
@@ -45,6 +45,7 @@ function calculateAccInputHash(
  * @param {Number} newNumBatch - final batch number
  * @param {Number} chainID - L2 chainID
  * @param {String} aggregatorAddress - Aggregator Ethereum address in hex string
+ * @param {Number} forkID - L2 rom fork identifier
  * @returns {String} - input snark in hex encoding
  */
 async function calculateSnarkInput(
@@ -57,6 +58,7 @@ async function calculateSnarkInput(
     newNumBatch,
     chainID,
     aggregatorAddress,
+    forkID,
 ) {
     // 20 bytes agggregator address
     const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
@@ -72,6 +74,9 @@ async function calculateSnarkInput(
 
     // 8 bytes for chainID
     const strChainID = padZeros(Scalar.e(chainID).toString(16), 16);
+
+    // 8 bytes for forkID
+    const strForkID = padZeros(Scalar.e(forkID).toString(16), 16);
 
     // 32 bytes each field element for oldStateRoot
     const strNewStateRoot = padZeros((Scalar.fromString(newStateRoot, 16)).toString(16), 64);
@@ -91,6 +96,7 @@ async function calculateSnarkInput(
         .concat(strOldAccInputHash)
         .concat(strOldNumBatch)
         .concat(strChainID)
+        .concat(strForkID)
         .concat(strNewStateRoot)
         .concat(strNewAccInputHash)
         .concat(strNewLocalExitRoot)

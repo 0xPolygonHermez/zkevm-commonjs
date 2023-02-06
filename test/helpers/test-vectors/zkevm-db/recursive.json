@@ -3,6 +3,7 @@
     "id": 0,
     "description": "2 accounts and 1 valid transaction.",
     "chainID": 1000,
+    "forkID": 1,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "globalExitRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
     "oldAccInputHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -85,6 +86,6 @@
     "finalLocalExitRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "finalAccInputHash": "0x87f958227c38bcf883025f5fda2dee19460cff48ca3c4d48d3a48f55c1258e60",
     "finalNumBatch": 2,
-    "inputSnark": "0x0aef7431c3060a724238693fea11a846f2d71827f5f64fa24b1dd72b27f8681d"
+    "inputSnark": "0x08395e5f9fff146dbb6583142bee0900d00e6df7d0cad929c4b2cea4ea619c63"
   }
 ]

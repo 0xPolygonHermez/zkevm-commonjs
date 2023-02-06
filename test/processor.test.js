@@ -78,6 +78,7 @@ describe('Processor', async function () {
                 timestamp,
                 bridgeDeployed,
                 chainID,
+                forkID,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -91,6 +92,7 @@ describe('Processor', async function () {
                 null,
                 null,
                 chainID,
+                forkID,
             );
 
             // Check evm contract params
@@ -196,7 +198,7 @@ describe('Processor', async function () {
                         processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
                         processorUtils.toHexStringRlp(tx.gasPrice),
                         processorUtils.toHexStringRlp(tx.gasLimit),
-                        processorUtils.toHexStringRlp(tx.to),
+                        processorUtils.addressToHexStringRlp(tx.to),
                         processorUtils.toHexStringRlp(tx.value),
                         processorUtils.toHexStringRlp(tx.data),
                         processorUtils.toHexStringRlp(tx.chainId),

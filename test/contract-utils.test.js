@@ -14,7 +14,7 @@ describe('contractUtils', function () {
     const expectedBatchHashData = '0x80cc22bc1a205c21f2b8c87e6185e1215fb60e3d83c609fd3bf3cdc586a6244b';
     // TODO: input taken from pil-stark
     const expectedStarkHashExecutor = '0x704d5cfd3e44b82028f7f8cae31168267a7422c5a447b90a65134116da5a8432';
-    const expectedSnarkInputHash = '15588448576060468525242870965361192827910782996030023758348255084502752104347';
+    const expectedSnarkInputHash = '594262252873243840875998239270722753577223730670772204748849761598102435680';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
@@ -62,6 +62,7 @@ describe('contractUtils', function () {
             oldNumBatch,
             newNumBatch,
             chainID,
+            forkID,
         } = testVector;
 
         const computedSnark = await contractUtils.calculateSnarkInput(
@@ -74,6 +75,7 @@ describe('contractUtils', function () {
             newNumBatch,
             chainID,
             aggregatorAddress,
+            forkID,
         );
 
         expect(computedSnark.toString()).to.be.equal(expectedSnarkInputHash.toString());

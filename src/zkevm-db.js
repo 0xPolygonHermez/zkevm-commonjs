@@ -21,7 +21,7 @@ const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
 const { calculateSnarkInput } = require('./contract-utils');
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, accInputHash, localExitRoot, poseidon, vm, smt, chainID) {
+    constructor(db, lastBatch, stateRoot, accInputHash, localExitRoot, poseidon, vm, smt, chainID, forkID) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
@@ -31,6 +31,7 @@ class ZkEVMDB {
         this.accInputHash = accInputHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.chainID = chainID;
+        this.forkID = forkID;
 
         this.smt = smt;
         this.vm = vm;
@@ -58,6 +59,7 @@ class ZkEVMDB {
             globalExitRoot,
             timestamp,
             this.chainID,
+            this.forkID,
             clone(this.vm),
             options,
         );
@@ -226,6 +228,7 @@ class ZkEVMDB {
         }
 
         dataVerify.chainID = this.chainID;
+        dataVerify.forkID = this.forkID;
         dataVerify.aggregatorAddress = aggregatorAddress;
 
         dataVerify.inputSnark = `0x${Scalar.toString(await calculateSnarkInput(
@@ -238,6 +241,7 @@ class ZkEVMDB {
             dataVerify.newNumBatch,
             dataVerify.chainID,
             dataVerify.aggregatorAddress,
+            dataVerify.forkID,
         ), 16).padStart(64, '0')}`;
 
         return dataVerify;
@@ -302,9 +306,10 @@ class ZkEVMDB {
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
      * @param {Number} chainID - L2 chainID
+     * @param {Number} forkID - L2 rom fork identifier
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, accHashInput, genesis, vm, smt, chainID) {
+    static async newZkEVM(db, poseidon, stateRoot, accHashInput, genesis, vm, smt, chainID, forkID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
         common.setEIPs([3607, 3541]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
@@ -377,6 +382,7 @@ class ZkEVMDB {
                 newVm,
                 newSmt,
                 chainID,
+                forkID,
             );
         }
 
@@ -395,6 +401,7 @@ class ZkEVMDB {
             vm,
             smt,
             chainID,
+            forkID,
         );
     }
 }

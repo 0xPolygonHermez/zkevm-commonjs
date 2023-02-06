@@ -43,6 +43,7 @@ describe('ZkEVMDB', function () {
         const genesis = [];
         const db = new MemDB(F);
         const chainID = 1000;
+        const forkID = 1;
 
         // create a zkEVMDB and build a batch
         const zkEVMDB = await ZkEVMDB.newZkEVM(
@@ -54,6 +55,7 @@ describe('ZkEVMDB', function () {
             null,
             null,
             chainID,
+            forkID,
         );
 
         // build an empty batch
@@ -90,6 +92,7 @@ describe('ZkEVMDB', function () {
             null,
             null,
             chainID,
+            forkID,
         );
 
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(zkEVMDBImported.getCurrentNumBatch());
@@ -110,6 +113,7 @@ describe('ZkEVMDB', function () {
             oldAccInputHash,
             expectedNewAccInputHash,
             chainID,
+            forkID,
         } = testVectors[0];
 
         const db = new MemDB(F);
@@ -181,7 +185,7 @@ describe('ZkEVMDB', function () {
                         processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
                         processorUtils.toHexStringRlp(tx.gasPrice),
                         processorUtils.toHexStringRlp(tx.gasLimit),
-                        processorUtils.toHexStringRlp(tx.to),
+                        processorUtils.addressToHexStringRlp(tx.to),
                         processorUtils.toHexStringRlp(tx.value),
                         processorUtils.toHexStringRlp(tx.data),
                         processorUtils.toHexStringRlp(tx.chainId),
@@ -221,6 +225,7 @@ describe('ZkEVMDB', function () {
             null,
             null,
             chainID,
+            forkID,
         );
 
         const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
@@ -291,6 +296,7 @@ describe('ZkEVMDB', function () {
             timestamp,
             oldAccInputHash,
             chainID,
+            forkID,
             finalStateRoot,
             finalLocalExitRoot,
             finalAccInputHash,
@@ -419,6 +425,7 @@ describe('ZkEVMDB', function () {
             null,
             null,
             chainID,
+            forkID,
         );
 
         // create batches
