@@ -84,7 +84,7 @@ class Database {
      * @param {String} dbProgramTable - Name of the table used to store/read program data. Default is "state.program"
      */
     async connect(connectionString, dbNodesTable, dbProgramTable) {
-        if (!['local', 'memdb'].includes(connectionString)) {
+        if (connectionString && !['local', 'memdb'].includes(connectionString)) {
             this.useRemoteDB = true;
             if (dbNodesTable) this.dbNodesTable = dbNodesTable;
             if (dbProgramTable) this.dbProgramTable = dbProgramTable;
