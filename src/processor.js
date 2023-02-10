@@ -350,7 +350,6 @@ module.exports = class Processor {
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
                 try {
                     const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
-
                     this.evmSteps.push(txResult.execResult.evmSteps);
 
                     currentDecodedTx.receipt = txResult.receipt;
