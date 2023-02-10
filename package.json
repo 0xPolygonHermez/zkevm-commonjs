@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/0xPolygonHermez/zkevm-commonjs#readme",
   "devDependencies": {
-    "@0xpolygonhermez/zkevm-contracts": "github:0xPolygonHermez/zkevm-contracts#v0.6.0.0",
+    "@0xpolygonhermez/zkevm-contracts": "github:0xPolygonHermez/zkevm-contracts#feature/newDeployment",
     "@ethersproject/abi": "^5.6.4",
     "@nomiclabs/hardhat-ethers": "^2.1.0",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
