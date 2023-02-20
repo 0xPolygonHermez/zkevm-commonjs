@@ -127,13 +127,12 @@ function calculateBatchHashData(
  * @returns {Object} - Proof structure ready to be sent to smart contract
  */
 function generateSolidityInputs(
-    proofJson
+    proofJson,
 ) {
-
     const { evaluations, polynomials } = proofJson;
-    const arrayStings = Array(24).fill('bytes32');
+    const arrayStrings = Array(24).fill('bytes32');
     const proof = ethers.utils.defaultAbiCoder.encode(
-        arrayStings,
+        arrayStrings,
         [
             ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C1[0]).toHexString(), 32),
             ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C1[1]).toHexString(), 32),
@@ -162,9 +161,7 @@ function generateSolidityInputs(
         ],
     );
 
-    return {
-        proof
-    };
+    return proof
 }
 
 module.exports = {
