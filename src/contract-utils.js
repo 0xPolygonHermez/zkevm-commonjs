@@ -123,34 +123,47 @@ function calculateBatchHashData(
 
 /**
  * Prepare zkSnark inputs for smart contract
- * @param {Object} proof - Contain the proof data related from snarkJs
- * @param {Array} publicSignals - Contain the public input array from snarkJs
+ * @param {Object} proofJson - Contain the proof data related from snarkJs
  * @returns {Object} - Proof structure ready to be sent to smart contract
  */
 function generateSolidityInputs(
-    proof,
-    publicSignals,
+    proofJson
 ) {
-    const proofA = [proof.pi_a[0],
-        proof.pi_a[1],
-    ];
-    const proofB = [
+
+    const { evaluations, polynomials } = proofJson;
+    const arrayStings = Array(24).fill('bytes32');
+    const proof = ethers.utils.defaultAbiCoder.encode(
+        arrayStings,
         [
-            proof.pi_b[0][1],
-            proof.pi_b[0][0],
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C1[0]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C1[1]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C2[0]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C2[1]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.W1[0]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.W1[1]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.W2[0]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.W2[1]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.ql).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.qr).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.qm).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.qo).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.qc).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.s1).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.s2).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.s3).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.a).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.b).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.c).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.z).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.zw).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.t1w).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.t2w).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.inv).toHexString(), 32),
         ],
-        [
-            proof.pi_b[1][1],
-            proof.pi_b[1][0],
-        ],
-    ];
-    const proofC = [proof.pi_c[0],
-        proof.pi_c[1],
-    ];
-    const input = publicSignals;
+    );
 
     return {
-        proofA, proofB, proofC, input,
+        proof
     };
 }
 
