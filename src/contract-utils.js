@@ -161,7 +161,7 @@ function generateSolidityInputs(
         ],
     );
 
-    return proof
+    return proof;
 }
 
 module.exports = {
