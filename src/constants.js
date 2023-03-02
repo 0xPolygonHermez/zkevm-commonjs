@@ -24,6 +24,10 @@ module.exports.SMT_KEY_SC_CODE = 2;
 module.exports.SMT_KEY_SC_STORAGE = 3;
 module.exports.SMT_KEY_SC_LENGTH = 4;
 
+// SMT touched-tree constant keys
+module.exports.SMT_KEY_TOUCHED_ADDR = 5;
+module.exports.SMT_KEY_TOUCHED_SLOTS = 6;
+
 // SMT constant
 module.exports.BYTECODE_ELEMENTS_HASH = 8;
 module.exports.BYTECODE_BYTES_ELEMENT = 7;
@@ -32,7 +36,7 @@ module.exports.HASH_POSEIDON_ALL_ZEROES = '0xc71603f33a1144ca7953db0ab48808f4c40
 
 // EVM constant
 module.exports.ADDRESS_BRIDGE = '0x9D98DeAbC42dd696Deb9e40b4f1CAB7dDBF55988';
-module.exports.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2 = '0xAE4bB80bE56B819606589DE61d5ec3b522EEB032';
+module.exports.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2 = '0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA';
 module.exports.GLOBAL_EXIT_ROOT_STORAGE_POS = 0;
 module.exports.LOCAL_EXIT_ROOT_STORAGE_POS = 1;
 module.exports.BATCH_GAS_LIMIT = 30000000;

@@ -52,7 +52,7 @@ function fea2scalar(Fr, arr) {
  */
 function fea2String(Fr, arr) {
     const s = fea2scalar(Fr, arr);
-    const res = `0x${Scalar.toString(s, 16).padStart(32, '0')}`;
+    const res = `0x${Scalar.toString(s, 16).padStart(64, '0')}`;
 
     return res;
 }

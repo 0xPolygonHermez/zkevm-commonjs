@@ -64,7 +64,7 @@ describe('Processor utils', () => {
                             processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
                             processorUtils.toHexStringRlp(tx.gasPrice),
                             processorUtils.toHexStringRlp(tx.gasLimit),
-                            processorUtils.toHexStringRlp(tx.to),
+                            processorUtils.addressToHexStringRlp(tx.to),
                             processorUtils.toHexStringRlp(tx.value),
                             processorUtils.toHexStringRlp(tx.data),
                             processorUtils.toHexStringRlp(tx.chainId),
@@ -118,6 +118,50 @@ describe('Processor utils', () => {
                     expect(txData.customRawTx).to.equal(undefined);
                 }
             }
+        }
+    });
+
+    it('toHexStringRlp', async () => {
+        const testHexStringRLP = [
+            [0, '0x'],
+            ['0x', '0x'],
+            ['0x00', '0x00'],
+            ['0x0000', '0x0000'],
+            ['0x1234', '0x1234'],
+            [Scalar.e('0x1234'), '0x1234'],
+            [1234n, '0x04d2'],
+        ];
+
+        for (let i = 0; i < testHexStringRLP.length; i++) {
+            const input = testHexStringRLP[i][0];
+            const expectedOut = testHexStringRLP[i][1];
+
+            const out = processorUtils.toHexStringRlp(input);
+
+            expect(out).to.be.equal(expectedOut);
+        }
+    });
+
+    it('addressToHexStringRlp', async () => {
+        const testHexStringRLP = [
+            [undefined, '0x'],
+            ['0x', '0x'],
+            ['0x00', '0x0000000000000000000000000000000000000000'],
+            ['0x0000', '0x0000000000000000000000000000000000000000'],
+            [0, '0x0000000000000000000000000000000000000000'],
+            ['0x01', '0x0000000000000000000000000000000000000001'],
+            [1, '0x0000000000000000000000000000000000000001'],
+            ['0x1234', '0x0000000000000000000000000000000000001234'],
+            [Scalar.e('0x1234'), '0x0000000000000000000000000000000000001234'],
+            [1234n, '0x00000000000000000000000000000000000004d2'],
+        ];
+
+        for (let i = 0; i < testHexStringRLP.length; i++) {
+            const input = testHexStringRLP[i][0];
+            const expectedOut = testHexStringRLP[i][1];
+
+            const out = processorUtils.addressToHexStringRlp(input);
+            expect(out).to.be.equal(expectedOut);
         }
     });
 });

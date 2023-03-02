@@ -52,14 +52,14 @@ function arrayToEncodedString(rawTxs) {
 
 /**
  * Convert a number type to a hex string starting with 0x and with a integer number of bytes
- * @param {Number | BigInt | BigNumber | Object} num - Number
+ * @param {Number | BigInt | BigNumber | Object | String} num - Number
  * @returns {Number} - Hex string
  */
 function toHexStringRlp(num) {
     let numHex;
     if (typeof num === 'number' || typeof num === 'bigint' || typeof num === 'object') {
         numHex = Scalar.toString(Scalar.e(num), 16);
-        // if it's an integer and it's value is 0, the standar is set to 0x, instead of 0x00 ( because says that always is codified in the shortest way)
+        // if it's an integer and it's value is 0, the standard is set to 0x, instead of 0x00 ( because says that always is codified in the shortest way)
         if (Scalar.e(num) === Scalar.e(0)) return '0x';
     } else if (typeof num === 'string') {
         numHex = num.startsWith('0x') ? num.slice(2) : num;
@@ -67,6 +67,28 @@ function toHexStringRlp(num) {
     numHex = (numHex.length % 2 === 1) ? (`0x0${numHex}`) : (`0x${numHex}`);
 
     return numHex;
+}
+
+/**
+ * Convert a Ethereum address hex string starting with 0x and with a integer number of bytes
+ * @param {Number | BigInt | BigNumber | Object | String} address - address
+ * @returns {Number} - address hex string
+ */
+function addressToHexStringRlp(address) {
+    // empty address: deployment
+    if (typeof address === 'undefined' || (typeof address === 'string' && address === '0x')) {
+        return '0x';
+    }
+
+    let addressScalar;
+    if (typeof address === 'number' || typeof address === 'bigint' || typeof address === 'object') {
+        addressScalar = Scalar.e(address);
+    } else if (typeof address === 'string') {
+        const tmpAddr = address.startsWith('0x') ? address : `0x${address}`;
+        addressScalar = Scalar.fromString(tmpAddr, 16);
+    }
+
+    return `0x${Scalar.toString(addressScalar, 16).padStart(40, '0')}`;
 }
 
 /**
@@ -81,7 +103,7 @@ function rawTxToCustomRawTx(rawTx) {
         toHexStringRlp(tx.nonce),
         toHexStringRlp(tx.gasPrice),
         toHexStringRlp(tx.gasLimit),
-        toHexStringRlp(tx.to || '0x'),
+        addressToHexStringRlp(tx.to || '0x'),
         toHexStringRlp(tx.value),
         toHexStringRlp(tx.data),
         toHexStringRlp(tx.chainId),
@@ -279,4 +301,5 @@ module.exports = {
     customRawTxToRawTx,
     arrayToEncodedString,
     encodedStringToArray,
+    addressToHexStringRlp,
 };

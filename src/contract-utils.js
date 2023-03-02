@@ -35,7 +35,7 @@ function calculateAccInputHash(
 }
 
 /**
- * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
+ * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, forkID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
  * @param {String} oldStateRoot - Current state Root
  * @param {String} newStateRoot - New State root once the batch is processed
  * @param {String} oldAccInputHash - initial accumulateInputHash
@@ -45,6 +45,7 @@ function calculateAccInputHash(
  * @param {Number} newNumBatch - final batch number
  * @param {Number} chainID - L2 chainID
  * @param {String} aggregatorAddress - Aggregator Ethereum address in hex string
+ * @param {Number} forkID - L2 rom fork identifier
  * @returns {String} - input snark in hex encoding
  */
 async function calculateSnarkInput(
@@ -57,6 +58,7 @@ async function calculateSnarkInput(
     newNumBatch,
     chainID,
     aggregatorAddress,
+    forkID,
 ) {
     // 20 bytes agggregator address
     const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
@@ -72,6 +74,9 @@ async function calculateSnarkInput(
 
     // 8 bytes for chainID
     const strChainID = padZeros(Scalar.e(chainID).toString(16), 16);
+
+    // 8 bytes for forkID
+    const strForkID = padZeros(Scalar.e(forkID).toString(16), 16);
 
     // 32 bytes each field element for oldStateRoot
     const strNewStateRoot = padZeros((Scalar.fromString(newStateRoot, 16)).toString(16), 64);
@@ -91,6 +96,7 @@ async function calculateSnarkInput(
         .concat(strOldAccInputHash)
         .concat(strOldNumBatch)
         .concat(strChainID)
+        .concat(strForkID)
         .concat(strNewStateRoot)
         .concat(strNewAccInputHash)
         .concat(strNewLocalExitRoot)
@@ -117,35 +123,45 @@ function calculateBatchHashData(
 
 /**
  * Prepare zkSnark inputs for smart contract
- * @param {Object} proof - Contain the proof data related from snarkJs
- * @param {Array} publicSignals - Contain the public input array from snarkJs
+ * @param {Object} proofJson - Contain the proof data related from snarkJs
  * @returns {Object} - Proof structure ready to be sent to smart contract
  */
 function generateSolidityInputs(
-    proof,
-    publicSignals,
+    proofJson,
 ) {
-    const proofA = [proof.pi_a[0],
-        proof.pi_a[1],
-    ];
-    const proofB = [
+    const { evaluations, polynomials } = proofJson;
+    const arrayStrings = Array(24).fill('bytes32');
+    const proof = ethers.utils.defaultAbiCoder.encode(
+        arrayStrings,
         [
-            proof.pi_b[0][1],
-            proof.pi_b[0][0],
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C1[0]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C1[1]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C2[0]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.C2[1]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.W1[0]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.W1[1]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.W2[0]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(polynomials.W2[1]).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.ql).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.qr).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.qm).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.qo).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.qc).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.s1).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.s2).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.s3).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.a).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.b).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.c).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.z).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.zw).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.t1w).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.t2w).toHexString(), 32),
+            ethers.utils.hexZeroPad(ethers.BigNumber.from(evaluations.inv).toHexString(), 32),
         ],
-        [
-            proof.pi_b[1][1],
-            proof.pi_b[1][0],
-        ],
-    ];
-    const proofC = [proof.pi_c[0],
-        proof.pi_c[1],
-    ];
-    const input = publicSignals;
+    );
 
-    return {
-        proofA, proofB, proofC, input,
-    };
+    return proof;
 }
 
 module.exports = {

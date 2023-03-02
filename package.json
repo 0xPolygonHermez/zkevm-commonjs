@@ -1,7 +1,7 @@
 {
   "name": "@0xpolygonhermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "0.6.0.0",
+  "version": "0.8.0.0",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
@@ -11,7 +11,8 @@
     "test:selfdestruct": "npx mocha ./test/processor.test.js --selfdestruct",
     "eslint": "npx eslint src/** test/*.test.js && npx eslint tools",
     "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix",
-    "test:update": "./tools/update-tests/update-tests.sh"
+    "test:update": "./tools/update-tests/update-tests.sh",
+    "test:database": "npx mocha ./test/database.test.js"
   },
   "repository": {
     "type": "git",
@@ -34,7 +35,7 @@
   },
   "homepage": "https://github.com/0xPolygonHermez/zkevm-commonjs#readme",
   "devDependencies": {
-    "@0xpolygonhermez/zkevm-contracts": "github:0xPolygonHermez/zkevm-contracts#v0.6.0.0",
+    "@0xpolygonhermez/zkevm-contracts": "github:0xPolygonHermez/zkevm-contracts#v0.8.0.0-rc.2-fork.1",
     "@ethersproject/abi": "^5.6.4",
     "@nomiclabs/hardhat-ethers": "^2.1.0",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
@@ -50,10 +51,11 @@
     "@ethereumjs/block": "^3.6.2",
     "@ethereumjs/tx": "^3.4.0",
     "@polygon-hermez/common": "2.6.4",
-    "@polygon-hermez/vm": "5.7.28",
+    "@polygon-hermez/vm": "5.7.30",
     "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.55",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "pg": "^8.7.1"
   }
 }

@@ -31,9 +31,11 @@ module.exports = class Processor {
      * @param {Array[Field]} globalExitRoot - global exit root
      * @param {Number} timestamp - Timestamp of the batch
      * @param {Number} chainID - L2 chainID
+     * @param {Number} forkID - L2 rom fork identifier
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
+     * @param {Number} options.newBatchGasLimit New batch gas limit
      */
     constructor(
         db,
@@ -46,6 +48,7 @@ module.exports = class Processor {
         globalExitRoot,
         timestamp,
         chainID,
+        forkID,
         vm,
         options,
     ) {
@@ -74,6 +77,7 @@ module.exports = class Processor {
         this.sequencerAddress = sequencerAddress;
         this.timestamp = timestamp;
         this.chainID = chainID;
+        this.forkID = forkID;
 
         this.vm = vm;
         this.evmSteps = [];
@@ -339,14 +343,17 @@ module.exports = class Processor {
                 blockData.header = {};
                 blockData.header.timestamp = new BN(Scalar.e(this.timestamp));
                 blockData.header.coinbase = new Address(toBuffer(this.sequencerAddress));
-                blockData.header.gasLimit = new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
+                blockData.header.gasLimit = this.options.newBatchGasLimit
+                    ? new BN(Scalar.e(this.options.newBatchGasLimit)) : new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
                 blockData.header.difficulty = new BN(Scalar.e(Constants.BATCH_DIFFICULTY));
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
                 try {
                     const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
-
                     this.evmSteps.push(txResult.execResult.evmSteps);
+
+                    currentDecodedTx.receipt = txResult.receipt;
+                    currentDecodedTx.createdAddress = txResult.createdAddress;
 
                     // Check transaction completed
                     if (txResult.execResult.exceptionError) {
@@ -596,6 +603,7 @@ module.exports = class Processor {
             oldNumBatch: this.oldNumBatch,
             newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
+            forkID: this.forkID,
             batchL2Data: this.getBatchL2Data(),
             globalExitRoot,
             timestamp: this.timestamp,
@@ -628,6 +636,7 @@ module.exports = class Processor {
             this.oldNumBatch,
             this.newNumBatch,
             this.chainID,
+            this.forkID,
             aggregatorAddress,
         );
     }

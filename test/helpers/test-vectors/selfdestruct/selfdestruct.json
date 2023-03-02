@@ -3,6 +3,7 @@
     "id": 0,
     "description": "Selfdestruct",
     "chainID": 1000,
+    "forkID": 1,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
     "genesis": [
@@ -90,9 +91,9 @@
         "rawTx": "0xf86a02843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae9880842b68b9c68207f4a0f5b684b995dd9549bb5fd2ed23d3b388f75f559b14110277b4ae7de5bd7775efa01be51078330d1ef03f0e4fe0271e8e2502b6e98c1f7664a5e2aeae3ab04156d4"
       }
     ],
-    "expectedNewRoot": "0x96ddba4a047cb0002f6fcc966c0685040d289946f730b38f7ead4a466d01785a",
+    "expectedNewRoot": "0x0c2d0ad3998544591daf6ecb3eec63ac26058f29c06d8aec4e856030fbdbc30a",
     "expectedNewLeafs": {
-      "0xae4bb80be56b819606589de61d5ec3b522eeb032": {
+      "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa": {
         "balance": "0",
         "nonce": "0",
         "storage": {
@@ -102,6 +103,13 @@
         "bytecodeLength": 0
       },
       "0x0000000000000000000000000000000000000000": {
+        "balance": "0",
+        "nonce": "0",
+        "storage": null,
+        "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "bytecodeLength": 0
+      },
+      "0xae4bb80be56b819606589de61d5ec3b522eeb032": {
         "balance": "0",
         "nonce": "0",
         "storage": null,
@@ -137,9 +145,9 @@
         "nonce": "0",
         "storage": {
           "0x0000000000000000000000000000000000000000000000000000000000000000": "0x03",
-          "0x7dfe757ecd65cbd7922a9c0161e935dd7fdbcc0e999689c7d31633896b1fc60b": "0x874bb1c54bd84db12cfeae234fde18e6eb9fc78fdc740544954665a60194609b",
-          "0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f": "0xf13d27f15e082ec0d7cd70e9dfe1c3dff946c0a7ef39a0667d1410e13eecf72d",
-          "0xd9d16d34ffb15ba3a3d852f0d403e2ce1d691fb54de27ac87cd2f993f3ec330f": "0xb189c75e3c56fdca62d57db79a99001a4fc0ee797d46f5f6f9beafa8896d80d4"
+          "0x7dfe757ecd65cbd7922a9c0161e935dd7fdbcc0e999689c7d31633896b1fc60b": "0xb4a3dda302f14960e0b26a99742cecbe02cf014cb85fcaaa4797f1fd105a2397",
+          "0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f": "0xfd30cf307f37a2b6f446ae7cecd9c0e621ee6092474bf85b5b07197c7ba3e6ee",
+          "0xd9d16d34ffb15ba3a3d852f0d403e2ce1d691fb54de27ac87cd2f993f3ec330f": "0x3d5539a260afd4001f39b51fad47c259809a2425fc975acd76365cdcfe871fbf"
         },
         "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "bytecodeLength": 0
