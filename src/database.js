@@ -12,6 +12,7 @@ class Database {
         this.F = F;
         this.useRemoteDB = false;
         this.connected = false;
+        this.readOnly = true;
         this.dbNodesTable = 'state.nodes';
         this.dbProgramTable = 'state.program';
         if (db) this.db = db;
@@ -82,12 +83,15 @@ class Database {
      * @param {String} connectionString - Connection string for the database. If the value is "local" or "memdb" no remote SQL database will be used, data will be stored only in memory
      * @param {String} dbNodesTable - Name of the table used to store/read nodes data. Default is "state.nodes"
      * @param {String} dbProgramTable - Name of the table used to store/read program data. Default is "state.program"
+     * @param {Object} options - options for DB connection
+     * @param {Boolean} options.readOnly - read only on SQL DB connecton. Default: true
      */
-    async connect(connectionString, dbNodesTable, dbProgramTable) {
+    async connect(connectionString, dbNodesTable, dbProgramTable, options = {}) {
         if (connectionString && !['local', 'memdb'].includes(connectionString)) {
             this.useRemoteDB = true;
             if (dbNodesTable) this.dbNodesTable = dbNodesTable;
             if (dbProgramTable) this.dbProgramTable = dbProgramTable;
+            if (options.readOnly === false) this.readOnly = false;
             this.client = new Client({ connectionString });
             await this.client.connect();
             this.connected = true;
@@ -169,7 +173,7 @@ class Database {
             this.db[keyS].push(this.F.toString(value[i], 16).padStart(16, '0'));
         }
 
-        if (this.useRemoteDB) {
+        if (this.useRemoteDB && !this.readOnly) {
             let dataS = '';
             for (let i = 0; i < this.db[keyS].length; i++) {
                 dataS += this.db[keyS][i];
@@ -189,7 +193,7 @@ class Database {
 
         this.db[keyS] = Buffer.from(jsonS, 'utf8').toString('hex');
 
-        if (this.useRemoteDB) {
+        if (this.useRemoteDB && !this.readOnly) {
             await this._insertDB(this.dbProgramTable, keyS, this.db[keyS]);
         }
     }
@@ -272,7 +276,7 @@ class Database {
 
         this.db[keyS] = Buffer.from(value).toString('hex');
 
-        if (this.useRemoteDB) {
+        if (this.useRemoteDB && !this.readOnly) {
             await this._insertDB(this.dbProgramTable, keyS, this.db[keyS]);
         }
     }
