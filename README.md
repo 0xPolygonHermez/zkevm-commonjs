@@ -4,8 +4,6 @@ Javascript library implementing common utilities for polygon-hermez zkevm
 
 [![Main CI](https://github.com/0xPolygonHermez/zkevm-commonjs/actions/workflows/main.yml/badge.svg)](https://github.com/0xPolygonHermez/zkevm-commonjs/actions/workflows/main.yml)
 
-> **WARNING**: All code here is in WIP
-
 ## Usage
 
 ```
@@ -52,12 +50,4 @@ In order to test, the following private keys are being used. This keys are not m
 - private key: `0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f`
   - address:`0xc949254d682d8c9ad5682521675b8f43b102aec4`
 
-## License
 
-### Copyright
-
-Polygon `zkevm-commonjs` was developed by Polygon. While we plan to adopt an open source license, we haven’t selected one yet, so all rights are reserved for the time being. Please reach out to us if you have thoughts on licensing.
-
-### Disclaimer
-
-This code has not yet been audited, and should not be used in any production systems.
