@@ -4,8 +4,6 @@ Javascript library implementing common utilities for polygon-hermez zkevm
 
 [![Main CI](https://github.com/0xPolygonHermez/zkevm-commonjs/actions/workflows/main.yml/badge.svg)](https://github.com/0xPolygonHermez/zkevm-commonjs/actions/workflows/main.yml)
 
-> **WARNING**: All code here is in WIP
-
 ## Usage
 
 ```
