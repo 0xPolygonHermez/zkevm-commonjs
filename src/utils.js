@@ -80,10 +80,42 @@ function sha256Snark(str) {
     return h;
 }
 
+/**
+ * Compare two arrays
+ * Returns true if both arrays has the same length and
+ * contains the same alements regardledd the order
+ * @param {Array} array1 - first array
+ * @param {Array} array2 - second array
+ * @returns {Bool} true if conditions are met false otherwise
+ */
+function compareArrays(array1, array2) {
+    if (array1.length === array2.length) {
+        return array1.every((element) => {
+            if (array2.includes(element)) {
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    return false;
+}
+
+/**
+ * Gets current fuction name being called
+ * @returns {String} function name
+ */
+function getFuncName() {
+    return getFuncName.caller.name;
+}
+
 module.exports = {
     log2,
     byteArray2HexString,
     hexString2byteArray,
     sha256Snark,
     padZeros,
+    compareArrays,
+    getFuncName,
 };
