@@ -1,3 +1,5 @@
+const ethers = require('ethers');
+
 const ENUM_TX_TYPES = {
     PRE_EIP_155: 0,
     LEGACY: 1,
@@ -38,6 +40,7 @@ const ENUM_ENCODING_TYPES = {
     COMPRESSED_VALUE: 0b101,
     UNCOMPRESSED_ADDRESS: 0b11000000,
     UNCOMPRESSED_32_BYTES: 0b11000001,
+    DATA_32_BYTES_PAD_RIGHT: 0b111,
 };
 
 module.exports = {

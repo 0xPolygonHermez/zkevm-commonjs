@@ -14,10 +14,17 @@ function dataLess32Bytes(_data) {
     }
 
     const data = _data.startsWith('0x') ? _data.slice(2) : _data;
+    if (data.length % 2) {
+        throw new Error(`${getFuncName()}: data is not a aligned to a byte`);
+    }
+
     const dataBytesLength = data.length / 2;
+    if (dataBytesLength > 31) {
+        throw new Error(`${getFuncName()}: data over 31 bytes`);
+    }
 
     // build compression hex string
-    const compressionHeader = (ENUM_ENCODING_TYPES.DATA_LESS_32_BYTES << 5) || dataBytesLength;
+    const compressionHeader = (ENUM_ENCODING_TYPES.DATA_LESS_32_BYTES << 5) | dataBytesLength;
     const compressionHeaderHex = compressionHeader.toString(16).padStart(2, '0');
 
     return compressionHeaderHex + data;
@@ -44,7 +51,7 @@ function largeData(_data) {
     lenDataBytesLength = (lenDataBytesLength.length % 2) ? `0${lenDataBytesLength}` : lenDataBytesLength;
 
     // build compression hex string
-    const compressionHeader = (ENUM_ENCODING_TYPES.LARGE_DATA_BYTES << 5) || (lenDataBytesLength.length / 2);
+    const compressionHeader = (ENUM_ENCODING_TYPES.LARGE_DATA_BYTES << 5) | (lenDataBytesLength.length / 2);
     const compressionHeaderHex = compressionHeader.toString(16).padStart(2, '0');
 
     return compressionHeaderHex + lenDataBytesLength + data;
@@ -52,20 +59,22 @@ function largeData(_data) {
 
 /**
  * Encode type '002': small value
- * @param {Number} _value - value
+ * @param {Number | BigInt} _value - value
  * @returns {String} encode small value with no '0x' prefix
  */
 function smallValue(_value) {
-    if (typeof _value !== 'number') {
+    if (!(typeof _value === 'number' || (typeof _value === 'bigint'))) {
         throw new Error(`${getFuncName()}: _value is not a number`);
     }
 
-    if (_value > 32) {
-        throw new Error(`${getFuncName()}: cannot encode a value over 32`);
+    const value = Scalar.e(_value);
+
+    if (Scalar.gt(value, 31)) {
+        throw new Error(`${getFuncName()}: cannot encode a value over 31`);
     }
 
     // build compression hex string
-    const compressionHeader = (ENUM_ENCODING_TYPES.SMALL_VALUE << 5) || _value;
+    const compressionHeader = (ENUM_ENCODING_TYPES.SMALL_VALUE << 5) | Number(_value);
     const compressionHeaderHex = compressionHeader.toString(16).padStart(2, '0');
 
     return compressionHeaderHex;
@@ -83,14 +92,18 @@ function compressed32Byte(_index) {
 
     let hexStrIndex = _index.toString(16);
     hexStrIndex = (hexStrIndex.length % 2) ? `0${hexStrIndex}` : hexStrIndex;
+    const lenBytesIndex = hexStrIndex.length / 2;
 
-    const lenBytesIndex = hexStrIndex / 2;
+    // check maximum length: 2**5 - 1
+    if (lenBytesIndex > 31) {
+        throw new Error(`${getFuncName()}: exponent is over 31`);
+    }
 
     // build compression hex string
-    const compressionHeader = (ENUM_ENCODING_TYPES.COMPRESSED_32_BYTES << 5) || lenBytesIndex;
+    const compressionHeader = (ENUM_ENCODING_TYPES.COMPRESSED_32_BYTES << 5) | lenBytesIndex;
     const compressionHeaderHex = compressionHeader.toString(16).padStart(2, '0');
 
-    return compressionHeaderHex + lenBytesIndex + hexStrIndex;
+    return compressionHeaderHex + hexStrIndex;
 }
 
 /**
@@ -106,13 +119,18 @@ function compressedAddress(_index) {
     let hexStrIndex = _index.toString(16);
     hexStrIndex = (hexStrIndex.length % 2) ? `0${hexStrIndex}` : hexStrIndex;
 
-    const lenBytesIndex = hexStrIndex / 2;
+    const lenBytesIndex = hexStrIndex.length / 2;
+
+    // check maximum length: 2**5 - 1
+    if (lenBytesIndex > 31) {
+        throw new Error(`${getFuncName()}: exponent is over 31`);
+    }
 
     // build compression hex string
-    const compressionHeader = (ENUM_ENCODING_TYPES.COMPRESSED_ADDRESS << 5) || lenBytesIndex;
+    const compressionHeader = (ENUM_ENCODING_TYPES.COMPRESSED_ADDRESS << 5) | lenBytesIndex;
     const compressionHeaderHex = compressionHeader.toString(16).padStart(2, '0');
 
-    return compressionHeaderHex + lenBytesIndex + hexStrIndex;
+    return compressionHeaderHex + hexStrIndex;
 }
 
 /**
@@ -121,8 +139,8 @@ function compressedAddress(_index) {
  * @returns {String} encode value with no '0x' prefix
  */
 function compressedValue(_value) {
-    if ((typeof _value === 'number' || typeof _value === 'bigint')) {
-        throw new Error(`${getFuncName()}: _index is not a number`);
+    if (!(typeof _value === 'number' || (typeof _value === 'bigint'))) {
+        throw new Error(`${getFuncName()}: _value is not a number`);
     }
 
     const value = Scalar.e(_value);
@@ -130,9 +148,11 @@ function compressedValue(_value) {
     let mantissa = value;
     let exponent = 0;
 
-    while (Scalar.isZero(Scalar.mod(mantissa, 10))) {
-        mantissa = Scalar.div(mantissa, 10);
-        exponent += 1;
+    if (!Scalar.isZero(value)) {
+        while (Scalar.isZero(Scalar.mod(mantissa, 10))) {
+            mantissa = Scalar.div(mantissa, 10);
+            exponent += 1;
+        }
     }
 
     // check maximum exponent: 2**8 - 1
@@ -141,17 +161,17 @@ function compressedValue(_value) {
     }
 
     // exponent string
-    let strHexExponent = mantissa.toString(16);
+    let strHexExponent = exponent.toString(16);
     strHexExponent = (strHexExponent.length % 2) ? `0${strHexExponent}` : strHexExponent;
 
     // mantissa string
     let strHexMantissa = mantissa.toString(16);
     strHexMantissa = (strHexMantissa.length % 2) ? `0${strHexMantissa}` : strHexMantissa;
 
-    const lenBytesMatissa = strHexMantissa / 2;
+    const lenBytesMatissa = strHexMantissa.length / 2;
 
     // build compression hex string
-    const compressionHeader = (ENUM_ENCODING_TYPES.COMPRESSED_VALUE << 5) || lenBytesMatissa;
+    const compressionHeader = (ENUM_ENCODING_TYPES.COMPRESSED_VALUE << 5) | lenBytesMatissa;
     const compressionHeaderHex = compressionHeader.toString(16).padStart(2, '0');
 
     return compressionHeaderHex + strHexMantissa + strHexExponent;
@@ -205,6 +225,33 @@ function uncompressed32Bytes(_data) {
     return compressionHeaderHex + data;
 }
 
+/**
+ * Encode type '111': data < 32 bytes
+ * @param {String} _data - data string represented as hexadecimal string
+ * @returns {String} encode data < 32 bytes with no '0x' prefix
+ */
+function data32BytesPadRight(_data) {
+    if (typeof _data !== 'string') {
+        throw new Error(`${getFuncName()}: data is not a string`);
+    }
+
+    const data = _data.startsWith('0x') ? _data.slice(2) : _data;
+    if (data.length % 2) {
+        throw new Error(`${getFuncName()}: data is not a aligned to a byte`);
+    }
+
+    const dataBytesLength = data.length / 2;
+    if (dataBytesLength > 31) {
+        throw new Error(`${getFuncName()}: data over 31 bytes`);
+    }
+
+    // build compression hex string
+    const compressionHeader = (ENUM_ENCODING_TYPES.DATA_32_BYTES_PAD_RIGHT << 5) | dataBytesLength;
+    const compressionHeaderHex = compressionHeader.toString(16).padStart(2, '0');
+
+    return compressionHeaderHex + data;
+}
+
 module.exports = {
     dataLess32Bytes,
     largeData,
@@ -214,4 +261,5 @@ module.exports = {
     compressedValue,
     uncompressedAddress,
     uncompressed32Bytes,
+    data32BytesPadRight,
 };

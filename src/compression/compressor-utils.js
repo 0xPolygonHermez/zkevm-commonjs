@@ -42,8 +42,6 @@ function getTxSignedMessage(_tx) {
     if (_tx.type === ENUM_TX_TYPES.CHANGE_L2_BLOCK) {
         return serializeChangeL2Block(_tx);
     }
-    console.log(_tx);
-    // const ethersTx = JSON.parse(JSON.stringify(_tx));
 
     const ethersTx = { ..._tx };
 

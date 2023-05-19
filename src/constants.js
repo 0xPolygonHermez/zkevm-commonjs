@@ -10,6 +10,8 @@ module.exports.DB_GLOBAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_GLOBAL_EXIT_ROOT
 module.exports.DB_ADDRESS_STORAGE = ethers.utils.id(('ZKEVM_DB_ADDRESS_STORAGE'));
 module.exports.DB_TOUCHED_ACCOUNTS = ethers.utils.id(('ZKEVM_DB_TOUCHED_ACCOUNTS'));
 module.exports.DB_STARK_INPUT = ethers.utils.id(('ZKEVM_DB_STARK_INPUT'));
+module.exports.DB_COMPRESSOR_ADDRESS = ethers.utils.id(('COMPRESSOR_ADDRESS'));
+module.exports.DB_COMPRESSOR_32_BYTES = ethers.utils.id(('COMPRESSOR_32_BYTES'));
 
 // Default values and global constants
 module.exports.DEFAULT_MAX_TX = 1000;

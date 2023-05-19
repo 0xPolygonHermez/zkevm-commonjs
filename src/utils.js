@@ -1,4 +1,5 @@
 /* eslint-disable no-restricted-syntax */
+const { Coder } = require('@ethersproject/abi/lib/coders/abstract-coder');
 const crypto = require('crypto');
 const { Scalar } = require('ffjavascript');
 const { FrSNARK } = require('./constants');
@@ -110,6 +111,27 @@ function getFuncName() {
     return getFuncName.caller.name;
 }
 
+/**
+ * Convert a value into in its hexadecimal string representation
+ * @param {Number | BigInt} _value - value to encode
+ * @param {Boolean} prefix - attach '0x' at the beginning of the string
+ * @returns {String} encoded value in hexadecimal string
+ */
+function valueToHexStr(_value, prefix = false) {
+    if (!(typeof _value === 'number' || typeof _value === 'bigint')) {
+        throw new Error(`${getFuncName()}: _value is not a number or BigInt type`);
+    }
+
+    if (prefix !== false && typeof preifx !== 'boolean') {
+        throw new Error(`${getFuncName()}: _prefix is not a boolean`);
+    }
+
+    let valueHex = Scalar.e(_value).toString(16);
+    valueHex = valueHex.length % 2 ? `0${valueHex}` : valueHex;
+
+    return prefix ? `0x${valueHex}` : valueHex;
+}
+
 module.exports = {
     log2,
     byteArray2HexString,
@@ -118,4 +140,5 @@ module.exports = {
     padZeros,
     compareArrays,
     getFuncName,
+    valueToHexStr,
 };
