@@ -51,7 +51,7 @@
     "@ethereumjs/block": "^3.6.2",
     "@ethereumjs/tx": "^3.4.0",
     "@polygon-hermez/common": "2.6.4",
-    "@polygon-hermez/vm": "5.7.34",
+    "@polygon-hermez/vm": "5.7.36",
     "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.55",
