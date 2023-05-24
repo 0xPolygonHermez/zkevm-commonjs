@@ -3,11 +3,14 @@
 const { Scalar } = require('ffjavascript');
 const { valueToHexStr } = require('../../../index').utils;
 
-function ratio(nonCompressed, compressed, signatureBytes = 0) {
+function getPerformance(nonCompressed, compressed, removeSignature = false) {
     const lenNonComp = ((nonCompressed.length - 2) / 2) + 65; // always add signature bytes
-    const lenComp = ((compressed.length - 2) / 2) + signatureBytes;
+    const lenComp = ((compressed.length - 2) / 2) + (removeSignature ? 0 : 65);
 
-    return `${((1 - (lenComp / lenNonComp)) * 100).toFixed(2)} %`;
+    const ratio = `${((1 - (lenComp / lenNonComp)) * 100).toFixed(2)}%`.padEnd(6);
+    const improvement = (lenNonComp / lenComp).toFixed(2);
+
+    console.log(`${removeSignature ? 'no sig' : 'sig'}:`.padEnd(10), ratio, improvement);
 }
 
 /**
@@ -49,6 +52,6 @@ function getAddrFromData(_data) {
 }
 
 module.exports = {
-    ratio,
+    getPerformance,
     getAddrFromData,
 };

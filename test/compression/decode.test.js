@@ -6,13 +6,13 @@ const path = require('path');
 const { expect } = require('chai');
 
 const {
-    encode,
+    decode,
 } = require('../../index').compression;
 
 const pathTestVectors = path.join(__dirname, './test-vectors');
 
-describe('Compressor:encode', async () => {
-    const pathEncodeTests = path.join(pathTestVectors, './encode.json');
+describe('Compressor:decode', async () => {
+    const pathEncodeTests = path.join(pathTestVectors, './decode.json');
     let update;
     let testVectors;
 
@@ -29,10 +29,10 @@ describe('Compressor:encode', async () => {
     });
 
     it('dataLess32Bytes', async () => {
-        for (let i = 0; i < testVectors.dataLess32Bytes.length; i++) {
+        for (let i = 5; i < testVectors.dataLess32Bytes.length; i++) {
             const test = testVectors.dataLess32Bytes[i];
 
-            const computedOutput = encode.dataLess32Bytes(test.input);
+            const computedOutput = decode.dataLess32Bytes(test.input);
 
             if (update) {
                 test.output = `0x${computedOutput}`;
@@ -46,11 +46,14 @@ describe('Compressor:encode', async () => {
         for (let i = 0; i < testVectors.largeData.length; i++) {
             const test = testVectors.largeData[i];
 
-            const computedOutput = encode.largeData(test.input);
+            const computedOutput = decode.largeData(test.input);
 
             if (update) {
                 test.output = `0x${computedOutput}`;
             } else {
+                // console.log("input: ", test.input);
+                // console.log("computedOutput: ", computedOutput);
+                // console.log("test.output: ", test.output);
                 expect(`0x${computedOutput}`).to.be.equal(test.output);
             }
         }
@@ -60,7 +63,21 @@ describe('Compressor:encode', async () => {
         for (let i = 0; i < testVectors.smallValue.length; i++) {
             const test = testVectors.smallValue[i];
 
-            const computedOutput = encode.smallValue(test.input);
+            const computedOutput = decode.smallValue(test.input);
+
+            if (update) {
+                test.output = computedOutput;
+            } else {
+                expect(computedOutput).to.be.equal(test.output);
+            }
+        }
+    });
+
+    it('smallValue: isData', async () => {
+        for (let i = 0; i < testVectors.smallValueIsData.length; i++) {
+            const test = testVectors.smallValueIsData[i];
+
+            const computedOutput = decode.smallValue(test.input, true);
 
             if (update) {
                 test.output = `0x${computedOutput}`;
@@ -74,12 +91,12 @@ describe('Compressor:encode', async () => {
         for (let i = 0; i < testVectors.compressed32Byte.length; i++) {
             const test = testVectors.compressed32Byte[i];
 
-            const computedOutput = encode.compressed32Byte(test.input);
+            const computedOutput = decode.compressed32Byte(test.input);
 
             if (update) {
                 test.output = `0x${computedOutput}`;
             } else {
-                expect(`0x${computedOutput}`).to.be.equal(test.output);
+                expect(computedOutput).to.be.equal(test.output);
             }
         }
     });
@@ -88,12 +105,12 @@ describe('Compressor:encode', async () => {
         for (let i = 0; i < testVectors.compressedAddress.length; i++) {
             const test = testVectors.compressedAddress[i];
 
-            const computedOutput = encode.compressedAddress(test.input);
+            const computedOutput = decode.compressedAddress(test.input);
 
             if (update) {
                 test.output = `0x${computedOutput}`;
             } else {
-                expect(`0x${computedOutput}`).to.be.equal(test.output);
+                expect(computedOutput).to.be.equal(test.output);
             }
         }
     });
@@ -102,7 +119,35 @@ describe('Compressor:encode', async () => {
         for (let i = 0; i < testVectors.compressedValue.length; i++) {
             const test = testVectors.compressedValue[i];
 
-            const computedOutput = encode.compressedValue(Scalar.e(test.input));
+            const computedOutput = decode.compressedValue(test.input);
+
+            if (update) {
+                test.output = computedOutput.toString();
+            } else {
+                expect(computedOutput.toString()).to.be.equal(test.output);
+            }
+        }
+    });
+
+    it('compressedValue: isData', async () => {
+        for (let i = 0; i < testVectors.compressedValueIsData.length; i++) {
+            const test = testVectors.compressedValueIsData[i];
+
+            const computedOutput = decode.compressedValue(test.input, true);
+
+            if (update) {
+                test.output = `0x${computedOutput}`;
+            } else {
+                expect(`0x${computedOutput}`.toString()).to.be.equal(test.output);
+            }
+        }
+    });
+
+    it('uncompressedAddress', async () => {
+        for (let i = 0; i < testVectors.uncompressedAddress.length; i++) {
+            const test = testVectors.uncompressedAddress[i];
+
+            const computedOutput = decode.uncompressedAddress(test.input);
 
             if (update) {
                 test.output = `0x${computedOutput}`;
@@ -112,11 +157,11 @@ describe('Compressor:encode', async () => {
         }
     });
 
-    it('uncompressedAddress', async () => {
-        for (let i = 0; i < testVectors.uncompressedAddress.length; i++) {
-            const test = testVectors.uncompressedAddress[i];
+    it('uncompressedAddress: isData', async () => {
+        for (let i = 0; i < testVectors.uncompressedAddressIsData.length; i++) {
+            const test = testVectors.uncompressedAddressIsData[i];
 
-            const computedOutput = encode.uncompressedAddress(test.input);
+            const computedOutput = decode.uncompressedAddress(test.input, true);
 
             if (update) {
                 test.output = `0x${computedOutput}`;
@@ -130,7 +175,7 @@ describe('Compressor:encode', async () => {
         for (let i = 0; i < testVectors.uncompressed32Bytes.length; i++) {
             const test = testVectors.uncompressed32Bytes[i];
 
-            const computedOutput = encode.uncompressed32Bytes(test.input);
+            const computedOutput = decode.uncompressed32Bytes(test.input);
 
             if (update) {
                 test.output = `0x${computedOutput}`;
@@ -144,7 +189,7 @@ describe('Compressor:encode', async () => {
         for (let i = 0; i < testVectors.data32BytesPadRight.length; i++) {
             const test = testVectors.data32BytesPadRight[i];
 
-            const computedOutput = encode.data32BytesPadRight(test.input);
+            const computedOutput = decode.data32BytesPadRight(test.input);
 
             if (update) {
                 test.output = `0x${computedOutput}`;

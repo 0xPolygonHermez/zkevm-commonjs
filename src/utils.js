@@ -1,5 +1,4 @@
 /* eslint-disable no-restricted-syntax */
-const { Coder } = require('@ethersproject/abi/lib/coders/abstract-coder');
 const crypto = require('crypto');
 const { Scalar } = require('ffjavascript');
 const { FrSNARK } = require('./constants');

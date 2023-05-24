@@ -56,8 +56,8 @@ class Compressor {
             const paramName = txParams[i];
             const dataToAdd = await this[paramName](tx);
             if (paramName === 'data') {
-                console.log(`   ${paramName}`);
-                console.log(`       final: ${dataToAdd}`);
+                // console.log(`   ${paramName}`);
+                // console.log(`       final: ${dataToAdd}`);
             }
             res.compressed += dataToAdd;
         }
@@ -200,7 +200,7 @@ class Compressor {
      * @param {Object} tx - transaction object
      */
     async data(tx) {
-        console.log('       tx.data.length: ', tx.data.length);
+        // console.log('       tx.data.length: ', tx.data.length);
 
         // remove '0x'
         const dataHex = tx.data.startsWith('0x') ? tx.data.slice(2) : tx.data;
@@ -225,25 +225,25 @@ class Compressor {
 
             // selector: get 4 bytes
             fullDataCompressed = encode.dataLess32Bytes(dataHex.slice(offset, offset + 4 * 2));
-            console.log('           selector old:', dataHex.slice(offset, offset + 4 * 2));
-            console.log('           selector new:', fullDataCompressed);
+            // console.log('           selector old:', dataHex.slice(offset, offset + 4 * 2));
+            // console.log('           selector new:', fullDataCompressed);
             remainingBytes -= 4;
 
             const blocks32Bytes = Math.floor(remainingBytes / 32);
             const dataTail = remainingBytes % 32;
             offset = 8;
 
-            console.log(`           block32bytes: ${blocks32Bytes}`);
-            console.log(`           dataTail: ${dataTail}`);
+            // console.log(`           block32bytes: ${blocks32Bytes}`);
+            // console.log(`           dataTail: ${dataTail}`);
 
             for (let i = 0; i < blocks32Bytes; i++) {
                 const dataToCompress = dataHex.slice(offset + i * 64, offset + ((i + 1) * 64));
                 const dataScalar = Scalar.fromString(dataToCompress, 16);
-                console.log(`           dataToCompress: ${dataToCompress}`);
+                // console.log(`           dataToCompress: ${dataToCompress}`);
                 // try to encode it as a small value
                 if (Scalar.lt(dataScalar, 32)) {
                     fullDataCompressed += encode.smallValue(dataScalar);
-                    console.log(`               smallValue: ${encode.smallValue(dataScalar)}`);
+                    // console.log(`               smallValue: ${encode.smallValue(dataScalar)}`);
                     continue;
                 }
 
@@ -256,7 +256,7 @@ class Compressor {
                 const indexDataTree = await this.db.getValue(keyCompressedData32);
                 if (indexDataTree !== null) {
                     fullDataCompressed += encode.compressed32Byte(indexDataTree);
-                    console.log(`               compressed32Byte: ${encode.compressed32Byte(indexDataTree)}`);
+                    // console.log(`               compressed32Byte: ${encode.compressed32Byte(indexDataTree)}`);
                     continue;
                 }
 
@@ -270,47 +270,74 @@ class Compressor {
 
                 if (indexAddressCompressed !== null) {
                     fullDataCompressed += encode.compressedAddress(indexAddressCompressed);
-                    console.log(`               compressedaddress: ${encode.compressedAddress(indexAddressCompressed)}`);
+                    // console.log(`               compressedaddress: ${encode.compressedAddress(indexAddressCompressed)}`);
                     continue;
                 }
 
-                // check best encoding type
+                // check best encoding type among: encodeLess32, encodeCompressedValue & encode32BytesPadRight
                 const dataTrim = valueToHexStr(dataScalar);
                 let encodeLess32 = null;
                 if (dataTrim.length / 2 < 32) {
                     encodeLess32 = encode.dataLess32Bytes(dataTrim);
                 }
 
+                const dataNoZerosRight = dataToCompress.replace(/00+$/, '');
+                // console.log("dataToCompress: ", dataToCompress);
+                // console.log("dataNoZerosRight: ", dataNoZerosRight);
+                let encode32BytesPadright = null;
+                if (dataNoZerosRight.length / 2 < 32) {
+                    encode32BytesPadright = encode.data32BytesPadRight(dataNoZerosRight);
+                }
+
                 const encodeCompressedValue = encode.compressedValue(dataScalar);
-                const encode32BytesPadRigth = encode.data32BytesPadRight(dataToCompress.replace(/0+$/, ''));
 
                 if ((encodeLess32 !== null && encodeLess32.length / 2 < 32)
-                    || encodeCompressedValue.length / 2 < 32 || encode32BytesPadRigth / 2 < 32) {
+                    || (encode32BytesPadright !== null && encode32BytesPadright.length / 2 < 32)
+                    || encodeCompressedValue.length / 2 < 32) {
                     if (encodeLess32 === null) {
                         // compare compressed value & 32 byte pad right
-                        if (encode32BytesPadRigth.length < encodeCompressedValue.length) {
-                            fullDataCompressed += encode32BytesPadRigth;
-                            console.log(`               compressed32BytePadRigth: ${encode32BytesPadRigth}`);
+                        if (encode32BytesPadright.length < encodeCompressedValue.length) {
+                            fullDataCompressed += encode32BytesPadright;
+                            // console.log(`               compressed32BytePadright: ${encode32BytesPadright}`);
                             continue;
                         }
                         fullDataCompressed += encodeCompressedValue;
-                        console.log(`               compressedValue: ${encodeCompressedValue}`);
+                        // console.log(`               compressedValue: ${encodeCompressedValue}`);
                         continue;
                     }
-                    // TODO: logic choose between compressed value, 32 byte, 32 byte pad rigth
-                    if (encodeLess32.length < encodeCompressedValue.length) {
+
+                    if (encode32BytesPadright === null) {
+                        // compare compressed value & less than 32 bytes
+                        if (encodeLess32.length < encodeCompressedValue.length) {
+                            fullDataCompressed += encodeLess32;
+                            // console.log(`               encodeLess32: ${encodeLess32}`);
+                            continue;
+                        }
+                        fullDataCompressed += encodeCompressedValue;
+                        // console.log(`               encodeCompressedValue: ${encodeCompressedValue}`);
+                        continue;
+                    }
+
+                    // choose the best encoding among compressed value, encode less 32 bytes & 32 byte pad right
+                    const lessBytes = Math.min(encodeCompressedValue.length, encodeLess32.length, encode32BytesPadright.length);
+                    if (lessBytes === encodeCompressedValue.length) {
+                        fullDataCompressed += encodeCompressedValue;
+                        // console.log(`               encodeCompressedValue: ${encodeCompressedValue}`);
+                        continue;
+                    } else if (lessBytes === encodeLess32.length) {
                         fullDataCompressed += encodeLess32;
-                        console.log(`               encodeLess32: ${encodeLess32}`);
+                        // console.log(`               encodeLess32: ${encodeLess32}`);
+                        continue;
+                    } else {
+                        fullDataCompressed += encode32BytesPadright;
+                        // console.log(`               compressed32BytePadright: ${encode32BytesPadright}`);
                         continue;
                     }
-                    fullDataCompressed += encodeCompressedValue;
-                    console.log(`               encodeCompressedValue: ${encodeCompressedValue}`);
-                    continue;
                 }
 
                 // if cannot be compressed, added to the bytes 32 data tree
                 fullDataCompressed += encode.uncompressed32Bytes(dataToCompress);
-                console.log(`               uncompressed32Bytes: ${encode.uncompressed32Bytes(dataToCompress)}`);
+                // console.log(`               uncompressed32Bytes: ${encode.uncompressed32Bytes(dataToCompress)}`);
             }
 
             // add tail

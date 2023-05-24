@@ -1,19 +1,17 @@
+/* eslint-disable no-console */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
-const { Scalar, utils } = require('ffjavascript');
+const { Scalar } = require('ffjavascript');
 const fs = require('fs');
 const { argv } = require('yargs');
 const path = require('path');
-const { assert, expect } = require('chai');
-const ethers = require('ethers');
+const { expect } = require('chai');
 
-const { ratio, getAddrFromData } = require('./helpers/helpers');
+const { getAddrFromData, getPerformance } = require('./helpers/helpers');
 
 const {
     compression, getPoseidon, MemDB, Constants,
 } = require('../../index');
-
-const { scalar2key } = require('../helpers/test-utils');
 
 const pathTestVectors = path.join(__dirname, './test-vectors');
 
@@ -40,45 +38,49 @@ describe('Compressor', async function () {
         }
     });
 
-    // it('Compressor: no compressed address/bytes32', async () => {
-    //     const db = new MemDB(F);
+    it('Compressor: no compressed address/bytes32', async () => {
+        const db = new MemDB(F);
 
-    //     const compressor = new compression.Compressor(db);
+        const compressor = new compression.Compressor(db);
 
-    //     for (let i = 0; i < testVectors.length; i++) {
-    //         const { tx, expected, extraInfo } = testVectors[i];
-    //         console.log(extraInfo.name);
-    //         const txToCompress = { ...tx };
-    //         // set big int values
-    //         txToCompress.nonce = Scalar.e(txToCompress.nonce);
-    //         txToCompress.gasPrice = Scalar.e(txToCompress.gasPrice);
-    //         txToCompress.gasLimit = Scalar.e(txToCompress.gasLimit);
-    //         txToCompress.value = Scalar.e(txToCompress.value);
-    //         txToCompress.chainId = Number(txToCompress.chainId);
+        for (let i = 0; i < testVectors.length; i++) {
+            const { tx, expected, extraInfo } = testVectors[i];
 
-    //         const txCompressed = await compressor.compressTxData(txToCompress);
+            if (argv.verbose) {
+                console.log(extraInfo.name);
+            }
 
-    //         const r = ratio(txCompressed.nonCompressed, txCompressed.compressed);
-    //         const rSig = ratio(txCompressed.nonCompressed, txCompressed.compressed, 65);
-    //         console.log(`   ratio: ${r}`);
-    //         console.log(`   ratio with sig: ${r}`);
-    //         console.log(`   improvement: ${txCompressed.nonCompressed.length / txCompressed.compressed.length}x`);
-    //         console.log('///////////////////');
-    //         console.log('///////////////////\n\n');
-    //         if (update) {
-    //             expected.compressed = txCompressed.compressed;
-    //             expected.nonCompressed = txCompressed.nonCompressed;
-    //         } else {
-    //             expect(expected.compressed).to.be.equal(txCompressed.compressed);
-    //             expect(expected.nonCompressed).to.be.equal(txCompressed.nonCompressed);
-    //         }
-    //     }
-    // });
+            const txToCompress = { ...tx };
+            // set big int values
+            txToCompress.nonce = Scalar.e(txToCompress.nonce);
+            txToCompress.gasPrice = Scalar.e(txToCompress.gasPrice);
+            txToCompress.gasLimit = Scalar.e(txToCompress.gasLimit);
+            txToCompress.value = Scalar.e(txToCompress.value);
+            txToCompress.chainId = Number(txToCompress.chainId);
+
+            const txCompressed = await compressor.compressTxData(txToCompress);
+
+            if (argv.verbose) {
+                getPerformance(txCompressed.nonCompressed, txCompressed.compressed);
+                getPerformance(txCompressed.nonCompressed, txCompressed.compressed, true);
+            }
+
+            if (update) {
+                expected.compressed = txCompressed.compressed;
+                expected.nonCompressed = txCompressed.nonCompressed;
+            } else {
+                expect(expected.compressed).to.be.equal(txCompressed.compressed);
+                expect(expected.nonCompressed).to.be.equal(txCompressed.nonCompressed);
+            }
+        }
+    });
 
     it('Compressor: compressed addresses', async () => {
-        console.log('/////////////////////////////////');
-        console.log('/////////FULL COMPRESSED/////////');
-        console.log('/////////////////////////////////\n\n');
+        if (argv.verbose) {
+            console.log('/////////////////////////////////');
+            console.log('/////////FULL COMPRESSED/////////');
+            console.log('/////////////////////////////////\n\n');
+        }
 
         const db = new MemDB(F);
 
@@ -115,7 +117,11 @@ describe('Compressor', async function () {
 
         for (let i = 0; i < testVectors.length; i++) {
             const { tx, expected, extraInfo } = testVectors[i];
-            console.log(extraInfo.name);
+
+            if (argv.verbose) {
+                console.log(extraInfo.name);
+            }
+
             const txToCompress = { ...tx };
 
             // set big int values
@@ -126,16 +132,11 @@ describe('Compressor', async function () {
             txToCompress.chainId = Number(txToCompress.chainId);
 
             const txCompressed = await compressor.compressTxData(txToCompress);
-            const r = ratio(txCompressed.nonCompressed, txCompressed.compressed);
-            const rSig = ratio(txCompressed.nonCompressed, txCompressed.compressed, 65);
 
-            console.log(`   ratio: ${r}`);
-            console.log(`   ratio with sig: ${rSig}`);
-            console.log(`   length non-compressed: ${(txCompressed.nonCompressed.length - 2) / 2}`);
-            console.log(`   length full-compressed: ${(txCompressed.compressed.length - 2) / 2}`);
-            console.log(`   improvement: ${(txCompressed.nonCompressed.length - 2) / (txCompressed.compressed.length - 2)}x`);
-            console.log('///////////////////');
-            console.log('///////////////////\n\n');
+            if (argv.verbose) {
+                getPerformance(txCompressed.nonCompressed, txCompressed.compressed);
+                getPerformance(txCompressed.nonCompressed, txCompressed.compressed, true);
+            }
 
             if (update) {
                 expected.fullCompressed = txCompressed.compressed;

@@ -170,5 +170,23 @@
       "input": "0x5d79FBb745D2412BD03d58D8433200BbacE7D0d903d58D8433200BbacE7D0d93",
       "output": "0xc15d79FBb745D2412BD03d58D8433200BbacE7D0d903d58D8433200BbacE7D0d93"
     }
+  ],
+  "data32BytesPadRight": [
+    {
+      "input": "0x",
+      "output": "0xe0"
+    },
+    {
+      "input": "0x1234",
+      "output": "0xe21234"
+    },
+    {
+      "input": "0xff",
+      "output": "0xe1ff"
+    },
+    {
+      "input": "0x5d79FBb745D2412B",
+      "output": "0xe85d79FBb745D2412B"
+    }
   ]
 }

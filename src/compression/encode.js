@@ -107,7 +107,7 @@ function compressed32Byte(_index) {
 }
 
 /**
- * Encode type '004': compressed 32 byte data
+ * Encode type '004': compressed address
  * @param {Number} _index - index address tree
  * @returns {String} encode compressed address with no '0x' prefix
  */
@@ -179,7 +179,7 @@ function compressedValue(_value) {
 
 /**
  * Encode type '006' | '00000': uncompressed address and store it in address tree
- * @param {String} _address - index address tree
+ * @param {String} _address - address
  * @returns {String} encode address with no '0x' prefix
  */
 function uncompressedAddress(_address) {
@@ -204,7 +204,7 @@ function uncompressedAddress(_address) {
 /**
  * Encode type '006' | '00001': uncompressed 32 bytes and store it in data tree
  * @param {String} _data - 32 byte data
- * @returns {String} encode address with no '0x' prefix
+ * @returns {String} encode 32 bytes with no '0x' prefix
  */
 function uncompressed32Bytes(_data) {
     if (typeof _data !== 'string') {
