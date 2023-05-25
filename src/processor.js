@@ -309,7 +309,7 @@ module.exports = class Processor {
 
                 // B: ENOUGH UPFRONT TX COST
                 const effectiveGasPrice = computeEffectiveGasPrice(currenTx.gasPrice, currenTx.effectivePercentage);
-                const gasLimitCost = Scalar.mul(Scalar.e(currenTx.gasLimit), Scalar.e(effectiveGasPrice));
+                const gasLimitCost = Scalar.mul(Scalar.e(currenTx.gasLimit), effectiveGasPrice);
                 const upfronTxCost = Scalar.add(gasLimitCost, Scalar.e(currenTx.value));
 
                 if (Scalar.gt(upfronTxCost, Scalar.e(oldStateFrom.balance))) {

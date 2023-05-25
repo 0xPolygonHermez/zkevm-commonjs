@@ -26,7 +26,7 @@ function unarrayifyInteger(data, offset, length) {
  */
 function customRawTxToRawTx(customRawTx) {
     const signatureCharacters = Constants.SIGNATURE_BYTES * 2;
-    const effectivePercentageCharacters = 2;
+    const effectivePercentageCharacters = Constants.EFFECTIVE_PERCENTAGE_BYTES * 2;
     const rlpSignData = customRawTx.slice(0, -(signatureCharacters + effectivePercentageCharacters));
     const signature = `0x${customRawTx.slice(-(signatureCharacters + effectivePercentageCharacters), -effectivePercentageCharacters)}`;
 
@@ -306,8 +306,8 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
 
 /**
  * Computes the effective gas price for a transaction
- * @param {String} gasPrice in hex string
- * @param {String} effectivePercentage in hex string
+ * @param {String | BigInt} gasPrice in hex string or BigInt
+ * @param {String | BigInt} effectivePercentage in hex string or BigInt
  * @returns effectiveGasPrice in hex string
  */
 function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
@@ -316,7 +316,7 @@ function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
         256,
     );
 
-    return `0x${effectivegasPrice.toString(16)}`;
+    return effectivegasPrice;
 }
 
 module.exports = {
