@@ -21,14 +21,14 @@ const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
 const { calculateSnarkInput } = require('./contract-utils');
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, accInputHash, localExitRoot, poseidon, vm, smt, chainID, forkID) {
+    constructor(db, lastBatch, stateRoot, accBlobHash, localExitRoot, poseidon, vm, smt, chainID, forkID) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
         this.F = poseidon.F;
 
         this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
-        this.accInputHash = accInputHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.accBlobHash = accBlobHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.chainID = chainID;
         this.forkID = forkID;
@@ -37,27 +37,46 @@ class ZkEVMDB {
         this.vm = vm;
     }
 
+    // COMMENTS:
+    // create the blob processor
+    // from the ZkEVMDB --> only blob processor could be builded (theoretically)
+    // add txs to the blob processor
+    // build blob processor
+    // consolidate blob processor
+        // once the blob is consolidated
+        // batch inputs are available
+        // for each batch created --> processBatch & consolidate
+        // this last step could be done automatically in the code
+
     /**
      * Return a new Processor with the current RollupDb state
-     * @param {Number} timestamp - Timestamp of the batch
+     * @param {Number} timestampLimit - Timestamp limit of the batch
      * @param {String} sequencerAddress - ethereum address represented as hex
-     * @param {Array[Field]} globalExitRoot - global exit root
+     * @param {Array[Field]} historicGERRoot - global exit root
+     * @param {Array[Field]} oldAccBatchHashData - old accumulate batch hash data
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      * @param {Object} options - additional batch options
-     * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smrt contract at the end of processable transactions
+     * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smart contract at the end of processable transactions
      * @param {Number} options.newBatchGasLimit New batch gas limit
      */
-    async buildBatch(timestamp, sequencerAddress, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX, options = {}) {
+    async buildBatch(
+        timestampLimit,
+        sequencerAddress,
+        historicGERRoot,
+        oldAccBatchHashData,
+        maxNTx = Constants.DEFAULT_MAX_TX,
+        options = {},
+    ) {
         return new Processor(
             this.db,
-            this.lastBatch + 1,
+            this.lastBatch,
             this.poseidon,
             maxNTx,
             this.stateRoot,
             sequencerAddress,
-            this.accInputHash,
-            globalExitRoot,
-            timestamp,
+            oldAccBatchHashData,
+            historicGERRoot,
+            timestampLimit,
             this.chainID,
             this.forkID,
             clone(this.vm),
@@ -71,11 +90,12 @@ class ZkEVMDB {
      */
     async consolidate(processor) {
         if (processor.newNumBatch !== this.lastBatch + 1) {
+            // This may not be true with blobs
             throw new Error('Updating the wrong batch');
         }
 
-        if (!processor.builded) {
-            await processor.executeTxs();
+        if (processor.builded === false) {
+            throw new Error('Consolidating a batcb that has not been build');
         }
 
         // Populate actual DB with the keys and values inserted in the batch
@@ -87,11 +107,12 @@ class ZkEVMDB {
             h4toString(processor.currentStateRoot),
         );
 
-        // Set accumulate hash input
-        await this.db.setValue(
-            Scalar.add(Constants.DB_ACC_INPUT_HASH, processor.newNumBatch),
-            h4toString(processor.newAccInputHash),
-        );
+        // Set accumulate blob hash
+        // TODO: will be replaced by the accBlobHash
+        // await this.db.setValue(
+        //     Scalar.add(Constants.DB_ACC_BLOB_HASH, processor.newNumBatch),
+        //     h4toString(processor.newAccInputHash),
+        // );
 
         // Set local exit root
         await this.db.setValue(
@@ -120,7 +141,7 @@ class ZkEVMDB {
         // Update ZKEVMDB variables
         this.lastBatch = processor.newNumBatch;
         this.stateRoot = processor.currentStateRoot;
-        this.accInputHash = processor.newAccInputHash;
+        // this.accInputHash = processor.newAccInputHash; //TODO: replaced by blob
         this.localExitRoot = processor.newLocalExitRoot;
         this.vm = processor.vm;
     }
@@ -301,7 +322,7 @@ class ZkEVMDB {
      * @param {Object} db - Mem db object
      * @param {Object} poseidon - Poseidon object
      * @param {Array[Fields]} stateRoot - state merkle root
-     * @param {Array[Fields]} accHashInput - accumulate hash input
+     * @param {Array[Fields]} accBlobHash - accumulate blob hash
      * @param {Object} genesis - genesis block accounts (address, nonce, balance, bytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
@@ -309,7 +330,7 @@ class ZkEVMDB {
      * @param {Number} forkID - L2 rom fork identifier
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, accHashInput, genesis, vm, smt, chainID, forkID) {
+    static async newZkEVM(db, poseidon, stateRoot, accBlobHash, genesis, vm, smt, chainID, forkID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
         common.setEIPs([3607, 3541]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
@@ -376,7 +397,7 @@ class ZkEVMDB {
                 db,
                 0,
                 newStateRoot,
-                accHashInput,
+                accBlobHash,
                 null,
                 poseidon,
                 newVm,

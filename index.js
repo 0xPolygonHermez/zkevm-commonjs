@@ -14,3 +14,5 @@ module.exports.MTBridge = require('./src/mt-bridge');
 module.exports.mtBridgeUtils = require('./src/mt-bridge-utils');
 module.exports.Database = require('./src/database');
 module.exports.compression = require('./src/compression/index-compression');
+module.exports.txUtils = require('./src/tx-utils');
+module.exports.batchUtils = require('./src/batch-utils');

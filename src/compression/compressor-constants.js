@@ -1,5 +1,3 @@
-const ethers = require('ethers');
-
 const ENUM_TX_TYPES = {
     PRE_EIP_155: 0,
     LEGACY: 1,

@@ -4,7 +4,7 @@ const { Scalar } = require('ffjavascript');
 // Database keys
 module.exports.DB_LAST_BATCH = ethers.utils.id(('ZKEVM_DB_LAST_BATCH'));
 module.exports.DB_STATE_ROOT = ethers.utils.id(('ZKEVM_DB_STATE_ROOT'));
-module.exports.DB_ACC_INPUT_HASH = ethers.utils.id(('ZKEVM_DB_ACC_INPUT_HASH'));
+module.exports.DB_ACC_BLOB_HASH = ethers.utils.id(('ZKEVM_DB_ACC_BLOB_HASH'));
 module.exports.DB_LOCAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_LOCAL_EXIT_ROOT'));
 module.exports.DB_GLOBAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_GLOBAL_EXIT_ROOT'));
 module.exports.DB_ADDRESS_STORAGE = ethers.utils.id(('ZKEVM_DB_ADDRESS_STORAGE'));
@@ -44,8 +44,10 @@ module.exports.LOCAL_EXIT_ROOT_STORAGE_POS = 1;
 module.exports.BATCH_GAS_LIMIT = 30000000;
 module.exports.BATCH_DIFFICULTY = 0;
 module.exports.ADDRESS_SYSTEM = '0x000000000000000000000000000000005ca1ab1e';
-module.exports.STATE_ROOT_STORAGE_POS = 1;
 module.exports.LAST_TX_STORAGE_POS = 0;
+module.exports.STATE_ROOT_STORAGE_POS = 1;
+module.exports.TIMESTAMP_STORAGE_POS = 2; // Could be a mapping
+module.exports.BLOCK_STORAGE_POS = 3; // Could be a mapping
 
 // Bridge Leaf Types
 module.exports.BRIDGE_LEAF_TYPE_ASSET = 0;

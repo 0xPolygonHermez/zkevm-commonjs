@@ -1,6 +1,11 @@
 const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
+const {
+    TransactionFactory,
+} = require('@ethereumjs/tx');
+
 const Constants = require('./constants');
+const { ENUM_TX_TYPES } = require('./compression/compressor-constants');
 
 /**
  * Extract an integer from a byte array
@@ -294,6 +299,40 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     return { txDecoded, rlpSignData };
 }
 
+/**
+ * Returns typed evm transaction object
+ * @param {Object} zkevmTx - zkevm transaction object
+ * @returns {Object} evm transaction object
+ */
+function getEvmTx(zkevmTx) {
+    // fill in common transaction fields
+    const tx = {
+        nonce: zkevmTx.nonce,
+        gasPrice: zkevmTx.gasPrice,
+        gasLimit: zkevmTx.gasLimit,
+        to: zkevmTx.to,
+        value: zkevmTx.value,
+        data: zkevmTx.data,
+        v: zkevmTx.v,
+        r: zkevmTx.r,
+        s: zkevmTx.s,
+    };
+
+    if (zkevmTx.type === ENUM_TX_TYPES.LEGACY) {
+        tx.v = Number(zkevmTx.v) - 27 + zkevmTx.chainId * 2 + 35;
+    } else if (zkevmTx.type === ENUM_TX_TYPES.EIP_2930) {
+        tx.type = 1;
+        tx.accessList = zkevmTx.accessList;
+    } else if (zkevmTx.type === ENUM_TX_TYPES.EIP_1559) {
+        tx.type = 2;
+        tx.maxPriorityFeePerGas = zkevmTx.maxPriorityFeePerGas;
+        tx.maxFeePerGas = zkevmTx.maxFeePerGas;
+        delete tx.gasPrice;
+    }
+
+    return TransactionFactory.fromTxData(tx);
+}
+
 module.exports = {
     decodeCustomRawTxProverMethod,
     rawTxToCustomRawTx,
@@ -302,4 +341,5 @@ module.exports = {
     arrayToEncodedString,
     encodedStringToArray,
     addressToHexStringRlp,
+    getEvmTx,
 };
