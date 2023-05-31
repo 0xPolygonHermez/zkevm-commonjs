@@ -16,7 +16,7 @@ const smtUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
-const { decodeCustomRawTxProverMethod } = require('./processor-utils');
+const { decodeCustomRawTxProverMethod, computeEffectiveGasPrice } = require('./processor-utils');
 
 module.exports = class Processor {
     /**
@@ -308,7 +308,8 @@ module.exports = class Processor {
                 }
 
                 // B: ENOUGH UPFRONT TX COST
-                const gasLimitCost = Scalar.mul(Scalar.e(currenTx.gasLimit), Scalar.e(currenTx.gasPrice));
+                const effectiveGasPrice = computeEffectiveGasPrice(currenTx.gasPrice, currenTx.effectivePercentage);
+                const gasLimitCost = Scalar.mul(Scalar.e(currenTx.gasLimit), effectiveGasPrice);
                 const upfronTxCost = Scalar.add(gasLimitCost, Scalar.e(currenTx.value));
 
                 if (Scalar.gt(upfronTxCost, Scalar.e(oldStateFrom.balance))) {
@@ -349,7 +350,7 @@ module.exports = class Processor {
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
                 try {
-                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
+                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock, effectivePercentage: currenTx.effectivePercentage });
                     this.evmSteps.push(txResult.execResult.evmSteps);
 
                     currentDecodedTx.receipt = txResult.receipt;

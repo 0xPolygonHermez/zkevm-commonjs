@@ -198,7 +198,10 @@ describe('ZkEVMDB', function () {
                     const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
                     const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
                     const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
-                    customRawTx = signData.concat(r).concat(s).concat(v);
+                    if (typeof tx.effectivePercentage === 'undefined') {
+                        tx.effectivePercentage = 'ff';
+                    }
+                    customRawTx = signData.concat(r).concat(s).concat(v).concat(tx.effectivePercentage);
                 } else {
                     const rawTxEthers = await walletMap[txData.from].signTransaction(tx);
                     customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
