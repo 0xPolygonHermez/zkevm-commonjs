@@ -33,7 +33,7 @@ function parseLegacy(txData) {
 function parseChangeL2Block(txData) {
     return {
         type: txData.type,
-        deltaTimestampo: txData.deltaTimestamp,
+        deltaTimestamp: txData.deltaTimestamp,
         newGER: txData.newGER,
         indexHistoricalGERTree: txData.indexHistoricalGERTree,
     };

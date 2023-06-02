@@ -140,7 +140,7 @@ function valueToHexStr(_value, prefix = false) {
         throw new Error(`${getFuncName()}: _value is not a number or BigInt type`);
     }
 
-    if (prefix !== false && typeof preifx !== 'boolean') {
+    if (prefix !== false && typeof prefix !== 'boolean') {
         throw new Error(`${getFuncName()}: _prefix is not a boolean`);
     }
 

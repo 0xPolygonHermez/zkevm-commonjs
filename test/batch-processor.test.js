@@ -49,7 +49,7 @@ describe('Processor', async function () {
     } else if (argv.selfdestruct) {
         pathProcessorTests = path.join(pathTestVectors, 'selfdestruct/selfdestruct.json');
     } else {
-        pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json'); // First one to adapt
+        pathProcessorTests = path.join(pathTestVectors, 'batch-processor/state-transition.json'); // First one to adapt
     }
 
     let update;
@@ -72,6 +72,8 @@ describe('Processor', async function () {
                 id,
                 chainID,
                 forkID,
+                numBlob,
+                zkGasLimit,
                 sequencerAddress,
                 timestampLimit,
                 historicGERRoot,
@@ -242,6 +244,12 @@ describe('Processor', async function () {
                 sequencerAddress,
                 smtUtils.stringToH4(historicGERRoot),
                 oldAccBatchHashData,
+                numBlob,
+                Scalar.e(zkGasLimit),
+                Constants.DEFAULT_MAX_TX,
+                {
+                    skipVerifyGER: true,
+                },
             );
 
             for (let j = 0; j < rawTxs.length; j++) {
@@ -252,6 +260,10 @@ describe('Processor', async function () {
             await batch.executeTxs();
             // // consolidate state
             // await zkEVMDB.consolidate(batch);
+            // save input batch
+            const starkInput = await batch.getStarkInput();
+            console.log(starkInput);
+            fs.writeFileSync(pathProcessorTests = path.join(pathTestVectors, 'batch-processor/input-example.json'), JSON.stringify(starkInput, null, 2));
 
             // const newRoot = batch.currentStateRoot;
             // if (!update) {
@@ -276,8 +288,8 @@ describe('Processor', async function () {
             //     }
             // }
 
-            // // Check balances and nonces
-            // const updatedAccounts = batch.getUpdatedAccountsBatch();
+            // Check balances and nonces
+            const updatedAccounts = batch.getUpdatedAccountsBatch();
             // const newLeafs = {};
             // for (const item in updatedAccounts) {
             //     const address = item;

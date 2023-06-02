@@ -11,7 +11,7 @@ const { Hardfork } = require('@polygon-hermez/common');
 const ethers = require('ethers');
 const clone = require('lodash/clone');
 const Constants = require('./constants');
-const Processor = require('./processor');
+const BatchProcessor = require('./batch-processor');
 const SMT = require('./smt');
 const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
@@ -54,6 +54,8 @@ class ZkEVMDB {
      * @param {String} sequencerAddress - ethereum address represented as hex
      * @param {Array[Field]} historicGERRoot - global exit root
      * @param {Array[Field]} oldAccBatchHashData - old accumulate batch hash data
+     * @param {Number} numBlob - blob number
+     * @param {BigInt} zkGasLimit - zkGasLimit
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      * @param {Object} options - additional batch options
      * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smart contract at the end of processable transactions
@@ -64,10 +66,12 @@ class ZkEVMDB {
         sequencerAddress,
         historicGERRoot,
         oldAccBatchHashData,
+        numBlob,
+        zkGasLimit,
         maxNTx = Constants.DEFAULT_MAX_TX,
         options = {},
     ) {
-        return new Processor(
+        return new BatchProcessor(
             this.db,
             this.lastBatch,
             this.poseidon,
@@ -79,6 +83,8 @@ class ZkEVMDB {
             timestampLimit,
             this.chainID,
             this.forkID,
+            numBlob,
+            zkGasLimit,
             clone(this.vm),
             options,
         );

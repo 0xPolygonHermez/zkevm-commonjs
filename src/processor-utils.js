@@ -6,6 +6,7 @@ const {
 
 const Constants = require('./constants');
 const { ENUM_TX_TYPES } = require('./compression/compressor-constants');
+const { valueToHexStr } = require('./utils');
 
 /**
  * Extract an integer from a byte array
@@ -307,11 +308,11 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
 function getEvmTx(zkevmTx) {
     // fill in common transaction fields
     const tx = {
-        nonce: zkevmTx.nonce,
-        gasPrice: zkevmTx.gasPrice,
-        gasLimit: zkevmTx.gasLimit,
+        nonce: valueToHexStr(zkevmTx.nonce, true),
+        gasPrice: valueToHexStr(zkevmTx.gasPrice, true),
+        gasLimit: valueToHexStr(zkevmTx.gasLimit, true),
         to: zkevmTx.to,
-        value: zkevmTx.value,
+        value: valueToHexStr(zkevmTx.value, true),
         data: zkevmTx.data,
         v: zkevmTx.v,
         r: zkevmTx.r,

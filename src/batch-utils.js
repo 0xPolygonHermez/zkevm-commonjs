@@ -68,8 +68,8 @@ function serializeLegacy(tx) {
 
 /**
  * Serialize transaction for the batch
- * fields: [type | deltaTimestamp | newGER | indexHistGERTree ]
- * bytes:  [  1  |       8        |   32   |        4         ]
+ * fields: [type | deltaTimestamp | newGER | indexHistoricalGERTree ]
+ * bytes:  [  1  |       8        |   32   |           4            ]
  * @param {Object} tx - transaction object
  * @returns {String} - Serialized tx in hexadecimal string
  */
@@ -78,7 +78,7 @@ function serializeChangeL2Block(tx) {
 
     let offsetBits = 0;
 
-    data = Scalar.add(data, Scalar.shl(tx.indexHistGERTree, offsetBits));
+    data = Scalar.add(data, Scalar.shl(tx.indexHistoricalGERTree, offsetBits));
     offsetBits += 32;
 
     data = Scalar.add(data, Scalar.shl(tx.newGER, offsetBits));
@@ -87,7 +87,7 @@ function serializeChangeL2Block(tx) {
     data = Scalar.add(data, Scalar.shl(tx.deltaTimestamp, offsetBits));
     offsetBits += 64;
 
-    data = Scalar.add(data, tx.type);
+    data = Scalar.add(data, Scalar.shl(tx.type, offsetBits));
     offsetBits += 8;
 
     return valueToHexStr(data).padStart('0', offsetBits / 4);
@@ -144,8 +144,8 @@ function deserializeLegacy(_serializedTx) {
 
 /**
  * Deserialize transaction for the batch
- * fields: [type | deltaTimestamp | newGER | indexHistGERTree ]
- * bytes:  [  1  |       8        |   32   |        4         ]
+ * fields: [type | deltaTimestamp | newGER | indexHistoricalGERTree ]
+ * bytes:  [  1  |       8        |   32   |           4            ]
  * @param {String} _serializedTx - serialized transaction
  * @returns {Object} - transaction object
  */
@@ -155,16 +155,16 @@ function deserializeChangeL2Block(_serializedTx) {
     let offsetChars = 0;
     const serializedTx = _serializedTx.startsWith('0x') ? _serializedTx.slice(2) : _serializedTx;
 
-    tx.type = parseInt(serializedTx.slice(offsetChars, 1 * 2), 16);
+    tx.type = parseInt(serializedTx.slice(offsetChars, offsetChars + 1 * 2), 16);
     offsetChars += 1 * 2;
 
-    tx.deltaTimestamp = Scalar.fromString(serializedTx.slice(offsetChars, 8 * 2), 16);
+    tx.deltaTimestamp = Scalar.fromString(serializedTx.slice(offsetChars, offsetChars + 8 * 2), 16);
     offsetChars += 8 * 2;
 
-    tx.newGER = Scalar.fromString(serializedTx.slice(offsetChars, 32 * 2), 16);
+    tx.newGER = `0x${serializedTx.slice(offsetChars, offsetChars + 32 * 2)}`;
     offsetChars += 32 * 2;
 
-    tx.indexHistGERTree = parseInt(serializedTx.slice(offsetChars, 4 * 2), 16);
+    tx.indexHistoricalGERTree = parseInt(serializedTx.slice(offsetChars, offsetChars + 4 * 2), 16);
 
     return tx;
 }
@@ -219,6 +219,8 @@ async function computeNewAccBatchHashData(oldAccBatchHashData, batchData) {
     const poseidon = await getPoseidon();
     const { F } = poseidon;
 
+    console.log(oldAccBatchHashData);
+    console.log(batchData);
     // compute batchHashData
     const batcHashData = await linearPoseidon(batchData);
     const batcHashDataFields = stringToH4(batcHashData);

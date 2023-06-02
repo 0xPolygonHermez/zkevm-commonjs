@@ -12,15 +12,16 @@ const TmpSmtDB = require('./tmp-smt-db');
 const Constants = require('./constants');
 const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
+const { verifyMerkleProof } = require('./mt-bridge-utils');
 
 const { calculateSnarkInput } = require('./contract-utils');
 const { getEvmTx } = require('./processor-utils');
-const { getFuncName } = require('./utils');
 const { deserializeTx, computeNewAccBatchHashData } = require('./batch-utils');
 const { getTxSignedMessage } = require('./compression/compressor-utils');
 const { ENUM_TX_TYPES } = require('./compression/compressor-constants');
+const { valueToHexStr } = require('./utils');
 
-module.exports = class Processor {
+module.exports = class BatchProcessor {
     /**
      * constructor Processor class
      * @param {Object} db - database
@@ -34,10 +35,13 @@ module.exports = class Processor {
      * @param {Number} timestampLimit - Maximum timestamp that the batch can have
      * @param {Number} chainID - L2 chainID
      * @param {Number} forkID - L2 rom fork identifier
+     * @param {Number} numBlob - blob number
+     * @param {BigInt} zkGasLimit - zkGasLimit
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smart contract at the end of processable transactions
      * @param {Number} options.newBatchGasLimit New batch gas limit
+     * @param {Bool} options.skipVerifyGER Skips GEr verification against the historicGERRoot
      */
     constructor(
         db,
@@ -51,10 +55,14 @@ module.exports = class Processor {
         timestampLimit,
         chainID,
         forkID,
+        numBlob,
+        zkGasLimit,
         vm,
         options,
     ) {
         this.db = db;
+        this.zkGasLimit = zkGasLimit;
+        this.numBlob = numBlob;
         this.oldNumBatch = lastNumBatch;
         this.newNumBatch = lastNumBatch + 1; // TODO: check spoecial batch to just increase numBatches
         this.poseidon = poseidon;
@@ -102,6 +110,7 @@ module.exports = class Processor {
         if (this.rawTxs.length >= this.maxNTx) {
             throw new Error('addTxToBatch: Batch is already full of transactions');
         }
+
         this.rawTxs.push(tx);
     }
 
@@ -114,24 +123,24 @@ module.exports = class Processor {
         // Deserialize txs
         await this._deserializeTxs();
 
-        // // Process transactions and update the state
-        // await this._processTxs();
+        // Process transactions and update the state
+        await this._processTxs();
 
-        // // if batch has been invalid, revert current
-        // if (this.isInvalid) {
-        //     await this._rollbackBatch();
-        // }
+        // if batch has been invalid, revert current
+        if (this.isInvalid) {
+            await this._rollbackBatch();
+        }
 
-        // // Read Local exit root
-        // await this._readLocalExitRoot();
+        // Read Local exit root
+        await this._readLocalExitRoot();
 
         // // check zk-counters
-        // // await this._setSequencerAmountBlob();
+        // await this._setSequencerAmountBlob();
 
-        // // Calculate stark and snark input
-        // await this._computeStarkInput();
+        // Calculate stark and snark input
+        await this._computeStarkInput();
 
-        // this.builded = true;
+        this.builded = true;
     }
 
     /**
@@ -144,7 +153,7 @@ module.exports = class Processor {
      */
     async _deserializeTxs() {
         if (this.deserializedTxs.length !== 0) {
-            throw new Error(`${getFuncName()}: deserialized txs must be empty before processing`);
+            throw new Error('BatchProcessor:_deserializeTxs: deserialized txs must be empty before processing');
         }
 
         for (let i = 0; i < this.rawTxs.length; i++) {
@@ -168,6 +177,7 @@ module.exports = class Processor {
 
             // sanity check signature
             const digest = ethers.utils.keccak256(txMessageToSign);
+
             try {
                 const from = ethers.utils.recoverAddress(digest, {
                     r: rawTx.r,
@@ -175,11 +185,11 @@ module.exports = class Processor {
                     v: rawTx.v,
                 });
 
-                if (from !== txParams.from) {
-                    throw new Error(`${getFuncName()}: sanity check signature failed --> from mismatch`);
+                if (from.toLowerCase() !== txParams.from) {
+                    throw new Error('BatchProcessor:_deserializeTxs:: sanity check signature failed --> from mismatch');
                 }
             } catch (error) {
-                throw new Error(`${getFuncName()}: sanity check signature failed --> ${error}`);
+                throw new Error(`BatchProcessor:_deserializeTxs:: sanity check signature failed --> ${error}`);
             }
 
             const finalTx = {
@@ -197,7 +207,8 @@ module.exports = class Processor {
         for (let i = 0; i < this.deserializedTxs.length; i++) {
             const tx = this.deserializedTxs[i];
 
-            // first transaction must be a ChangeL2BlockTx. Otherwise, invalid batch
+            // First transaction must be a ChangeL2BlockTx. Otherwise, invalid batch
+            // This will be ensured by the blob
             if (i === 0 && tx.type !== ENUM_TX_TYPES.CHANGE_L2_BLOCK) {
                 this.isInvalid = true;
 
@@ -220,20 +231,26 @@ module.exports = class Processor {
 
     async _processChangeL2BlockTx(tx) {
         const currentTimestamp = await this._getTimestamp();
-
         // Verify valid deltaTimestamp
         if (Scalar.eq(tx.deltaTimestamp, 0)) {
             return true;
         }
 
         // Verify deltaTimestamp + currentTimestamp =< limitTimestamp
-        if (Scalar.leq(Scalar.add(currentTimestamp, tx.deltaTimestamp), this.timestampLimit)) {
+        if (Scalar.gt(Scalar.add(currentTimestamp, tx.deltaTimestamp), this.timestampLimit)) {
             return true;
         }
 
         // Verify newGER | indexHistoricalGERTree belong to historicGERRoot
-        // TODO: verify merkle proof that the GER is correctly set
-        // return helpers.verifyNewGER(this.historicGERRoot, newGER, indexHistoricalGERTree, proof);
+        if (!this.options.skipVerifyGER) {
+            if (typeof tx.smtProof === 'undefined') {
+                throw new Error('BatchProcessor:_processChangeL2BlockTx:: missing smtProof parameter in changeL2Block tx');
+            }
+
+            if (verifyMerkleProof(tx.newGER, tx.smtProof, tx.indexHistoricalGERTree, this.historicGERRoot)) {
+                return true;
+            }
+        }
 
         // set new timestamp
         const newTimestamp = Scalar.add(currentTimestamp, tx.deltaTimestamp);
@@ -282,7 +299,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(`0x${Constants.TIMESTAMP_STORAGE_POS.toString(16).padStart(64, '0')}`),
-            toBuffer(Number(timestamp)),
+            toBuffer(valueToHexStr(timestamp, true)),
         );
     }
 
@@ -292,6 +309,7 @@ module.exports = class Processor {
      * - Not overwrite storage position if timestamp is already set
      * This will be performed before process the transactions
      * @param {Scalar} globalExitRoot - new GER
+     * @param {Scalar} timestamp - timestamp
      */
     async _setGlobalExitRoot(globalExitRoot, timestamp) {
         // return if globalExitRoot is 0
@@ -326,10 +344,11 @@ module.exports = class Processor {
         );
 
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
+
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(timestamp),
+            toBuffer(valueToHexStr(timestamp, true)),
         );
 
         // store data in internal DB
@@ -349,6 +368,7 @@ module.exports = class Processor {
         for (let k = 0; k < keys.length; k++) {
             storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
         }
+
         await this.db.setValue(keyDumpStorage, storage);
     }
 
@@ -473,7 +493,7 @@ module.exports = class Processor {
         // Build block information
         const blockData = {};
         blockData.header = {};
-        blockData.header.timestamp = new BN(Scalar.e(this.timestamp));
+        blockData.header.timestamp = new BN(Scalar.e(this.timestampLimit));
         blockData.header.coinbase = new Address(toBuffer(this.sequencerAddress));
         blockData.header.gasLimit = this.options.newBatchGasLimit
             ? new BN(Scalar.e(this.options.newBatchGasLimit)) : new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
@@ -657,8 +677,8 @@ module.exports = class Processor {
      * Compute stark input
      */
     async _computeStarkInput() {
-        this.newAccBatchHashData = computeNewAccBatchHashData(
-            smtUtils.h4toString(this.oldAccBatchHashData),
+        this.newAccBatchHashData = await computeNewAccBatchHashData(
+            this.oldAccBatchHashData,
             this.getBatchData(),
         );
 
@@ -668,7 +688,7 @@ module.exports = class Processor {
             oldNumBatch: this.oldNumBatch, // TODO: May be removed from here
             chainID: this.chainID,
             forkID: this.forkID,
-            oldAccBatchHashData: smtUtils.h4toString(this.oldAccBatchHashData),
+            oldAccBatchHashData: this.oldAccBatchHashData,
             batchData: this.getBatchData(),
             // outputs
             newAccBatchHashData: this.newAccBatchHashData,
@@ -677,8 +697,8 @@ module.exports = class Processor {
             newLocalExitRoot: smtUtils.h4toString(this.newLocalExitRoot),
             // TODO: subject to change. Probably loaded through the batchData as a header
             sequencerAddress: this.sequencerAddress,
-            timestampLimit: this.timestampLimit,
-            historicGERRoot: this.historicGERRoot,
+            timestampLimit: this.timestampLimit.toString(),
+            historicGERRoot: smtUtils.h4toString(this.historicGERRoot),
             contractsBytecode: this.contractsBytecode,
             db: await smtUtils.getCurrentDB(this.oldStateRoot, this.db, this.F),
         };
@@ -716,8 +736,17 @@ module.exports = class Processor {
      * Return all the transactions serialized data concatenated
      */
     getBatchData() {
+        // build header
+        const historicGERRootStr = smtUtils.h4toString(this.historicGERRoot);
+        const timestampLimitStr = valueToHexStr(this.timestampLimit).padStart('0', 8 * 2);
+        const sequencerAddrStr = this.sequencerAddress.startsWith('0x') ? this.sequencerAddress.slice(2) : this.sequencerAddress;
+        const zkGasLimitStr = valueToHexStr(this.zkGasLimit).padStart('0', 8 * 2);
+        const numBlobStr = valueToHexStr(this.numBlob).padStart('0', 8 * 2);
+
         // concatenate serialize transactions
-        return this.rawTxs.reduce((accumulator, currentValue) => accumulator + currentValue.serialized.slice(2), '0x');
+        const txsConcat = this.rawTxs.reduce((accumulator, currentValue) => accumulator + currentValue.serialized.slice(2), '');
+
+        return `${historicGERRootStr}${timestampLimitStr}${sequencerAddrStr}${zkGasLimitStr}${numBlobStr}${txsConcat}`;
     }
 
     /**
@@ -744,14 +773,18 @@ module.exports = class Processor {
      * Throw error if batch is already builded
      */
     _isNotBuilded() {
-        if (this.builded) throw new Error('Batch already builded');
+        if (this.builded) {
+            throw new Error('BatchProcessor:_isBuilded: already builded');
+        }
     }
 
     /**
      * Throw error if batch is already builded
      */
     _isBuilded() {
-        if (!this.builded) throw new Error('Batch must first be builded');
+        if (!this.builded) {
+            throw new Error('BatchProcessor:_isBuilded: must first be builded');
+        }
     }
 
     /**

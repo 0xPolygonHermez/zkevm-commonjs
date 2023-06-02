@@ -96,14 +96,6 @@ function getTxSignedMessage(_tx) {
         throw new Error(`${getFuncName()}: tx.type ${_tx.type} not supported`);
     }
 
-    // modify type to fit ethers library to compute message
-    // set chainId = 0 if type is 0 (preEIP155)
-    if (ethersTx.type === ENUM_TX_TYPES.PRE_EIP_155) {
-        ethersTx.chainId = 0;
-    } else {
-        ethersTx.type -= 1;
-    }
-
     return ethers.utils.serializeTransaction(ethersTx);
 }
 
