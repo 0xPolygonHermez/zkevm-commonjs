@@ -308,7 +308,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
  * Computes the effective gas price for a transaction
  * @param {String | BigInt} gasPrice in hex string or BigInt
  * @param {String | BigInt} effectivePercentage in hex string or BigInt
- * @returns effectiveGasPrice in hex string
+ * @returns effectiveGasPrice as BigInt
  */
 function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
     const effectivegasPrice = Scalar.div(

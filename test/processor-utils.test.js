@@ -1,3 +1,4 @@
+/* eslint-disable global-require */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-continue */
 
@@ -164,6 +165,18 @@ describe('Processor utils', () => {
             const expectedOut = testHexStringRLP[i][1];
 
             const out = processorUtils.addressToHexStringRlp(input);
+            expect(out).to.be.equal(expectedOut);
+        }
+    });
+
+    it('computeEffectiveGasPrice', async () => {
+        const testComputeEffectiveGasPrice = require('./computeEffectiveGasPrice-input.json');
+        for (let i = 0; i < testComputeEffectiveGasPrice.length; i++) {
+            const gasPrice = testComputeEffectiveGasPrice[i][0];
+            const effectivePercentage = testComputeEffectiveGasPrice[i][1];
+            const expectedOut = testComputeEffectiveGasPrice[i][2];
+
+            const out = `0x${processorUtils.computeEffectiveGasPrice(gasPrice, effectivePercentage).toString(16)}`;
             expect(out).to.be.equal(expectedOut);
         }
     });
