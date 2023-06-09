@@ -167,4 +167,24 @@ describe('Processor utils', () => {
             expect(out).to.be.equal(expectedOut);
         }
     });
+
+    it('computeEffectiveGasPrice', async () => {
+        const testComputeEffectiveGasPrice = [
+            ['0x0', '0xff', 0n],
+            ['0x1234', '0xff', 4660n],
+            ['0x1234', '0x0', 18n],
+            ['0x1234', '0x7f', 2330n],
+            ['0x1', '0xf8', 0n],
+            ['0x2', '0xf8', 1n],
+            ['0x2', '0x01', 0n],
+        ];
+        for (let i = 0; i < testComputeEffectiveGasPrice.length; i++) {
+            const gasPrice = testComputeEffectiveGasPrice[i][0];
+            const effectivePercentage = testComputeEffectiveGasPrice[i][1];
+            const expectedOut = testComputeEffectiveGasPrice[i][2];
+
+            const out = processorUtils.computeEffectiveGasPrice(gasPrice, effectivePercentage);
+            expect(out).to.be.equal(expectedOut);
+        }
+    });
 });
