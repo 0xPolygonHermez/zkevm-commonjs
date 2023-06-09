@@ -25,9 +25,9 @@ function assertInterface(tx) {
  * @returns {String} serialization hexadecimal string
  */
 function serializeChangeL2Block(_tx) {
-    const strDeltaTimestamp = Scalar.e(_tx.deltaTimestamp).toString(16).padStart('0', 8);
-    const strNewGER = Scalar.e(_tx.newGER).toString(16).padStart('0', 64);
-    const strIndexGER = Scalar.e(_tx.indexHistoricalGERTree).toString(16).padStart('0', 16);
+    const strDeltaTimestamp = Scalar.e(_tx.deltaTimestamp).toString(16).padStart(8, '0');
+    const strNewGER = Scalar.e(_tx.newGER).toString(16).padStart(64, '0');
+    const strIndexGER = Scalar.e(_tx.indexHistoricalGERTree).toString(16).padStart(16, '0');
 
     return `0x${strDeltaTimestamp}${strNewGER}${strIndexGER}`;
 }

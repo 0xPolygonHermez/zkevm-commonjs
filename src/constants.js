@@ -19,7 +19,20 @@ module.exports.SIGNATURE_BYTES = 32 + 32 + 1;
 module.exports.FrSNARK = Scalar.e('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 module.exports.FrSTARK = Scalar.e('18446744069414584321');
 
-// SMT constant keys
+// SMT blob-tree constant keys
+module.exports.SMT_KEY_BLOB_CONSTANT = 7;
+module.exports.SMT_KEY_BLOB_LAST_ADDRESS_INDEX = 0;
+module.exports.SMT_KEY_BLOB_LAST_DATA_INDEX = 1;
+module.exports.SMT_KEY_BLOB_ADDRESS_ROOT = 2;
+module.exports.SMT_KEY_BLOB_DATA_ROOT = 3;
+
+// SMT address tree constants
+module.exports.SMT_KEY_ADDRESS_INDEX = 8;
+
+// SMT data tree constants
+module.exports.SMT_KEY_DATA_INDEX = 9;
+
+// SMT state-tree constant keys
 module.exports.SMT_KEY_BALANCE = 0;
 module.exports.SMT_KEY_NONCE = 1;
 module.exports.SMT_KEY_SC_CODE = 2;

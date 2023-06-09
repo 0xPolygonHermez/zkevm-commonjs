@@ -2,7 +2,7 @@ const { h4toString, stringToH4 } = require('./smt-utils');
 
 /**
  * This is a DB which intends to get all the state from the srcDB and
- * store all the inserts insetead of modifying the DB
+ * store all the inserts insyead of modifying the DB
  * in case the inserts are accepted, can be populated to the srcDB
  */
 class TmpSmtDB {

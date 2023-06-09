@@ -738,10 +738,10 @@ module.exports = class BatchProcessor {
     getBatchData() {
         // build header
         const historicGERRootStr = smtUtils.h4toString(this.historicGERRoot);
-        const timestampLimitStr = valueToHexStr(this.timestampLimit).padStart('0', 8 * 2);
+        const timestampLimitStr = valueToHexStr(this.timestampLimit).padStart(8 * 2, '0');
         const sequencerAddrStr = this.sequencerAddress.startsWith('0x') ? this.sequencerAddress.slice(2) : this.sequencerAddress;
-        const zkGasLimitStr = valueToHexStr(this.zkGasLimit).padStart('0', 8 * 2);
-        const numBlobStr = valueToHexStr(this.numBlob).padStart('0', 8 * 2);
+        const zkGasLimitStr = valueToHexStr(this.zkGasLimit).padStart(8 * 2, '0');
+        const numBlobStr = valueToHexStr(this.numBlob).padStart(8 * 2, '0');
 
         // concatenate serialize transactions
         const txsConcat = this.rawTxs.reduce((accumulator, currentValue) => accumulator + currentValue.serialized.slice(2), '');

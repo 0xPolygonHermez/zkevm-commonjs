@@ -63,7 +63,7 @@ function serializeLegacy(tx) {
     data = Scalar.add(data, Scalar.shl(tx.type, offsetBits));
     offsetBits += 8;
 
-    return valueToHexStr(data).padStart('0', offsetBits / 4);
+    return valueToHexStr(data).padStart(offsetBits / 4, '0');
 }
 
 /**
@@ -90,7 +90,7 @@ function serializeChangeL2Block(tx) {
     data = Scalar.add(data, Scalar.shl(tx.type, offsetBits));
     offsetBits += 8;
 
-    return valueToHexStr(data).padStart('0', offsetBits / 4);
+    return valueToHexStr(data).padStart(offsetBits / 4, '0');
 }
 
 /**
