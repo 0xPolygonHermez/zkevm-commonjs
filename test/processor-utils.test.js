@@ -1,3 +1,4 @@
+/* eslint-disable global-require */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-continue */
 
@@ -169,21 +170,13 @@ describe('Processor utils', () => {
     });
 
     it('computeEffectiveGasPrice', async () => {
-        const testComputeEffectiveGasPrice = [
-            ['0x0', '0xff', 0n],
-            ['0x1234', '0xff', 4660n],
-            ['0x1234', '0x0', 18n],
-            ['0x1234', '0x7f', 2330n],
-            ['0x1', '0xf8', 0n],
-            ['0x2', '0xf8', 1n],
-            ['0x2', '0x01', 0n],
-        ];
+        const testComputeEffectiveGasPrice = require('./computeEffectiveGasPrice-input.json');
         for (let i = 0; i < testComputeEffectiveGasPrice.length; i++) {
             const gasPrice = testComputeEffectiveGasPrice[i][0];
             const effectivePercentage = testComputeEffectiveGasPrice[i][1];
             const expectedOut = testComputeEffectiveGasPrice[i][2];
 
-            const out = processorUtils.computeEffectiveGasPrice(gasPrice, effectivePercentage);
+            const out = `0x${processorUtils.computeEffectiveGasPrice(gasPrice, effectivePercentage).toString(16)}`;
             expect(out).to.be.equal(expectedOut);
         }
     });
