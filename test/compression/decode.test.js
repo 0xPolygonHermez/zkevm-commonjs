@@ -92,9 +92,8 @@ describe('Compressor:decode', async () => {
             const test = testVectors.compressed32Byte[i];
 
             const computedOutput = decode.compressed32Byte(test.input);
-
             if (update) {
-                test.output = `0x${computedOutput}`;
+                test.output = computedOutput;
             } else {
                 expect(computedOutput).to.be.equal(test.output);
             }
@@ -108,7 +107,7 @@ describe('Compressor:decode', async () => {
             const computedOutput = decode.compressedAddress(test.input);
 
             if (update) {
-                test.output = `0x${computedOutput}`;
+                test.output = computedOutput;
             } else {
                 expect(computedOutput).to.be.equal(test.output);
             }

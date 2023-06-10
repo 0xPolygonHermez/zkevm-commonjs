@@ -744,7 +744,12 @@ module.exports = class BatchProcessor {
         const numBlobStr = valueToHexStr(this.numBlob).padStart(8 * 2, '0');
 
         // concatenate serialize transactions
-        const txsConcat = this.rawTxs.reduce((accumulator, currentValue) => accumulator + currentValue.serialized.slice(2), '');
+        let txsConcat = '';
+
+        for (let i = 0; i < this.rawTxs.length; i++) {
+            const serializedStr = this.rawTxs[i].serialized;
+            txsConcat += serializedStr.startsWith('0x') ? serializedStr.slice(2) : serializedStr;
+        }
 
         return `${historicGERRootStr}${timestampLimitStr}${sequencerAddrStr}${zkGasLimitStr}${numBlobStr}${txsConcat}`;
     }

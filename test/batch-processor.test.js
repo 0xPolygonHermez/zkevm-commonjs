@@ -229,6 +229,8 @@ describe('Processor', async function () {
                 }
 
                 if (!update) {
+                    console.log(batchCustomTx);
+                    console.log(txData.batchCustomTx);
                     expect(batchCustomTx).to.equal(txData.batchCustomTx);
                 } else {
                     txData.batchCustomTx = batchCustomTx;
