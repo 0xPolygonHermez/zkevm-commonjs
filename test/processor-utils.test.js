@@ -12,9 +12,11 @@ const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor utils', () => {
     let testVectors;
+    let testVectorsEffGasPrice;
 
     before(async () => {
         testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'zkevm-db/state-transition.json')));
+        testVectorsEffGasPrice = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'effective-gas-price/effective-gas-price.json')));
     });
 
     it('Check encode and decode transactions', async () => {
@@ -170,14 +172,11 @@ describe('Processor utils', () => {
     });
 
     it('computeEffectiveGasPrice', async () => {
-        const testComputeEffectiveGasPrice = require('./computeEffectiveGasPrice-input.json');
-        for (let i = 0; i < testComputeEffectiveGasPrice.length; i++) {
-            const gasPrice = testComputeEffectiveGasPrice[i][0];
-            const effectivePercentage = testComputeEffectiveGasPrice[i][1];
-            const expectedOut = testComputeEffectiveGasPrice[i][2];
+        for (let i = 0; i < testVectorsEffGasPrice.length; i++) {
+            const { gasPrice, effectivePercentage, expectedOutput } = testVectorsEffGasPrice[i];
 
-            const out = `0x${processorUtils.computeEffectiveGasPrice(gasPrice, effectivePercentage).toString(16)}`;
-            expect(out).to.be.equal(expectedOut);
+            const computedOutput = `0x${processorUtils.computeEffectiveGasPrice(gasPrice, effectivePercentage).toString(16)}`;
+            expect(computedOutput).to.be.equal(expectedOutput);
         }
     });
 });
