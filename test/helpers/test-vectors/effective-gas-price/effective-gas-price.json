@@ -1,0 +1,1317 @@
+[
+  {
+    "gasPrice": "0x0",
+    "effectivePercentage": "0xff",
+    "expectedOutput": "0x0"
+  },
+  {
+    "gasPrice": "0x1234",
+    "effectivePercentage": "0xff",
+    "expectedOutput": "0x1234"
+  },
+  {
+    "gasPrice": "0x1234",
+    "effectivePercentage": "0x0",
+    "expectedOutput": "0x12"
+  },
+  {
+    "gasPrice": "0x1234",
+    "effectivePercentage": "0x7f",
+    "expectedOutput": "0x91a"
+  },
+  {
+    "gasPrice": "0x1",
+    "effectivePercentage": "0xf8",
+    "expectedOutput": "0x0"
+  },
+  {
+    "gasPrice": "0x2",
+    "effectivePercentage": "0xf8",
+    "expectedOutput": "0x1"
+  },
+  {
+    "gasPrice": "0x2",
+    "effectivePercentage": "0x01",
+    "expectedOutput": "0x0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x0",
+    "expectedOutput": "0x3b9aca"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x1",
+    "expectedOutput": "0x773594"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x2",
+    "expectedOutput": "0xb2d05e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x3",
+    "expectedOutput": "0xee6b28"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x4",
+    "expectedOutput": "0x12a05f2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x5",
+    "expectedOutput": "0x165a0bc"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x6",
+    "expectedOutput": "0x1a13b86"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x7",
+    "expectedOutput": "0x1dcd650"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x8",
+    "expectedOutput": "0x218711a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x9",
+    "expectedOutput": "0x2540be4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa",
+    "expectedOutput": "0x28fa6ae"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb",
+    "expectedOutput": "0x2cb4178"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc",
+    "expectedOutput": "0x306dc42"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd",
+    "expectedOutput": "0x342770c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe",
+    "expectedOutput": "0x37e11d6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf",
+    "expectedOutput": "0x3b9aca0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x10",
+    "expectedOutput": "0x3f5476a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x11",
+    "expectedOutput": "0x430e234"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x12",
+    "expectedOutput": "0x46c7cfe"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x13",
+    "expectedOutput": "0x4a817c8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x14",
+    "expectedOutput": "0x4e3b292"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x15",
+    "expectedOutput": "0x51f4d5c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x16",
+    "expectedOutput": "0x55ae826"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x17",
+    "expectedOutput": "0x59682f0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x18",
+    "expectedOutput": "0x5d21dba"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x19",
+    "expectedOutput": "0x60db884"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x1a",
+    "expectedOutput": "0x649534e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x1b",
+    "expectedOutput": "0x684ee18"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x1c",
+    "expectedOutput": "0x6c088e2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x1d",
+    "expectedOutput": "0x6fc23ac"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x1e",
+    "expectedOutput": "0x737be76"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x1f",
+    "expectedOutput": "0x7735940"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x20",
+    "expectedOutput": "0x7aef40a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x21",
+    "expectedOutput": "0x7ea8ed4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x22",
+    "expectedOutput": "0x826299e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x23",
+    "expectedOutput": "0x861c468"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x24",
+    "expectedOutput": "0x89d5f32"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x25",
+    "expectedOutput": "0x8d8f9fc"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x26",
+    "expectedOutput": "0x91494c6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x27",
+    "expectedOutput": "0x9502f90"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x28",
+    "expectedOutput": "0x98bca5a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x29",
+    "expectedOutput": "0x9c76524"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x2a",
+    "expectedOutput": "0xa02ffee"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x2b",
+    "expectedOutput": "0xa3e9ab8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x2c",
+    "expectedOutput": "0xa7a3582"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x2d",
+    "expectedOutput": "0xab5d04c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x2e",
+    "expectedOutput": "0xaf16b16"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x2f",
+    "expectedOutput": "0xb2d05e0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x30",
+    "expectedOutput": "0xb68a0aa"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x31",
+    "expectedOutput": "0xba43b74"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x32",
+    "expectedOutput": "0xbdfd63e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x33",
+    "expectedOutput": "0xc1b7108"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x34",
+    "expectedOutput": "0xc570bd2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x35",
+    "expectedOutput": "0xc92a69c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x36",
+    "expectedOutput": "0xcce4166"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x37",
+    "expectedOutput": "0xd09dc30"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x38",
+    "expectedOutput": "0xd4576fa"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x39",
+    "expectedOutput": "0xd8111c4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x3a",
+    "expectedOutput": "0xdbcac8e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x3b",
+    "expectedOutput": "0xdf84758"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x3c",
+    "expectedOutput": "0xe33e222"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x3d",
+    "expectedOutput": "0xe6f7cec"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x3e",
+    "expectedOutput": "0xeab17b6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x3f",
+    "expectedOutput": "0xee6b280"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x40",
+    "expectedOutput": "0xf224d4a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x41",
+    "expectedOutput": "0xf5de814"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x42",
+    "expectedOutput": "0xf9982de"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x43",
+    "expectedOutput": "0xfd51da8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x44",
+    "expectedOutput": "0x1010b872"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x45",
+    "expectedOutput": "0x104c533c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x46",
+    "expectedOutput": "0x1087ee06"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x47",
+    "expectedOutput": "0x10c388d0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x48",
+    "expectedOutput": "0x10ff239a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x49",
+    "expectedOutput": "0x113abe64"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x4a",
+    "expectedOutput": "0x1176592e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x4b",
+    "expectedOutput": "0x11b1f3f8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x4c",
+    "expectedOutput": "0x11ed8ec2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x4d",
+    "expectedOutput": "0x1229298c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x4e",
+    "expectedOutput": "0x1264c456"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x4f",
+    "expectedOutput": "0x12a05f20"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x50",
+    "expectedOutput": "0x12dbf9ea"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x51",
+    "expectedOutput": "0x131794b4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x52",
+    "expectedOutput": "0x13532f7e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x53",
+    "expectedOutput": "0x138eca48"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x54",
+    "expectedOutput": "0x13ca6512"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x55",
+    "expectedOutput": "0x1405ffdc"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x56",
+    "expectedOutput": "0x14419aa6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x57",
+    "expectedOutput": "0x147d3570"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x58",
+    "expectedOutput": "0x14b8d03a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x59",
+    "expectedOutput": "0x14f46b04"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x5a",
+    "expectedOutput": "0x153005ce"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x5b",
+    "expectedOutput": "0x156ba098"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x5c",
+    "expectedOutput": "0x15a73b62"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x5d",
+    "expectedOutput": "0x15e2d62c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x5e",
+    "expectedOutput": "0x161e70f6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x5f",
+    "expectedOutput": "0x165a0bc0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x60",
+    "expectedOutput": "0x1695a68a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x61",
+    "expectedOutput": "0x16d14154"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x62",
+    "expectedOutput": "0x170cdc1e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x63",
+    "expectedOutput": "0x174876e8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x64",
+    "expectedOutput": "0x178411b2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x65",
+    "expectedOutput": "0x17bfac7c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x66",
+    "expectedOutput": "0x17fb4746"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x67",
+    "expectedOutput": "0x1836e210"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x68",
+    "expectedOutput": "0x18727cda"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x69",
+    "expectedOutput": "0x18ae17a4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x6a",
+    "expectedOutput": "0x18e9b26e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x6b",
+    "expectedOutput": "0x19254d38"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x6c",
+    "expectedOutput": "0x1960e802"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x6d",
+    "expectedOutput": "0x199c82cc"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x6e",
+    "expectedOutput": "0x19d81d96"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x6f",
+    "expectedOutput": "0x1a13b860"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x70",
+    "expectedOutput": "0x1a4f532a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x71",
+    "expectedOutput": "0x1a8aedf4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x72",
+    "expectedOutput": "0x1ac688be"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x73",
+    "expectedOutput": "0x1b022388"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x74",
+    "expectedOutput": "0x1b3dbe52"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x75",
+    "expectedOutput": "0x1b79591c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x76",
+    "expectedOutput": "0x1bb4f3e6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x77",
+    "expectedOutput": "0x1bf08eb0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x78",
+    "expectedOutput": "0x1c2c297a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x79",
+    "expectedOutput": "0x1c67c444"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x7a",
+    "expectedOutput": "0x1ca35f0e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x7b",
+    "expectedOutput": "0x1cdef9d8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x7c",
+    "expectedOutput": "0x1d1a94a2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x7d",
+    "expectedOutput": "0x1d562f6c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x7e",
+    "expectedOutput": "0x1d91ca36"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x7f",
+    "expectedOutput": "0x1dcd6500"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x80",
+    "expectedOutput": "0x1e08ffca"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x81",
+    "expectedOutput": "0x1e449a94"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x82",
+    "expectedOutput": "0x1e80355e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x83",
+    "expectedOutput": "0x1ebbd028"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x84",
+    "expectedOutput": "0x1ef76af2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x85",
+    "expectedOutput": "0x1f3305bc"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x86",
+    "expectedOutput": "0x1f6ea086"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x87",
+    "expectedOutput": "0x1faa3b50"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x88",
+    "expectedOutput": "0x1fe5d61a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x89",
+    "expectedOutput": "0x202170e4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x8a",
+    "expectedOutput": "0x205d0bae"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x8b",
+    "expectedOutput": "0x2098a678"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x8c",
+    "expectedOutput": "0x20d44142"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x8d",
+    "expectedOutput": "0x210fdc0c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x8e",
+    "expectedOutput": "0x214b76d6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x8f",
+    "expectedOutput": "0x218711a0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x90",
+    "expectedOutput": "0x21c2ac6a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x91",
+    "expectedOutput": "0x21fe4734"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x92",
+    "expectedOutput": "0x2239e1fe"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x93",
+    "expectedOutput": "0x22757cc8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x94",
+    "expectedOutput": "0x22b11792"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x95",
+    "expectedOutput": "0x22ecb25c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x96",
+    "expectedOutput": "0x23284d26"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x97",
+    "expectedOutput": "0x2363e7f0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x98",
+    "expectedOutput": "0x239f82ba"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x99",
+    "expectedOutput": "0x23db1d84"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x9a",
+    "expectedOutput": "0x2416b84e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x9b",
+    "expectedOutput": "0x24525318"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x9c",
+    "expectedOutput": "0x248dede2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x9d",
+    "expectedOutput": "0x24c988ac"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x9e",
+    "expectedOutput": "0x25052376"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0x9f",
+    "expectedOutput": "0x2540be40"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa0",
+    "expectedOutput": "0x257c590a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa1",
+    "expectedOutput": "0x25b7f3d4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa2",
+    "expectedOutput": "0x25f38e9e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa3",
+    "expectedOutput": "0x262f2968"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa4",
+    "expectedOutput": "0x266ac432"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa5",
+    "expectedOutput": "0x26a65efc"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa6",
+    "expectedOutput": "0x26e1f9c6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa7",
+    "expectedOutput": "0x271d9490"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa8",
+    "expectedOutput": "0x27592f5a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xa9",
+    "expectedOutput": "0x2794ca24"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xaa",
+    "expectedOutput": "0x27d064ee"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xab",
+    "expectedOutput": "0x280bffb8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xac",
+    "expectedOutput": "0x28479a82"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xad",
+    "expectedOutput": "0x2883354c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xae",
+    "expectedOutput": "0x28bed016"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xaf",
+    "expectedOutput": "0x28fa6ae0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb0",
+    "expectedOutput": "0x293605aa"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb1",
+    "expectedOutput": "0x2971a074"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb2",
+    "expectedOutput": "0x29ad3b3e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb3",
+    "expectedOutput": "0x29e8d608"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb4",
+    "expectedOutput": "0x2a2470d2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb5",
+    "expectedOutput": "0x2a600b9c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb6",
+    "expectedOutput": "0x2a9ba666"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb7",
+    "expectedOutput": "0x2ad74130"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb8",
+    "expectedOutput": "0x2b12dbfa"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xb9",
+    "expectedOutput": "0x2b4e76c4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xba",
+    "expectedOutput": "0x2b8a118e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xbb",
+    "expectedOutput": "0x2bc5ac58"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xbc",
+    "expectedOutput": "0x2c014722"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xbd",
+    "expectedOutput": "0x2c3ce1ec"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xbe",
+    "expectedOutput": "0x2c787cb6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xbf",
+    "expectedOutput": "0x2cb41780"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc0",
+    "expectedOutput": "0x2cefb24a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc1",
+    "expectedOutput": "0x2d2b4d14"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc2",
+    "expectedOutput": "0x2d66e7de"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc3",
+    "expectedOutput": "0x2da282a8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc4",
+    "expectedOutput": "0x2dde1d72"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc5",
+    "expectedOutput": "0x2e19b83c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc6",
+    "expectedOutput": "0x2e555306"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc7",
+    "expectedOutput": "0x2e90edd0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc8",
+    "expectedOutput": "0x2ecc889a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xc9",
+    "expectedOutput": "0x2f082364"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xca",
+    "expectedOutput": "0x2f43be2e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xcb",
+    "expectedOutput": "0x2f7f58f8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xcc",
+    "expectedOutput": "0x2fbaf3c2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xcd",
+    "expectedOutput": "0x2ff68e8c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xce",
+    "expectedOutput": "0x30322956"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xcf",
+    "expectedOutput": "0x306dc420"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd0",
+    "expectedOutput": "0x30a95eea"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd1",
+    "expectedOutput": "0x30e4f9b4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd2",
+    "expectedOutput": "0x3120947e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd3",
+    "expectedOutput": "0x315c2f48"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd4",
+    "expectedOutput": "0x3197ca12"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd5",
+    "expectedOutput": "0x31d364dc"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd6",
+    "expectedOutput": "0x320effa6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd7",
+    "expectedOutput": "0x324a9a70"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd8",
+    "expectedOutput": "0x3286353a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xd9",
+    "expectedOutput": "0x32c1d004"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xda",
+    "expectedOutput": "0x32fd6ace"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xdb",
+    "expectedOutput": "0x33390598"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xdc",
+    "expectedOutput": "0x3374a062"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xdd",
+    "expectedOutput": "0x33b03b2c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xde",
+    "expectedOutput": "0x33ebd5f6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xdf",
+    "expectedOutput": "0x342770c0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe0",
+    "expectedOutput": "0x34630b8a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe1",
+    "expectedOutput": "0x349ea654"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe2",
+    "expectedOutput": "0x34da411e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe3",
+    "expectedOutput": "0x3515dbe8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe4",
+    "expectedOutput": "0x355176b2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe5",
+    "expectedOutput": "0x358d117c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe6",
+    "expectedOutput": "0x35c8ac46"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe7",
+    "expectedOutput": "0x36044710"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe8",
+    "expectedOutput": "0x363fe1da"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xe9",
+    "expectedOutput": "0x367b7ca4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xea",
+    "expectedOutput": "0x36b7176e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xeb",
+    "expectedOutput": "0x36f2b238"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xec",
+    "expectedOutput": "0x372e4d02"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xed",
+    "expectedOutput": "0x3769e7cc"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xee",
+    "expectedOutput": "0x37a58296"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xef",
+    "expectedOutput": "0x37e11d60"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf0",
+    "expectedOutput": "0x381cb82a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf1",
+    "expectedOutput": "0x385852f4"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf2",
+    "expectedOutput": "0x3893edbe"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf3",
+    "expectedOutput": "0x38cf8888"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf4",
+    "expectedOutput": "0x390b2352"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf5",
+    "expectedOutput": "0x3946be1c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf6",
+    "expectedOutput": "0x398258e6"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf7",
+    "expectedOutput": "0x39bdf3b0"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf8",
+    "expectedOutput": "0x39f98e7a"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xf9",
+    "expectedOutput": "0x3a352944"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xfa",
+    "expectedOutput": "0x3a70c40e"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xfb",
+    "expectedOutput": "0x3aac5ed8"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xfc",
+    "expectedOutput": "0x3ae7f9a2"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xfd",
+    "expectedOutput": "0x3b23946c"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xfe",
+    "expectedOutput": "0x3b5f2f36"
+  },
+  {
+    "gasPrice": "0x3b9aca00",
+    "effectivePercentage": "0xff",
+    "expectedOutput": "0x3b9aca00"
+  }
+]
