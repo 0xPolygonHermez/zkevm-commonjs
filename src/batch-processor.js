@@ -243,25 +243,25 @@ module.exports = class BatchProcessor {
 
         // Verify newGER | indexHistoricalGERTree belong to historicGERRoot
         if (!this.options.skipVerifyGER) {
-            if (typeof tx.smtProof === 'undefined') {
+            if (typeof tx.smtProofs === 'undefined') {
                 throw new Error('BatchProcessor:_processChangeL2BlockTx:: missing smtProof parameter in changeL2Block tx');
             }
 
-            if (verifyMerkleProof(tx.newGER, tx.smtProof, tx.indexHistoricalGERTree, this.historicGERRoot)) {
+            if (verifyMerkleProof(tx.newGER, tx.smtProofs, tx.indexHistoricalGERTree, this.historicGERRoot)) {
                 return true;
             }
         }
 
         // set new timestamp
         const newTimestamp = Scalar.add(currentTimestamp, tx.deltaTimestamp);
-        this._setTimestamp(newTimestamp);
+        await this._setTimestamp(newTimestamp);
 
         // set new GER
-        this._setGlobalExitRoot(tx.newGER, newTimestamp);
+        await this._setGlobalExitRoot(tx.newGER, newTimestamp);
 
         // read block number, increase it by 1 and write it
         // write new blockchash
-        this._updateSystemStorage();
+        await this._updateSystemStorage();
 
         return false;
     }

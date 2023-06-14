@@ -160,6 +160,7 @@ describe('Processor', async function () {
              */
             const txProcessed = [];
             const rawTxs = [];
+            const smtProofsObject = {};
             for (let j = 0; j < txs.length; j++) {
                 const txData = txs[j];
                 const tx = txUtils.parseTx(txData);
@@ -170,6 +171,7 @@ describe('Processor', async function () {
                     batchCustomTx = {
                         serialized: batchUtils.serializeTx(tx),
                     };
+                    smtProofsObject[tx.indexHistoricalGERTree] = txData.smtProofs;
                 } else {
                     // The tx will have paramsDeploy in case is a deployment with constructor
                     // let params = '';
@@ -261,11 +263,12 @@ describe('Processor', async function () {
             // execute the transactions added to the batch
             await batch.executeTxs();
             // // consolidate state
-            // await zkEVMDB.consolidate(batch);
+            await zkEVMDB.consolidate(batch);
             // save input batch
             const starkInput = await batch.getStarkInput();
+            starkInput.smtProofs = smtProofsObject;
             console.log(starkInput);
-            fs.writeFileSync(pathProcessorTests = path.join(pathTestVectors, 'batch-processor/input-example.json'), JSON.stringify(starkInput, null, 2));
+            fs.writeFileSync(path.join(pathTestVectors, 'batch-processor/input-example.json'), JSON.stringify(starkInput, null, 2));
 
             // const newRoot = batch.currentStateRoot;
             // if (!update) {
@@ -292,46 +295,46 @@ describe('Processor', async function () {
 
             // Check balances and nonces
             const updatedAccounts = batch.getUpdatedAccountsBatch();
-            // const newLeafs = {};
-            // for (const item in updatedAccounts) {
-            //     const address = item;
-            //     const account = updatedAccounts[address];
-            //     newLeafs[address] = {};
+            const newLeafs = {};
+            for (const item in updatedAccounts) {
+                const address = item;
+                const account = updatedAccounts[address];
+                newLeafs[address] = {};
 
-            //     const newLeaf = await zkEVMDB.getCurrentAccountState(address);
-            //     expect(newLeaf.balance.toString()).to.equal(account.balance.toString());
-            //     expect(newLeaf.nonce.toString()).to.equal(account.nonce.toString());
+                const newLeaf = await zkEVMDB.getCurrentAccountState(address);
+                expect(newLeaf.balance.toString()).to.equal(account.balance.toString());
+                expect(newLeaf.nonce.toString()).to.equal(account.nonce.toString());
 
-            //     const smtNewLeaf = await zkEVMDB.getCurrentAccountState(address);
-            //     expect(smtNewLeaf.balance.toString()).to.equal(account.balance.toString());
-            //     expect(smtNewLeaf.nonce.toString()).to.equal(account.nonce.toString());
+                const smtNewLeaf = await zkEVMDB.getCurrentAccountState(address);
+                expect(smtNewLeaf.balance.toString()).to.equal(account.balance.toString());
+                expect(smtNewLeaf.nonce.toString()).to.equal(account.nonce.toString());
 
-            //     newLeafs[address].balance = account.balance.toString();
-            //     newLeafs[address].nonce = account.nonce.toString();
+                newLeafs[address].balance = account.balance.toString();
+                newLeafs[address].nonce = account.nonce.toString();
 
-            //     const storage = await zkEVMDB.dumpStorage(address);
-            //     const hashBytecode = await zkEVMDB.getHashBytecode(address);
-            //     const bytecodeLength = await zkEVMDB.getLength(address);
-            //     newLeafs[address].storage = storage;
-            //     newLeafs[address].hashBytecode = hashBytecode;
-            //     newLeafs[address].bytecodeLength = bytecodeLength;
-            // }
-            // for (const leaf of genesis) {
-            //     if (!newLeafs[leaf.address.toLowerCase()]) {
-            //         newLeafs[leaf.address] = { ...leaf };
-            //         delete newLeafs[leaf.address].address;
-            //         delete newLeafs[leaf.address].bytecode;
-            //         delete newLeafs[leaf.address].contractName;
-            //     }
-            // }
+                const storage = await zkEVMDB.dumpStorage(address);
+                const hashBytecode = await zkEVMDB.getHashBytecode(address);
+                const bytecodeLength = await zkEVMDB.getLength(address);
+                newLeafs[address].storage = storage;
+                newLeafs[address].hashBytecode = hashBytecode;
+                newLeafs[address].bytecodeLength = bytecodeLength;
+            }
+            for (const leaf of genesis) {
+                if (!newLeafs[leaf.address.toLowerCase()]) {
+                    newLeafs[leaf.address] = { ...leaf };
+                    delete newLeafs[leaf.address].address;
+                    delete newLeafs[leaf.address].bytecode;
+                    delete newLeafs[leaf.address].contractName;
+                }
+            }
 
-            // if (!update) {
-            //     for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
-            //         expect(lodash.isEqual(leaf, newLeafs[address])).to.be.equal(true);
-            //     }
-            // } else {
-            //     testVectors[i].expectedNewLeafs = newLeafs;
-            // }
+            if (!update) {
+                for (const [address, leaf] of Object.entries(expectedNewLeafs)) {
+                    expect(lodash.isEqual(leaf, newLeafs[address])).to.be.equal(true);
+                }
+            } else {
+                testVectors[i].expectedNewLeafs = newLeafs;
+            }
 
             // // Check global and local exit roots
             // const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
@@ -408,8 +411,8 @@ describe('Processor', async function () {
 
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
         }
-        // if (update) {
-        //     await fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
-        // }
+        if (update) {
+            fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
+        }
     });
 });
