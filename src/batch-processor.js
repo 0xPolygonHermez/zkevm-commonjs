@@ -8,7 +8,7 @@ const {
 
 const { Scalar } = require('ffjavascript');
 const SMT = require('./smt');
-const TmpSmtDB = require('./tmp-smt-db');
+const TmpDB = require('./tmp-db');
 const Constants = require('./constants');
 const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
@@ -42,6 +42,7 @@ module.exports = class BatchProcessor {
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smart contract at the end of processable transactions
      * @param {Number} options.newBatchGasLimit New batch gas limit
      * @param {Bool} options.skipVerifyGER Skips GEr verification against the historicGERRoot
+     * @param {Object} options.zkGasUsed - all zkGasUSed during the batch execution
      */
     constructor(
         db,
@@ -64,12 +65,12 @@ module.exports = class BatchProcessor {
         this.zkGasLimit = zkGasLimit;
         this.numBlob = numBlob;
         this.oldNumBatch = lastNumBatch;
-        this.newNumBatch = lastNumBatch + 1; // TODO: check spoecial batch to just increase numBatches
+        this.newNumBatch = lastNumBatch + 1;
         this.poseidon = poseidon;
         this.maxNTx = maxNTx;
         this.F = poseidon.F;
-        this.tmpSmtDB = new TmpSmtDB(db);
-        this.smt = new SMT(this.tmpSmtDB, poseidon, poseidon.F);
+        this.tmpDB = new TmpDB(db);
+        this.smt = new SMT(this.tmpDB, poseidon, poseidon.F);
 
         this.rawTxs = [];
         this.deserializedTxs = [];
@@ -122,6 +123,9 @@ module.exports = class BatchProcessor {
 
         // Deserialize txs
         await this._deserializeTxs();
+
+        // Check zkGasLimit
+        await this._checkZkGasLimit();
 
         // Process transactions and update the state
         await this._processTxs();
@@ -203,6 +207,12 @@ module.exports = class BatchProcessor {
         }
     }
 
+    // async _checkZkGasLimit() {
+    //     if (Scalar.gt(this.zkGasLimits, 0)) {
+
+    //     }
+    // }
+
     async _processTxs() {
         for (let i = 0; i < this.deserializedTxs.length; i++) {
             const tx = this.deserializedTxs[i];
@@ -254,14 +264,14 @@ module.exports = class BatchProcessor {
 
         // set new timestamp
         const newTimestamp = Scalar.add(currentTimestamp, tx.deltaTimestamp);
-        this._setTimestamp(newTimestamp);
+        await this._setTimestamp(newTimestamp);
 
         // set new GER
-        this._setGlobalExitRoot(tx.newGER, newTimestamp);
+        await this._setGlobalExitRoot(tx.newGER, newTimestamp);
 
         // read block number, increase it by 1 and write it
         // write new blockchash
-        this._updateSystemStorage();
+        await this._updateSystemStorage();
 
         return false;
     }
@@ -685,20 +695,19 @@ module.exports = class BatchProcessor {
         this.starkInput = {
             // inputs
             oldStateRoot: smtUtils.h4toString(this.oldStateRoot),
-            oldNumBatch: this.oldNumBatch, // TODO: May be removed from here
             chainID: this.chainID,
             forkID: this.forkID,
             oldAccBatchHashData: this.oldAccBatchHashData,
             batchData: this.getBatchData(),
+            initZkGasRemaining: this.zkGasLimit.toString(),
             // outputs
             newAccBatchHashData: this.newAccBatchHashData,
             newStateRoot: smtUtils.h4toString(this.currentStateRoot),
-            newNumBatch: this.newNumBatch, // TODO: May be removed from here
             newLocalExitRoot: smtUtils.h4toString(this.newLocalExitRoot),
-            // TODO: subject to change. Probably loaded through the batchData as a header
             sequencerAddress: this.sequencerAddress,
             timestampLimit: this.timestampLimit.toString(),
             historicGERRoot: smtUtils.h4toString(this.historicGERRoot),
+            // debug properties
             contractsBytecode: this.contractsBytecode,
             db: await smtUtils.getCurrentDB(this.oldStateRoot, this.db, this.F),
         };
@@ -812,3 +821,22 @@ module.exports = class BatchProcessor {
         return this.updatedAccounts;
     }
 };
+
+//TODO:
+// initBatch: check zkGasRemaining > 0
+//             - true: proceed
+//             - during execution: invalidate and finish batch --> set zkGasRemaining to 0
+//             - false: routine to fill missing batches
+
+// first batch --> filled with zkGasLimit
+    // take from there and use zkGasLimit
+// following batches are '0'
+    // read it from private input (forced to be inZkGasLimit(batch_N) == outZkGasLimit(batch_N-1))
+
+// BLOB
+// ----------
+// FIRST: "batchData" --> zkGasLimit --> read
+//     --> zkGasRemaining: zkGasLimit
+// SECOND: "batchData" --> zkGasLimit --> 0
+//     --> if (zkGasLimit == 0) --> read input signal (zkGasRemaining)
+//     --> check zkGasRemaining > 0 --> jump special batch

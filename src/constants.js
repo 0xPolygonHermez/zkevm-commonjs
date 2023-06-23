@@ -3,7 +3,9 @@ const { Scalar } = require('ffjavascript');
 
 // Database keys
 module.exports.DB_LAST_BATCH = ethers.utils.id(('ZKEVM_DB_LAST_BATCH'));
+module.exports.DB_LAST_BLOB = ethers.utils.id(('ZKEVM_DB_LAST_BLOB'));
 module.exports.DB_STATE_ROOT = ethers.utils.id(('ZKEVM_DB_STATE_ROOT'));
+module.exports.DB_BLOB_ROOT = ethers.utils.id(('ZKEVM_DB_BLOB_ROOT'));
 module.exports.DB_ACC_BLOB_HASH = ethers.utils.id(('ZKEVM_DB_ACC_BLOB_HASH'));
 module.exports.DB_LOCAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_LOCAL_EXIT_ROOT'));
 module.exports.DB_GLOBAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_GLOBAL_EXIT_ROOT'));
@@ -11,7 +13,9 @@ module.exports.DB_ADDRESS_STORAGE = ethers.utils.id(('ZKEVM_DB_ADDRESS_STORAGE')
 module.exports.DB_TOUCHED_ACCOUNTS = ethers.utils.id(('ZKEVM_DB_TOUCHED_ACCOUNTS'));
 module.exports.DB_STARK_INPUT = ethers.utils.id(('ZKEVM_DB_STARK_INPUT'));
 module.exports.DB_COMPRESSOR_ADDRESS = ethers.utils.id(('COMPRESSOR_ADDRESS'));
+module.exports.DB_COMPRESSOR_INDEX_ADDRESS = ethers.utils.id(('COMPRESSOR_INDEX_ADDRESS'));
 module.exports.DB_COMPRESSOR_32_BYTES = ethers.utils.id(('COMPRESSOR_32_BYTES'));
+module.exports.DB_COMPRESSOR_INDEX_32_BYTES = ethers.utils.id(('COMPRESSOR_INDEX_32_BYTES'));
 
 // Default values and global constants
 module.exports.DEFAULT_MAX_TX = 1000;
@@ -31,6 +35,7 @@ module.exports.SMT_KEY_ADDRESS_INDEX = 8;
 
 // SMT data tree constants
 module.exports.SMT_KEY_DATA_INDEX = 9;
+module.exports.SMT_DATA_MAX_INDEX = 2 ** 21;
 
 // SMT state-tree constant keys
 module.exports.SMT_KEY_BALANCE = 0;

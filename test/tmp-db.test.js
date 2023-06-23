@@ -3,10 +3,10 @@ const { expect } = require('chai');
 const ethers = require('ethers');
 
 const {
-    MemDB, SMT, smtUtils, TmpSmtDB, getPoseidon,
+    MemDB, SMT, smtUtils, TmpDB, getPoseidon,
 } = require('../index');
 
-describe('TmpSmtDB', () => {
+describe('TmpDB', () => {
     let poseidon;
     let F;
 
@@ -23,10 +23,11 @@ describe('TmpSmtDB', () => {
         const db = new MemDB(F);
         const smt = new SMT(db, poseidon, poseidon.F);
 
-        // create TmpSmtDB
-        const tmpDB = new TmpSmtDB(db);
+        // create TmpDB
+        const tmpDB = new TmpDB(db);
         const smtTmp = new SMT(tmpDB, poseidon, poseidon.F);
 
+        // smt nodes
         const keyBalance = await smtUtils.keyEthAddrBalance(address);
         const zeroRoot = smt.empty;
 
@@ -37,6 +38,28 @@ describe('TmpSmtDB', () => {
         const resBalanceTmp = await smtTmp.get(genesisRoot, keyBalance);
 
         expect(resBalance).to.be.deep.equal(resBalanceTmp);
+
+        // values
+        const key = Scalar.e(5843756759);
+        const value = 42;
+
+        await db.setValue(key, value);
+
+        const resValue = await db.getValue(key);
+        const resValueTmp = await tmpDB.getValue(key);
+
+        expect(resValue).to.be.equal(resValueTmp);
+
+        // programs
+        const keyProgram = [Scalar.e(1), Scalar.e(2), Scalar.e(3), Scalar.e(4)];
+        const valueProgram = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+
+        await db.setProgram(keyProgram, valueProgram);
+
+        const resProgram = await db.getProgram(keyProgram);
+        const resProgramTmp = await tmpDB.getProgram(keyProgram);
+
+        expect(resProgram).to.be.deep.equal(resProgramTmp);
     });
 
     it('Update and populate memDB with tmpDb', async () => {
@@ -47,11 +70,12 @@ describe('TmpSmtDB', () => {
         const smt = new SMT(db, poseidon, poseidon.F);
 
         // create TmpDB
-        const tmpDB = new TmpSmtDB(db);
+        const tmpDB = new TmpDB(db);
 
         // load smtTMp
         const smtTmp = new SMT(tmpDB, poseidon, poseidon.F);
 
+        // smt nodes
         const keyBalance = await smtUtils.keyEthAddrBalance(address);
         const zeroRoot = smt.empty;
 
@@ -69,9 +93,34 @@ describe('TmpSmtDB', () => {
         expect(resBalance.value).to.be.equal(Scalar.e(0));
         expect(resBalanceTmp.value).to.be.equal(balance);
 
+        // values
+        const key = Scalar.e(5843756759);
+        const value = 42;
+
+        await tmpDB.setValue(key, value);
+
+        const resValue = await db.getValue(key);
+        const resValueTmp = await tmpDB.getValue(key);
+
+        expect(resValue).to.be.equal(null);
+        expect(resValueTmp).to.be.equal(value);
+
+        // programs
+        const keyProgram = [Scalar.e(1), Scalar.e(2), Scalar.e(3), Scalar.e(4)];
+        const valueProgram = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+
+        await tmpDB.setProgram(keyProgram, valueProgram);
+
+        const resProgram = await db.getProgram(keyProgram);
+        const resProgramTmp = await tmpDB.getProgram(keyProgram);
+
+        expect(resProgram).to.be.deep.equal(null);
+        expect(resProgramTmp).to.be.deep.equal(valueProgram);
+
         // populate db with the content of the tmpDb
         await tmpDB.populateSrcDb();
 
+        // check smt nodes
         let resBalance2;
         try {
             resBalance2 = await smt.get(genesisRoot, keyBalance);
@@ -85,5 +134,12 @@ describe('TmpSmtDB', () => {
         expect(resBalance2Tmp.value).to.be.equal(balance);
         expect(resBalance2Tmp.value.toString()).to.be.equal(resBalance2.value.toString());
         expect(tempDBArray).to.be.deep.equal(DBArray);
+
+        // check values and programs
+        const resValueFinal = await db.getValue(key);
+        const resProgramFinal = await db.getProgram(keyProgram);
+
+        expect(resValueFinal).to.be.equal(value);
+        expect(resProgramFinal).to.be.deep.equal(valueProgram);
     });
 });

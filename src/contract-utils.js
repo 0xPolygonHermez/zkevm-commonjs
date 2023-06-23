@@ -5,40 +5,37 @@ const { sha256Snark, padZeros } = require('./utils');
 
 /**
  * Compute accumulateBlobHash = Keccak256(oldAccBlobHash, blobHashData, blobHashType, historicGERRoot, timestampLimit, sequencerAddress, L1BlockHash, zkGasLimit, gasPriceL1)
- * @param {String} oldAccBlobHash - old accumulateInputHash
- * @param {String} blobHashData - Batch hash data
- * @param {String} blobHashType - Global Exit Root
+ * @param {String} oldAccBlobHash - old accumulate blob hash
+ * @param {String} blobHashData - blob hash data
+ * @param {String} blobType - blob type
  * @param {String} historicGERRoot - Block timestamp
  * @param {BigInt} timestampLimit - Sequencer address
  * @param {String} sequencerAddress - Sequencer address
  * @param {String} L1BlockHash - Sequencer address
  * @param {BigInt} zkGasLimit - Sequencer address
- * @param {BigInt} gasPriceL1 - Sequencer address
  * @returns {String} - accumulateInputHash in hex encoding
  */
 function calculateAccBlobHash(
     oldAccBlobHash,
     blobHashData,
-    blobHashType,
+    blobType,
     historicGERRoot,
     timestampLimit,
     sequencerAddress,
     L1BlockHash,
     zkGasLimit,
-    gasPriceL1,
 ) {
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'uint64', 'bytes32', 'uint64', 'address', 'bytes32', 'uint64', 'uint64'],
+        ['bytes32', 'bytes32', 'uint8', 'bytes32', 'uint64', 'address', 'bytes32', 'uint64'],
         [
             oldAccBlobHash,
             blobHashData,
-            blobHashType,
+            blobType,
             historicGERRoot,
             timestampLimit,
             sequencerAddress,
             L1BlockHash,
             zkGasLimit,
-            gasPriceL1,
         ],
     );
 
@@ -141,11 +138,11 @@ async function calculateSnarkInput(
 }
 
 /**
- * Batch hash data
- * @param {String} transactions - All raw transaction data concatenated
- * @returns {String} - Batch hash data
+ * Blob hash data
+ * @param {String} blobData - blob data
+ * @returns {String} - Blob hash data
  */
-function calculateBatchHashData(
+function calculateBlobHashData(
     transactions,
 ) {
     return ethers.utils.solidityKeccak256(
@@ -202,6 +199,6 @@ function generateSolidityInputs(
 module.exports = {
     calculateAccBlobHash,
     calculateSnarkInput,
-    calculateBatchHashData,
+    calculateBlobHashData,
     generateSolidityInputs,
 };

@@ -2,15 +2,33 @@
 /* eslint-disable no-prototype-builtins */
 const { Scalar } = require('ffjavascript');
 
-const { VALID_TX_TYPES } = require('./compressor-constants');
+const { parseInt } = require('lodash');
+const { VALID_TX_TYPES, ENUM_ENCODING_TYPES, ENUM_TX_TYPES } = require('./compressor-constants');
 const { assertInterface, getTxSignedMessage } = require('./compressor-utils');
 const encode = require('./encode');
+const decode = require('./decode');
 const { valueToHexStr } = require('../utils');
 const Constants = require('../constants');
+const { setAddressIndex, getAddressIndex } = require('../blob/address-tree-utils');
+const { setDataIndex, getDataIndex } = require('../blob/data-tree-utils');
 
+// TODO: Decompress part should be in a different class with global vars coming from the blob
 class Compressor {
-    constructor(db) {
+    constructor(db, smt) {
         this.db = db;
+        this.smt = smt;
+    }
+
+    async setGlobalDataDecompression(
+        addressTreeRoot,
+        dataTreeRoot,
+        lastAddressIndex,
+        lastDataIndex,
+    ) {
+        this.addressTreeRoot = addressTreeRoot;
+        this.dataTreeRoot = dataTreeRoot;
+        this.lastAddressIndex = lastAddressIndex;
+        this.lastDataIndex = lastDataIndex;
     }
 
     // gets a transaction signed and compress all its fields according the specification
@@ -19,8 +37,6 @@ class Compressor {
         if (typeof tx !== 'object') {
             throw new Error('Compressor:compressData: tx is not an object');
         }
-
-        // TODO: infer 'type' based on tx parameters (could lead not controlled params)
 
         // check type property is present
         if (!tx.hasOwnProperty('type')) {
@@ -159,13 +175,13 @@ class Compressor {
      */
     value(tx) {
         // encode small value if less than 32
-        if (Scalar.lt(Scalar.e(tx.gasPrice), 32)) {
-            return encode.smallValue(tx.gasPrice);
+        if (Scalar.lt(Scalar.e(tx.value), 32)) {
+            return encode.smallValue(tx.value);
         }
 
         // check best encoding type
-        const encodeLess32 = encode.dataLess32Bytes(valueToHexStr(tx.gasPrice));
-        const encodeCompressedValue = encode.compressedValue(tx.gasPrice);
+        const encodeLess32 = encode.dataLess32Bytes(valueToHexStr(tx.value));
+        const encodeCompressedValue = encode.compressedValue(tx.value);
 
         if (encodeLess32.length > encodeCompressedValue.length) {
             return encodeCompressedValue;
@@ -180,13 +196,13 @@ class Compressor {
      */
     chainId(tx) {
         // encode small value if less than 32
-        if (Scalar.lt(Scalar.e(tx.gasPrice), 32)) {
-            return encode.smallValue(tx.gasPrice);
+        if (Scalar.lt(Scalar.e(tx.chainId), 32)) {
+            return encode.smallValue(tx.chainId);
         }
 
         // check best encoding type
-        const encodeLess32 = encode.dataLess32Bytes(valueToHexStr(tx.gasPrice));
-        const encodeCompressedValue = encode.compressedValue(tx.gasPrice);
+        const encodeLess32 = encode.dataLess32Bytes(valueToHexStr(tx.chainId));
+        const encodeCompressedValue = encode.compressedValue(tx.chainId);
 
         if (encodeLess32.length > encodeCompressedValue.length) {
             return encodeCompressedValue;
@@ -204,19 +220,40 @@ class Compressor {
 
         // remove '0x'
         const dataHex = tx.data.startsWith('0x') ? tx.data.slice(2) : tx.data;
+        const dataLengthBytes = dataHex.length / 2;
 
+        // compress dataLengthBytes
+        let compressDataLengthBytes;
+
+        if (Scalar.lt(Scalar.e(dataLengthBytes), 32)) {
+            compressDataLengthBytes = encode.smallValue(dataLengthBytes);
+        } else {
+            // check best encoding type
+            const encodeLess32Len = encode.dataLess32Bytes(valueToHexStr(dataLengthBytes));
+            const encodeCompressedValueLen = encode.compressedValue(dataLengthBytes);
+
+            if (encodeLess32Len.length > encodeCompressedValueLen.length) {
+                compressDataLengthBytes = encodeCompressedValueLen;
+            } else {
+                compressDataLengthBytes = encodeLess32Len;
+            }
+        }
+
+        if (Scalar.eq(dataLengthBytes, 0)) {
+            return compressDataLengthBytes;
+        }
+
+        // Start compress 'data'
         // do not compress deployment data
         if (tx.to === '0x') {
             if (Scalar.lt((dataHex.length / 2), 32)) {
-                return encode.dataLess32Bytes(tx.data);
+                return compressDataLengthBytes + encode.dataLess32Bytes(tx.data);
             }
 
-            return encode.largeData(tx.data);
+            return compressDataLengthBytes + encode.largeData(tx.data);
         }
 
-        // 0xa9059cbb00000000000000000000000053639833b2332ec84c34690201afde75eb96cf520000000000000000000000000000000000000000000000197211d7e1398fe000
-
-        // get selector and itarate over 32 bytes chunks
+        // get selector and iterate over 32 bytes chunks
         let fullDataCompressed;
         let remainingBytes = dataHex.length / 2;
 
@@ -345,15 +382,289 @@ class Compressor {
                 fullDataCompressed += encode.dataLess32Bytes(dataHex.slice(-dataTail * 2));
             }
 
-            return fullDataCompressed;
+            return compressDataLengthBytes + fullDataCompressed;
         }
 
-        return encode.dataLess32Bytes(dataHex);
+        return compressDataLengthBytes + encode.dataLess32Bytes(dataHex);
     }
 
-    // decompressData(tx) {
+    /**
+     * Compress deltaTimestamp
+     * @param {Object} tx - transaction object
+     * @returns {String} encoding string in hexadecimal
+     */
+    deltaTimestamp(tx) {
+        // encode small value if less than 32
+        if (Scalar.lt(Scalar.e(tx.deltaTimestamp), 32)) {
+            return encode.smallValue(tx.deltaTimestamp);
+        }
 
-    // }
+        // return data less 32 bytes encoding
+        return encode.dataLess32Bytes(valueToHexStr(tx.deltaTimestamp));
+    }
+
+    /**
+     * Compress newGER
+     * zero value or hash output
+     * @param {Object} tx - transaction object
+     * @returns {String} encoding string in hexadecimal
+     */
+    newGER(tx) {
+        // encode small value if less than 32
+        if (Scalar.lt(Scalar.e(tx.newGER), 32)) {
+            return encode.smallValue(tx.newGER);
+        }
+
+        // return large data
+        return encode.largeData(tx.newGER);
+    }
+
+    /**
+     * Compress indexHistoricalGERTree
+     * @param {Object} tx
+     * @returns {String} encoding string in hexadecimal
+     */
+    indexHistoricalGERTree(tx) {
+        // encode small value if less than 32
+        if (Scalar.lt(Scalar.e(tx.indexHistoricalGERTree), 32)) {
+            return encode.smallValue(tx.indexHistoricalGERTree);
+        }
+
+        // check best encoding type
+        const encodeLess32 = encode.dataLess32Bytes(valueToHexStr(tx.indexHistoricalGERTree));
+        const encodeCompressedValue = encode.compressedValue(tx.indexHistoricalGERTree);
+
+        if (encodeLess32.length > encodeCompressedValue.length) {
+            return encodeCompressedValue;
+        }
+
+        return encodeLess32;
+    }
+
+    /**
+     * Compress effectivePercentage
+     * @param {Object} tx
+     * @returns {String} encoding string in hexadecimal
+     */
+    effectivePercentage(tx) {
+        // encode small value if less than 32
+        if (Scalar.lt(Scalar.e(tx.effectivePercentage), 32)) {
+            return encode.smallValue(tx.effectivePercentage);
+        }
+
+        // check best encoding type
+        const encodeLess32 = encode.dataLess32Bytes(valueToHexStr(tx.effectivePercentage));
+        const encodeCompressedValue = encode.compressedValue(tx.effectivePercentage);
+
+        if (encodeLess32.length > encodeCompressedValue.length) {
+            return encodeCompressedValue;
+        }
+
+        return encodeLess32;
+    }
+
+    /// ///////////////////////////
+    /// ///  DECOMPRESSION  ///////
+    /// ///////////////////////////
+
+    async decompressData(_txCompressed) {
+        const txObject = {};
+
+        // remove '0x'
+        const txCompressed = _txCompressed.startsWith('0x') ? _txCompressed.slice(2) : _txCompressed;
+
+        // Start reading
+        let offset = 0;
+
+        // type
+        const { value, newOffset } = await this.getNextValue(txCompressed, offset, false);
+        txObject.type = value;
+        offset += newOffset;
+
+        // continue parsing depending on specific transaction type
+        switch (txObject.type) {
+        case ENUM_TX_TYPES.PRE_EIP_155:
+            return this.decompressPreEip155(txCompressed, txObject, offset);
+        case ENUM_TX_TYPES.LEGACY:
+            return this.decompressLegacy(txCompressed, txObject, offset);
+        case ENUM_TX_TYPES.CHANGE_L2_BLOCK:
+            return this.decompressChangeL2Block(txCompressed, txObject, offset);
+        default:
+            throw new Error(`Compressor:decompressData: tx.type ${txObject.type} not supported`);
+        }
+    }
+
+    async decompressChangeL2Block(txCompressed, txObject, _offset) {
+        let offset = _offset;
+        let res;
+
+        // get deltaTimestamp
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.deltaTimestamp = Scalar.fromString(res.value, 16);
+        offset = res.newOffset;
+
+        // get newGER
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.newGER = `0x${res.value}`;
+        offset = res.newOffset;
+
+        // get indexHistoricalGERTree
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.indexHistoricalGERTree = parseInt(res.value, 16);
+        offset = res.newOffset;
+
+        return txObject;
+    }
+
+    async decompressLegacy(txCompressed, txObject, _offset) {
+        let offset = _offset;
+        let res;
+
+        // get nonce
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.nonce = res.value;
+        offset = res.newOffset;
+
+        // get gasPrice
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.gasPrice = res.value;
+        offset = res.newOffset;
+
+        // get gasLimit
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.gasLimit = res.value;
+        offset = res.newOffset;
+
+        // get to
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.to = `0x${res.value}`;
+        offset = res.newOffset;
+
+        // get value
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.value = res.value;
+        offset = res.newOffset;
+
+        // get data length
+        res = await this.getNextValue(txCompressed, offset, false);
+        const dataLength = res.value;
+        offset = res.newOffset;
+
+        // read data
+        txObject.data = '0x';
+        let dataRead = 0;
+        while (dataLength > dataRead) {
+            res = await this.getNextValue(txCompressed, offset, true);
+            txObject.data += res.value;
+            offset = res.newOffset;
+            dataRead += res.value.length / 2;
+        }
+
+        // get chainId
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.chainId = parseInt(res.value, 16);
+        offset = res.newOffset;
+
+        // get effectivePercentage
+        res = await this.getNextValue(txCompressed, offset, false);
+        txObject.effectivePercentage = parseInt(res.value, 16);
+        offset = res.newOffset;
+
+        return txObject;
+    }
+
+    async getNextValue(txCompressed, offset, isData) {
+        // get encoding type from the first byte
+        const headerNumber = parseInt(txCompressed.slice(offset, offset + 2), 16);
+        const { encodingType, bytesToRead } = decode.getBytesToRead(headerNumber);
+
+        let value;
+        let newOffset = offset;
+
+        // trigger action depending on the encoding
+        if (encodingType === ENUM_ENCODING_TYPES.DATA_LESS_32_BYTES
+            || encodingType === ENUM_ENCODING_TYPES.SMALL_VALUE
+            || encodingType === ENUM_ENCODING_TYPES.COMPRESSED_VALUE
+            || encodingType === ENUM_ENCODING_TYPES.DATA_32_BYTES_PAD_RIGHT) {
+            value = decode.decodeData(txCompressed.slice(offset, offset + bytesToRead * 2), isData);
+            newOffset += bytesToRead * 2;
+        } else if (encodingType === ENUM_ENCODING_TYPES.LARGE_DATA_BYTES) {
+            // large data
+            // lengthBytestoRead = bytesToRead - 1;
+            const lengthBytestoRead = bytesToRead - 1;
+            newOffset += 2;
+            const finalBytesToRead = parseInt(txCompressed.slice(newOffset, newOffset + lengthBytestoRead * 2), 16);
+
+            newOffset += lengthBytestoRead * 2;
+            value = decode.decodeData(txCompressed.slice(offset, newOffset + finalBytesToRead * 2), isData);
+
+            newOffset += finalBytesToRead * 2;
+        } else if (encodingType === ENUM_ENCODING_TYPES.COMPRESSED_32_BYTES) {
+            const index = decode.decodeData(txCompressed.slice(offset, offset + bytesToRead * 2), isData);
+            newOffset += bytesToRead * 2;
+
+            // read from DB the 32byte compressed
+            const key = Scalar.add(
+                Constants.DB_COMPRESSOR_INDEX_32_BYTES,
+                Scalar.e(index),
+            );
+            value = await this.db.getValue(key);
+        } else if (encodingType === ENUM_ENCODING_TYPES.COMPRESSED_ADDRESS) {
+            const index = decode.decodeData(txCompressed.slice(offset, offset + bytesToRead * 2), isData);
+            newOffset += bytesToRead * 2;
+
+            // read from DB the 32byte compressed
+            const key = Scalar.add(
+                Constants.DB_COMPRESSOR_INDEX_ADDRESS,
+                Scalar.e(index),
+            );
+            value = await this.db.getValue(key);
+        } else if (encodingType === ENUM_ENCODING_TYPES.UNCOMPRESSED) {
+            if (headerNumber === ENUM_ENCODING_TYPES.UNCOMPRESSED_ADDRESS) {
+                value = decode.decodeData(txCompressed.slice(offset, offset + bytesToRead * 2), isData);
+                newOffset += bytesToRead * 2;
+
+                // check address has not any index assigned
+                const oldIndex = await getAddressIndex(value, this.smt, this.addressTreeRoot);
+
+                if (Scalar.eq(oldIndex, 0)) {
+                // read last index assigned in address tree
+                    this.lastAddressIndex = Scalar.add(this.lastAddressIndex, 1);
+                    const indexToWrite = this.lastAddressIndex;
+
+                    // write address tree abd DB
+                    this.addressTreeRoot = await setAddressIndex(value, indexToWrite, this.smt, this.addressTreeRoot);
+                }
+            } else if (headerNumber === ENUM_ENCODING_TYPES.UNCOMPRESSED_32_BYTES) {
+                value = decode.decodeData(txCompressed.slice(offset, offset + bytesToRead * 2), isData);
+                newOffset += bytesToRead * 2;
+
+                // check address has not any index assigned
+                const oldIndex = await getDataIndex(value, this.smt, this.dataTreeRoot);
+
+                if (Scalar.eq(oldIndex, 0)) {
+                // read last index assigned in address tree
+                    this.lastDataIndex = Scalar.add(this.lastDataIndex, 1);
+                    // if SMT_DATA_MAX_INDEX is reached, start overwriting
+                    const indexToWrite = Scalar.mod(this.lastDataIndex, Constants.SMT_DATA_MAX_INDEX);
+
+                    // write address tree abd DB
+                    this.dataTreeRoot = await setDataIndex(value, indexToWrite, this.smt, this.dataTreeRoot);
+                }
+            } else {
+                throw new Error('Compressor:decompressData: not supported encoding type');
+                // TODO: invalid blob
+            }
+        } else {
+            throw new Error('Compressor:decompressData: not supported encoding type');
+            // TODO: invalid blob
+        }
+
+        return {
+            newOffset,
+            value,
+        };
+    }
 }
 
 module.exports = Compressor;

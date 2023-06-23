@@ -1,3 +1,4 @@
+/* eslint-disable no-continue */
 /* eslint-disable no-console */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
@@ -10,7 +11,7 @@ const { expect } = require('chai');
 const { getAddrFromData, getPerformance } = require('./helpers/helpers');
 
 const {
-    compression, getPoseidon, MemDB, Constants,
+    compression, getPoseidon, MemDB, Constants, txUtils,
 } = require('../../index');
 
 const pathTestVectors = path.join(__dirname, './test-vectors');
@@ -44,20 +45,15 @@ describe('Compressor', async function () {
         const compressor = new compression.Compressor(db);
 
         for (let i = 0; i < testVectors.length; i++) {
+            console.log(i);
             const { tx, expected, extraInfo } = testVectors[i];
 
             if (argv.verbose) {
                 console.log(extraInfo.name);
             }
 
-            const txToCompress = { ...tx };
-            // set big int values
-            txToCompress.nonce = Scalar.e(txToCompress.nonce);
-            txToCompress.gasPrice = Scalar.e(txToCompress.gasPrice);
-            txToCompress.gasLimit = Scalar.e(txToCompress.gasLimit);
-            txToCompress.value = Scalar.e(txToCompress.value);
-            txToCompress.chainId = Number(txToCompress.chainId);
-
+            const txToCompress = txUtils.parseTx(tx);
+            console.log(txToCompress);
             const txCompressed = await compressor.compressTxData(txToCompress);
 
             if (argv.verbose) {
@@ -91,6 +87,10 @@ describe('Compressor', async function () {
         for (let i = 0; i < testVectors.length; i++) {
             const { tx } = testVectors[i];
 
+            if (tx.type === compression.compressorConstants.ENUM_TX_TYPES.CHANGE_L2_BLOCK) {
+                continue;
+            }
+
             // 'to' address
             if (tx.to !== '0x') {
                 const keyAddress = Scalar.add(
@@ -122,14 +122,7 @@ describe('Compressor', async function () {
                 console.log(extraInfo.name);
             }
 
-            const txToCompress = { ...tx };
-
-            // set big int values
-            txToCompress.nonce = Scalar.e(txToCompress.nonce);
-            txToCompress.gasPrice = Scalar.e(txToCompress.gasPrice);
-            txToCompress.gasLimit = Scalar.e(txToCompress.gasLimit);
-            txToCompress.value = Scalar.e(txToCompress.value);
-            txToCompress.chainId = Number(txToCompress.chainId);
+            const txToCompress = txUtils.parseTx(tx);
 
             const txCompressed = await compressor.compressTxData(txToCompress);
 

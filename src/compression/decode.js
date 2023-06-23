@@ -250,6 +250,84 @@ function data32BytesPadRight(_data) {
     return bytes32.padEnd(64, '0');
 }
 
+/**
+ * Determine encoding type and bytes to read
+ * @param {Number} header - 1 byte
+ */
+function getBytesToRead(header) {
+    const encodingType = header >> 5;
+    let bytesToRead = 1;
+
+    switch (encodingType) {
+    case ENUM_ENCODING_TYPES.DATA_LESS_32_BYTES:
+        bytesToRead += (header & 0x1f);
+        break;
+    case ENUM_ENCODING_TYPES.LARGE_DATA_BYTES:
+        bytesToRead += (header & 0x1f);
+        break;
+    case ENUM_ENCODING_TYPES.SMALL_VALUE:
+        bytesToRead += 0;
+        break;
+    case ENUM_ENCODING_TYPES.COMPRESSED_32_BYTES:
+        bytesToRead += (header & 0x1f);
+        break;
+    case ENUM_ENCODING_TYPES.COMPRESSED_ADDRESS:
+        bytesToRead += (header & 0x1f);
+        break;
+    case ENUM_ENCODING_TYPES.COMPRESSED_VALUE:
+        bytesToRead += (header & 0x1f) + 1;
+        break;
+    case ENUM_ENCODING_TYPES.UNCOMPRESSED:
+        if (header === ENUM_ENCODING_TYPES.UNCOMPRESSED_ADDRESS) {
+            bytesToRead += 20;
+        } else if (header === ENUM_ENCODING_TYPES.UNCOMPRESSED_32_BYTES) {
+            bytesToRead += 32;
+        } else {
+            throw new Error(`${getFuncName()}: encodingType ${encodingType} not supported`);
+        }
+        break;
+    case ENUM_ENCODING_TYPES.DATA_32_BYTES_PAD_RIGHT:
+        bytesToRead = (header & 0x1f);
+        break;
+    default:
+        throw new Error(`${getFuncName()}: encodingType ${encodingType} not supported`);
+    }
+
+    return { encodingType, bytesToRead };
+}
+
+function decodeData(dataEncoded, isData = false) {
+    const header = parseInt(dataEncoded.slice(0, 2), 16);
+    const encodingType = header >> 5;
+
+    switch (encodingType) {
+    case ENUM_ENCODING_TYPES.DATA_LESS_32_BYTES:
+        return dataLess32Bytes(dataEncoded);
+    case ENUM_ENCODING_TYPES.LARGE_DATA_BYTES:
+        return largeData(dataEncoded);
+    case ENUM_ENCODING_TYPES.SMALL_VALUE:
+        return smallValue(dataEncoded, isData);
+    case ENUM_ENCODING_TYPES.COMPRESSED_32_BYTES:
+        return compressed32Byte(dataEncoded);
+    case ENUM_ENCODING_TYPES.COMPRESSED_ADDRESS:
+        return compressedAddress(dataEncoded);
+    case ENUM_ENCODING_TYPES.COMPRESSED_VALUE:
+        return compressedValue(dataEncoded, isData);
+    case ENUM_ENCODING_TYPES.UNCOMPRESSED:
+        if (header === ENUM_ENCODING_TYPES.UNCOMPRESSED_ADDRESS) {
+            return uncompressedAddress(dataEncoded, isData);
+        } if (header === ENUM_ENCODING_TYPES.UNCOMPRESSED_32_BYTES) {
+            return uncompressed32Bytes(dataEncoded, isData);
+        }
+        throw new Error(`${getFuncName()}: encodingType ${encodingType} not supported`);
+
+    case ENUM_ENCODING_TYPES.DATA_32_BYTES_PAD_RIGHT:
+        return data32BytesPadRight(dataEncoded);
+    default:
+        throw new Error(`${getFuncName()}: encodingType ${encodingType} not supported`);
+    }
+}
+
 module.exports = {
     dataLess32Bytes,
     largeData,
@@ -260,4 +338,6 @@ module.exports = {
     uncompressedAddress,
     uncompressed32Bytes,
     data32BytesPadRight,
+    getBytesToRead,
+    decodeData,
 };

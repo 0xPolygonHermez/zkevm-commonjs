@@ -12,22 +12,28 @@ const ethers = require('ethers');
 const clone = require('lodash/clone');
 const Constants = require('./constants');
 const BatchProcessor = require('./batch-processor');
+const BlobProcessor = require('./blob/blob-processor');
 const SMT = require('./smt');
 const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
     getContractBytecodeLength,
 } = require('./state-utils');
-const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
+const { h4toString, stringToH4, hashContractBytecode, h4toScalar } = require('./smt-utils');
 const { calculateSnarkInput } = require('./contract-utils');
+const { setAddressIndex } = require('./blob/address-tree-utils');
+const { setDataIndex } = require('./blob/data-tree-utils');
+const { setVar } = require('./blob/blob-tree-utils');
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, accBlobHash, localExitRoot, poseidon, vm, smt, chainID, forkID) {
+    constructor(db, lastBatch, stateRoot, lastBlob, blobRoot, accBlobHash, localExitRoot, poseidon, vm, smt, chainID, forkID) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
+        this.lastBlob = lastBlob || 0;
         this.poseidon = poseidon;
         this.F = poseidon.F;
 
         this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.blobRoot = blobRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.accBlobHash = accBlobHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.chainID = chainID;
@@ -91,6 +97,57 @@ class ZkEVMDB {
     }
 
     /**
+     * Return a new Processor with the current RollupDb state
+     * @param {Object} _blobType
+     * @param {Bool} _blobType.isEIP4844Active
+     * @param {Bool} _blobType.isForced
+     * @param {Bool} _blobType.addL1BlockHash
+     * @param {Array[Field]} _historicGERRoot - global exit root
+     * @param {BigInt} _timestampLimit - Timestamp limit of the batch
+     * @param {String} _sequencerAddress - ethereum address represented as hex
+     * @param {BigInt} _L1BlockHash - L1BlockHash
+     * @param {BigInt} _zkGasLimit - zkGasLimit
+     */
+    async buildBlob(
+        _blobType,
+        _historicGERRoot,
+        _timestampLimit,
+        _sequencerAddress,
+        _L1BlockHash,
+        _zkGasLimit,
+    ) {
+        // build globalInputs
+        const globalInputs = {
+            oldBlobRoot: this.blobRoot,
+            chainId: this.chainID,
+            forkId: this.forkID,
+            oldAccBlobHash: this.accBlobHash,
+            oldNumBlob: this.lastBlob,
+        };
+
+        // build privateInputs
+        const privateInputs = {
+            historicGERRoot: _historicGERRoot,
+            timestampLimit: _timestampLimit,
+            sequencerAddress: _sequencerAddress,
+            blobType: {
+                isEIP4844Active: _blobType.isEIP4844Active,
+                isForced: _blobType.isForced,
+                addL1BlockHash: _blobType.addL1BlockHash,
+            },
+            L1BlockHash: _L1BlockHash,
+            zkGasLimit: _zkGasLimit,
+        };
+
+        return new BlobProcessor(
+            this.db,
+            this.poseidon,
+            globalInputs,
+            privateInputs,
+        );
+    }
+
+    /**
      * Consolidate a batch by writing it in the DB
      * @param {Object} processor - Processor object
      */
@@ -105,7 +162,7 @@ class ZkEVMDB {
         }
 
         // Populate actual DB with the keys and values inserted in the batch
-        await processor.tmpSmtDB.populateSrcDb();
+        await processor.tmpDB.populateSrcDb();
 
         // set state root
         await this.db.setValue(
@@ -147,7 +204,6 @@ class ZkEVMDB {
         // Update ZKEVMDB variables
         this.lastBatch = processor.newNumBatch;
         this.stateRoot = processor.currentStateRoot;
-        // this.accInputHash = processor.newAccInputHash; //TODO: replaced by blob
         this.localExitRoot = processor.newLocalExitRoot;
         this.vm = processor.vm;
     }
@@ -328,30 +384,33 @@ class ZkEVMDB {
      * @param {Object} db - Mem db object
      * @param {Object} poseidon - Poseidon object
      * @param {Array[Fields]} stateRoot - state merkle root
+     * @param {Array[Fields]} blobRoot - blob merkle root
      * @param {Array[Fields]} accBlobHash - accumulate blob hash
-     * @param {Object} genesis - genesis block accounts (address, nonce, balance, bytecode, storage)
+     * @param {Object} genesisState - genesis block accounts (address, nonce, balance, bytecode, storage)
+     * @param {Object} genesisBlob - genesis blob (address tree, data tree, indexes)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
      * @param {Number} chainID - L2 chainID
      * @param {Number} forkID - L2 rom fork identifier
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, accBlobHash, genesis, vm, smt, chainID, forkID) {
+    static async newZkEVM(db, poseidon, stateRoot, blobRoot, accBlobHash, genesisState, genesisBlob, vm, smt, chainID, forkID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
         common.setEIPs([3607, 3541]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
+
         // If it is null, instantiate a new evm-db
         if (lastBatch === null) {
             const newVm = new VM({ common });
             const newSmt = new SMT(db, poseidon, poseidon.F);
+
+            // Add genesis state tree
             let newStateRoot = stateRoot;
 
-            // Add genesis to the vm
-            // Add contracts to genesis
-            for (let j = 0; j < genesis.length; j++) {
+            for (let j = 0; j < genesisState.length; j++) {
                 const {
                     address, nonce, balance, bytecode, storage,
-                } = genesis[j];
+                } = genesisState[j];
 
                 // Add contract account to EVM
                 const addressInstance = new Address(toBuffer(address));
@@ -369,7 +428,7 @@ class ZkEVMDB {
                     const evmBytecode = await newVm.stateManager.getContractCode(addressInstance);
                     newStateRoot = await setContractBytecode(address, newSmt, newStateRoot, evmBytecode.toString('hex'));
                     const hashByteCode = await hashContractBytecode(bytecode);
-                    db.setValue(hashByteCode, evmBytecode.toString('hex'));
+                    await db.setValue(hashByteCode, evmBytecode.toString('hex'));
                 }
 
                 if (storage) {
@@ -399,10 +458,71 @@ class ZkEVMDB {
             await newVm.stateManager.checkpoint();
             await newVm.stateManager.commit();
 
+            // add genesis blob root
+            // address tree
+            let addressRoot = [poseidon.F.zero, poseidon.F.zero, poseidon.F.zero, poseidon.F.zero];
+            let lastAddressIndex = 0;
+
+            for (let j = 0; j < genesisBlob.addressTree.length; j++) {
+                const { address, index } = genesisBlob.addressTree[j];
+
+                addressRoot = await setAddressIndex(address, index, newSmt, addressRoot);
+                lastAddressIndex = index;
+
+                // shortcut in DB for compression
+                const keyCompressedAddress = Scalar.add(
+                    Constants.DB_COMPRESSOR_ADDRESS,
+                    Scalar.fromString(address, 16),
+                );
+                await db.setValue(keyCompressedAddress, index);
+
+                // shortcut in DB for decompression
+                const keyCompressedIndexAddress = Scalar.add(
+                    Constants.DB_COMPRESSOR_INDEX_ADDRESS,
+                    Scalar.e(index),
+                );
+                await db.setValue(keyCompressedIndexAddress, address);
+            }
+
+            // data tree
+            let dataRoot = [poseidon.F.zero, poseidon.F.zero, poseidon.F.zero, poseidon.F.zero];
+            let lastDataIndex = 0;
+
+            for (let j = 0; j < genesisBlob.dataTree.length; j++) {
+                const { bytes32, index } = genesisBlob.dataTree[j];
+
+                dataRoot = await setDataIndex(bytes32, index, newSmt, dataRoot);
+                lastDataIndex = index;
+
+                // shortcut in DB for compression
+                const keyCompressedData32 = Scalar.add(
+                    Constants.DB_COMPRESSOR_32_BYTES,
+                    Scalar.fromString(bytes32, 16),
+                );
+                await db.setValue(keyCompressedData32, index);
+
+                // shortcut in DB for decompression
+                const keyCompressedIndexData32 = Scalar.add(
+                    Constants.DB_COMPRESSOR_INDEX_32_BYTES,
+                    Scalar.e(index),
+                );
+                await db.setValue(keyCompressedIndexData32, bytes32);
+            }
+
+            // build blob root
+            let newBlobRoot = blobRoot;
+
+            newBlobRoot = await setVar(Constants.SMT_KEY_BLOB_LAST_ADDRESS_INDEX, lastAddressIndex, newSmt, newBlobRoot);
+            newBlobRoot = await setVar(Constants.SMT_KEY_BLOB_LAST_DATA_INDEX, lastDataIndex, newSmt, newBlobRoot);
+            newBlobRoot = await setVar(Constants.SMT_KEY_BLOB_ADDRESS_ROOT, h4toScalar(addressRoot), newSmt, newBlobRoot);
+            newBlobRoot = await setVar(Constants.SMT_KEY_BLOB_DATA_ROOT, h4toScalar(dataRoot), newSmt, newBlobRoot);
+
             return new ZkEVMDB(
                 db,
                 0,
                 newStateRoot,
+                0,
+                newBlobRoot,
                 accBlobHash,
                 null,
                 poseidon,
@@ -414,15 +534,22 @@ class ZkEVMDB {
         }
 
         // Update current zkevm instance
+        // blob related
+        const lastBlob = await db.getValue(Constants.DB_LAST_BLOB);
+        const DBBlobRoot = await db.getValue(Scalar.add(Constants.DB_BLOB_ROOT, lastBlob));
+        const DBAccBlobHash = await db.getValue(Scalar.add(Constants.DB_ACC_BLOB_HASH, lastBatch));
+
+        // batch related
         const DBStateRoot = await db.getValue(Scalar.add(Constants.DB_STATE_ROOT, lastBatch));
-        const DBAccInputHash = await db.getValue(Scalar.add(Constants.DB_ACC_INPUT_HASH, lastBatch));
         const DBLocalExitRoot = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatch));
 
         return new ZkEVMDB(
             db,
             lastBatch,
             stringToH4(DBStateRoot),
-            stringToH4(DBAccInputHash),
+            lastBlob,
+            stringToH4(DBBlobRoot),
+            stringToH4(DBAccBlobHash),
             stringToH4(DBLocalExitRoot),
             poseidon,
             vm,

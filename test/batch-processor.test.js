@@ -212,7 +212,7 @@ describe('Processor', async function () {
                     const signData = compressorUtils.getTxSignedMessage(tx);
                     const digest = ethers.utils.keccak256(signData);
                     const signature = signingKey.signDigest(digest);
-
+                    console.log(signature);
                     // add from for batch processor
                     tx.from = txData.from;
                     // add effecivePercentage == 0xFF if not present

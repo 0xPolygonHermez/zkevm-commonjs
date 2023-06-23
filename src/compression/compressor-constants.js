@@ -9,19 +9,19 @@ const ENUM_TX_TYPES = {
 const VALID_TX_TYPES = {
     0: {
         name: 'PRE_EIP_155',
-        interface: ['type', 'nonce', 'gasPrice', 'gasLimit', 'to', 'value', 'data'],
+        interface: ['type', 'nonce', 'gasPrice', 'gasLimit', 'to', 'value', 'data', 'effectivePercentage'],
     },
     1: {
         name: 'LEGACY',
-        interface: ['type', 'nonce', 'gasPrice', 'gasLimit', 'to', 'value', 'data', 'chainId'],
+        interface: ['type', 'nonce', 'gasPrice', 'gasLimit', 'to', 'value', 'data', 'chainId', 'effectivePercentage'],
     },
     2: {
         name: 'EIP_2930',
-        interface: ['type', 'chainId', 'nonce', 'gasPrice', 'gasLimit', 'to', 'value', 'data', 'accessList'],
+        interface: ['type', 'chainId', 'nonce', 'gasPrice', 'gasLimit', 'to', 'value', 'data', 'accessList', 'effectivePercentage'],
     },
     3: {
         name: 'EIP_1559',
-        interface: ['type', 'chainId', 'nonce', 'maxPriorityFeePerGas', 'maxFeePerGas', 'gasLimit', 'to', 'value', 'data', 'accessList'],
+        interface: ['type', 'chainId', 'nonce', 'maxPriorityFeePerGas', 'maxFeePerGas', 'gasLimit', 'to', 'value', 'data', 'accessList', 'effectivePercentage'],
     },
     4: {
         name: 'CHANGE_L2_BLOCK',
@@ -36,6 +36,7 @@ const ENUM_ENCODING_TYPES = {
     COMPRESSED_32_BYTES: 0b011,
     COMPRESSED_ADDRESS: 0b100,
     COMPRESSED_VALUE: 0b101,
+    UNCOMPRESSED: 0b110,
     UNCOMPRESSED_ADDRESS: 0b11000000,
     UNCOMPRESSED_32_BYTES: 0b11000001,
     DATA_32_BYTES_PAD_RIGHT: 0b111,

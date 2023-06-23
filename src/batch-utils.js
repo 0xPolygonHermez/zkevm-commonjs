@@ -30,7 +30,7 @@ function serializeLegacy(tx) {
         offsetBits += dataByteLen * 8;
     }
 
-    data = Scalar.add(data, Scalar.shl(dataByteLen * 8, offsetBits));
+    data = Scalar.add(data, Scalar.shl(dataByteLen, offsetBits));
     offsetBits += 24;
 
     data = Scalar.add(data, Scalar.shl(tx.value, offsetBits));
@@ -219,8 +219,6 @@ async function computeNewAccBatchHashData(oldAccBatchHashData, batchData) {
     const poseidon = await getPoseidon();
     const { F } = poseidon;
 
-    console.log(oldAccBatchHashData);
-    console.log(batchData);
     // compute batchHashData
     const batcHashData = await linearPoseidon(batchData);
     const batcHashDataFields = stringToH4(batcHashData);

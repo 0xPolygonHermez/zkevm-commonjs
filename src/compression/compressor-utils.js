@@ -33,7 +33,7 @@ function serializeChangeL2Block(_tx) {
 }
 
 /**
- * Extract preEIP155 transaction object comapitble with etherjs
+ * Extract preEIP155 transaction object compatible with etherjs
  * @param {Object} tx - transaction object
  * @returns {Object} - to be ready to ethersjs library
  */
