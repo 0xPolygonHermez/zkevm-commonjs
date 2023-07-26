@@ -342,7 +342,7 @@ async function keyContractLength(_ethAddr) {
  * Fill the dbObject with all the childs recursively
  * @param {Array[Field]} node merkle node
  * @param {Object} db Mem DB
- * @param {Object} dbObject Object that will be fullfilled
+ * @param {Object} dbObject Object that will be fulfilled
  * @param {Object} Fr - poseidon F
  * @returns {Array} merkle tree
  */
