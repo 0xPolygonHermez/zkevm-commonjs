@@ -40,12 +40,19 @@ module.exports.ADDRESS_BRIDGE = '0x9D98DeAbC42dd696Deb9e40b4f1CAB7dDBF55988';
 module.exports.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2 = '0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA';
 module.exports.GLOBAL_EXIT_ROOT_STORAGE_POS = 0;
 module.exports.LOCAL_EXIT_ROOT_STORAGE_POS = 1;
-module.exports.BATCH_GAS_LIMIT = 30000000;
+module.exports.BLOCK_GAS_LIMIT = 2 ** 32 - 1;
+module.exports.TX_GAS_LIMIT = 30000000;
+
 module.exports.BATCH_DIFFICULTY = 0;
 module.exports.ADDRESS_SYSTEM = '0x000000000000000000000000000000005ca1ab1e';
+module.exports.LAST_BLOCK_STORAGE_POS = 0;
 module.exports.STATE_ROOT_STORAGE_POS = 1;
+module.exports.TIMESTAMP_STORAGE_POS = 2;
 module.exports.LAST_TX_STORAGE_POS = 0;
 
 // Bridge Leaf Types
 module.exports.BRIDGE_LEAF_TYPE_ASSET = 0;
 module.exports.BRIDGE_LEAF_TYPE_MESSAGE = 1;
+
+// Tx Types
+module.exports.TX_CHANGE_L2_BLOCK = 11;
