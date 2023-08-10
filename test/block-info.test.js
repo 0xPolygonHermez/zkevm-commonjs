@@ -122,8 +122,8 @@ describe('Block info tests', function () {
 
             for (let k = 0; k < batches.length; k++) {
                 const {
-                    txs, expectedNewRoot, expectedNewLeafs, batchL2Data, globalExitRoot,
-                    inputHash, timestamp, batchHashData, newLocalExitRoot,
+                    txs, expectedNewRoot, expectedNewLeafs, batchL2Data, historicGERRoot,
+                    inputHash, timestampLimit, batchHashData, newLocalExitRoot,
                 } = batches[k];
                 const rawTxs = [];
                 for (let j = 0; j < txs.length; j++) {
@@ -219,7 +219,7 @@ describe('Block info tests', function () {
                     txProcessed.push(txData);
                 }
 
-                const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
+                const batch = await zkEVMDB.buildBatch(timestampLimit, sequencerAddress, smtUtils.stringToH4(historicGERRoot));
                 for (let j = 0; j < rawTxs.length; j++) {
                     batch.addRawTx(rawTxs[j]);
                 }
@@ -302,8 +302,6 @@ describe('Block info tests', function () {
                 // Check global and local exit roots
                 const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
                 const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32));
-                const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-                const globalExitRootPosBuffer = toBuffer(globalExitRootPos);
 
                 // Check local exit root
                 const localExitRootVm = await zkEVMDB.vm.stateManager
@@ -323,20 +321,6 @@ describe('Block info tests', function () {
                     expect(localExitRootVm.toString('hex')).to.equal(newLocalExitRoot.slice(2));
                 }
 
-                // Check global exit root
-                const timestampVm = await zkEVMDB.vm.stateManager.getContractStorage(
-                    addressInstanceGlobalExitRoot,
-                    globalExitRootPosBuffer,
-                );
-                const timestampSmt = (await stateUtils.getContractStorage(
-                    Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
-                    zkEVMDB.smt,
-                    zkEVMDB.stateRoot,
-                    [globalExitRootPos],
-                ))[Scalar.e(globalExitRootPos)];
-
-                expect(Scalar.fromString(timestampVm.toString('hex'), 16)).to.equal(timestampSmt);
-
                 // Check through a call in the EVM
                 if (bridgeDeployed) {
                     const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
@@ -346,7 +330,7 @@ describe('Block info tests', function () {
                         caller: Address.zero(),
                         data: Buffer.from(encodedData.slice(2), 'hex'),
                     });
-                    expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(globalExitRoot.slice(2));
+                    expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(historicGERRoot.slice(2));
                 }
 
                 // Check the circuit input

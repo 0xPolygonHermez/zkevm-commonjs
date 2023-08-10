@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define */
 /* eslint-disable no-restricted-syntax */
 const crypto = require('crypto');
 const { Scalar } = require('ffjavascript');
@@ -14,6 +15,35 @@ function log2(V) {
         ? (V &= 0xFF00FF00, 8) : 0) | ((V & 0xF0F0F0F0) !== 0
         ? (V &= 0xF0F0F0F0, 4) : 0) | ((V & 0xCCCCCCCC) !== 0
         ? (V &= 0xCCCCCCCC, 2) : 0) | ((V & 0xAAAAAAAA) !== 0));
+}
+
+/**
+ * Convert a value into in its hexadecimal string representation
+ * @param {Number | BigInt} _value - value to encode
+ * @param {Boolean} prefix - attach '0x' at the beginning of the string
+ * @returns {String} encoded value in hexadecimal string
+ */
+function valueToHexStr(_value, prefix = false) {
+    if (!(typeof _value === 'number' || typeof _value === 'bigint')) {
+        throw new Error(`${getFuncName()}: _value is not a number or BigInt type`);
+    }
+
+    if (prefix !== false && typeof prefix !== 'boolean') {
+        throw new Error(`${getFuncName()}: _prefix is not a boolean`);
+    }
+
+    let valueHex = Scalar.e(_value).toString(16);
+    valueHex = valueHex.length % 2 ? `0${valueHex}` : valueHex;
+
+    return prefix ? `0x${valueHex}` : valueHex;
+}
+
+/**
+ * Gets current fuction name being called
+ * @returns {String} function name
+ */
+function getFuncName() {
+    return getFuncName.caller.name;
 }
 
 /**
@@ -86,4 +116,5 @@ module.exports = {
     hexString2byteArray,
     sha256Snark,
     padZeros,
+    valueToHexStr,
 };

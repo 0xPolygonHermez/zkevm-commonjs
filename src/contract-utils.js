@@ -3,31 +3,34 @@ const { Scalar } = require('ffjavascript');
 const { sha256Snark, padZeros } = require('./utils');
 
 /**
- * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
+ * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, historicGERRoot, timestampLimit, seqAddress)
  * @param {String} oldAccInputHash - old accumulateInputHash
  * @param {String} batchHashData - Batch hash data
- * @param {String} globalExitRoot - Global Exit Root
- * @param {Number} timestamp - Block timestamp
+ * @param {String} historicGERRoot - Global Exit Root
+ * @param {Number} timestampLimit - Block timestampLimit
  * @param {String} sequencerAddress - Sequencer address
+ * @param {Number} isForced - Flag for forced transaction
  * @returns {String} - accumulateInputHash in hex encoding
  */
 function calculateAccInputHash(
     oldAccInputHash,
     batchHashData,
-    globalExitRoot,
-    timestamp,
+    historicGERRoot,
+    timestampLimit,
     sequencerAddress,
+    isForced = 0,
 ) {
     const oldAccInputHashHex = `0x${Scalar.e(oldAccInputHash).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address'],
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes1'],
         [
             oldAccInputHashHex,
             batchHashData,
-            globalExitRoot,
-            timestamp,
+            historicGERRoot,
+            timestampLimit,
             sequencerAddress,
+            isForced,
         ],
     );
 

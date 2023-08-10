@@ -38,8 +38,8 @@ describe('ZkEVMDB', function () {
         const sequencerAddress = '0x0000000000000000000000000000000000000000';
         const genesisRoot = [F.zero, F.zero, F.zero, F.zero];
         const accHashInput = [F.zero, F.zero, F.zero, F.zero];
-        const globalExitRoot = [F.zero, F.zero, F.zero, F.zero];
-        const timestamp = 1;
+        const historicGERRoot = [F.zero, F.zero, F.zero, F.zero];
+        const timestampLimit = 1;
         const genesis = [];
         const db = new MemDB(F);
         const chainID = 1000;
@@ -59,7 +59,7 @@ describe('ZkEVMDB', function () {
         );
 
         // build an empty batch
-        const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, globalExitRoot);
+        const batch = await zkEVMDB.buildBatch(timestampLimit, sequencerAddress, historicGERRoot);
         await batch.executeTxs();
 
         // checks DB state previous consolidate zkEVMDB
@@ -107,8 +107,8 @@ describe('ZkEVMDB', function () {
             txs,
             expectedNewRoot,
             sequencerAddress,
-            globalExitRoot,
-            timestamp,
+            historicGERRoot,
+            timestampLimit,
             newLocalExitRoot,
             oldAccInputHash,
             expectedNewAccInputHash,
@@ -231,7 +231,7 @@ describe('ZkEVMDB', function () {
             forkID,
         );
 
-        const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
+        const batch = await zkEVMDB.buildBatch(timestampLimit, sequencerAddress, smtUtils.stringToH4(historicGERRoot));
         for (let j = 0; j < rawTxs.length; j++) {
             batch.addRawTx(rawTxs[j]);
         }
@@ -295,8 +295,8 @@ describe('ZkEVMDB', function () {
             expectedOldRoot,
             batches,
             sequencerAddress,
-            globalExitRoot,
-            timestamp,
+            historicGERRoot,
+            timestampLimit,
             oldAccInputHash,
             chainID,
             forkID,
@@ -434,7 +434,7 @@ describe('ZkEVMDB', function () {
         // create batches
         for (let m = 0; m < rawBatches.length; m++) {
             const rawTxs = rawBatches[m];
-            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
+            const batch = await zkEVMDB.buildBatch(timestampLimit, sequencerAddress, smtUtils.stringToH4(historicGERRoot));
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }
@@ -479,8 +479,8 @@ describe('ZkEVMDB', function () {
         const seqBatches = await zkEVMDB.sequenceMultipleBatches(initBatch, finalBatch);
 
         for (let i = 0; i < (finalBatch - initBatch); i++) {
-            expect(seqBatches[i].timestamp).to.equal(timestamp);
-            expect(seqBatches[i].globalExitRoot).to.equal(globalExitRoot);
+            expect(seqBatches[i].timestampLimit).to.equal(String(timestampLimit));
+            expect(seqBatches[i].historicGERRoot).to.equal(historicGERRoot);
             expect(seqBatches[i].transactions).to.equal(batches[i].expectedBatchL2Data);
         }
 

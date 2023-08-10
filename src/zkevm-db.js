@@ -1,3 +1,4 @@
+/* eslint-disable default-param-last */
 /* eslint-disable multiline-comment-style */
 /* eslint-disable no-restricted-syntax */
 const { Scalar } = require('ffjavascript');
@@ -32,22 +33,31 @@ class ZkEVMDB {
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.chainID = chainID;
         this.forkID = forkID;
-
         this.smt = smt;
         this.vm = vm;
     }
 
     /**
      * Return a new Processor with the current RollupDb state
-     * @param {Number} timestamp - Timestamp of the batch
+     * @param {Number} timestampLimit - Timestamp limit of the batch
      * @param {String} sequencerAddress - ethereum address represented as hex
-     * @param {Array[Field]} globalExitRoot - global exit root
+     * @param {Array[Field]} historicGERRoot - global exit root
+     * @param {Number} isForced - Forced batch flag
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      * @param {Object} options - additional batch options
      * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smrt contract at the end of processable transactions
-     * @param {Number} options.newBatchGasLimit New batch gas limit
+     * @param {Number} options.newBlockGasLimit New batch gas limit
+     * @param {Object} extraData - additional data to embed in the batch
      */
-    async buildBatch(timestamp, sequencerAddress, globalExitRoot, maxNTx = Constants.DEFAULT_MAX_TX, options = {}) {
+    async buildBatch(
+        timestampLimit,
+        sequencerAddress,
+        historicGERRoot,
+        isForced,
+        maxNTx = Constants.DEFAULT_MAX_TX,
+        options = {},
+        extraData,
+    ) {
         return new Processor(
             this.db,
             this.lastBatch + 1,
@@ -56,12 +66,14 @@ class ZkEVMDB {
             this.stateRoot,
             sequencerAddress,
             this.accInputHash,
-            globalExitRoot,
-            timestamp,
+            historicGERRoot,
+            timestampLimit,
             this.chainID,
             this.forkID,
+            isForced,
             clone(this.vm),
             options,
+            extraData,
         );
     }
 
@@ -183,8 +195,8 @@ class ZkEVMDB {
 
             const dataBatch = {
                 transactions: value.batchL2Data,
-                globalExitRoot: value.globalExitRoot,
-                timestamp: value.timestamp,
+                historicGERRoot: value.historicGERRoot,
+                timestampLimit: value.timestampLimit,
                 forceBatchesTimestamp: [],
             };
 

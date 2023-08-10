@@ -29,6 +29,7 @@ const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
+const { valueToHexStr } = require('../src/utils');
 
 describe('Processor', async function () {
     this.timeout(100000);
@@ -41,6 +42,8 @@ describe('Processor', async function () {
         pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info.json');
     } else if (argv.selfdestruct) {
         pathProcessorTests = path.join(pathTestVectors, 'selfdestruct/selfdestruct.json');
+    } else if (argv.fork_6) {
+        pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition-6.json');
     } else {
         pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
     }
@@ -73,13 +76,13 @@ describe('Processor', async function () {
                 batchL2Data,
                 oldAccInputHash,
                 newLocalExitRoot,
-                globalExitRoot,
+                historicGERRoot,
                 batchHashData,
                 inputHash,
-                timestamp,
-                bridgeDeployed,
+                timestampLimit,
                 chainID,
                 forkID,
+                isForced,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -145,15 +148,52 @@ describe('Processor', async function () {
                 testVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
             }
 
+            const extraData = { GERS: {} };
+            const batch = await zkEVMDB.buildBatch(
+                timestampLimit,
+                sequencerAddress,
+                smtUtils.stringToH4(historicGERRoot),
+                isForced,
+                Constants.DEFAULT_MAX_TX,
+                {
+                    skipVerifyGER: true,
+                },
+                extraData,
+            );
+
             /*
              * build, sign transaction and generate rawTxs
              * rawTxs would be the calldata inserted in the contract
              */
             const txProcessed = [];
             const rawTxs = [];
+            const smtProofsObject = {};
             for (let j = 0; j < txs.length; j++) {
                 const txData = txs[j];
 
+                if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    let data = Scalar.e(0);
+
+                    let offsetBits = 0;
+
+                    data = Scalar.add(data, Scalar.shl(txData.indexHistoricalGERTree, offsetBits));
+                    offsetBits += 32;
+
+                    // Append newGER to GERS object
+                    extraData.GERS[j + 1] = txData.newGER;
+
+                    data = Scalar.add(data, Scalar.shl(txData.deltaTimestamp, offsetBits));
+                    offsetBits += 64;
+
+                    data = Scalar.add(data, Scalar.shl(txData.type, offsetBits));
+                    offsetBits += 8;
+
+                    const customRawTx = valueToHexStr(data).padStart(offsetBits / 4, '0');
+                    rawTxs.push(`0x${customRawTx}`);
+                    txProcessed.push(txData);
+                    smtProofsObject[txData.indexHistoricalGERTree] = txData.smtProofs;
+                    continue;
+                }
                 const tx = {
                     to: txData.to,
                     nonce: txData.nonce,
@@ -243,7 +283,6 @@ describe('Processor', async function () {
                 txProcessed.push(txData);
             }
 
-            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }
@@ -322,8 +361,6 @@ describe('Processor', async function () {
             // Check global and local exit roots
             const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
             const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32));
-            const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-            const globalExitRootPosBuffer = toBuffer(globalExitRootPos);
 
             // Check local exit root
             const localExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(addressInstanceGlobalExitRoot, localExitRootPosBuffer);
@@ -348,33 +385,6 @@ describe('Processor', async function () {
                 expect(localExitRootVm.toString('hex')).to.equal(newLocalExitRoot.slice(2));
             }
 
-            // Check global exit root
-            const timestampVm = await zkEVMDB.vm.stateManager.getContractStorage(
-                addressInstanceGlobalExitRoot,
-                globalExitRootPosBuffer,
-            );
-            const timestampSmt = (await stateUtils.getContractStorage(
-                Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
-                zkEVMDB.smt,
-                zkEVMDB.stateRoot,
-                [globalExitRootPos],
-            ))[Scalar.e(globalExitRootPos)];
-
-            expect(Scalar.fromString(timestampVm.toString('hex'), 16)).to.equal(timestampSmt);
-            expect(timestampSmt).to.equal(Scalar.e(batch.timestamp));
-
-            // Check through a call in the EVM
-            if (bridgeDeployed) {
-                const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(bytes32)']);
-                const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [globalExitRoot]);
-                const globalExitRootResult = await zkEVMDB.vm.runCall({
-                    to: addressInstanceGlobalExitRoot,
-                    caller: Address.zero(),
-                    data: Buffer.from(encodedData.slice(2), 'hex'),
-                });
-                expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(ethers.utils.hexZeroPad(batch.timestamp, 32).slice(2));
-            }
-
             // Check the circuit input
             const circuitInput = await batch.getStarkInput();
 
@@ -391,7 +401,10 @@ describe('Processor', async function () {
                 testVectors[i].inputHash = circuitInput.inputHash;
                 testVectors[i].newLocalExitRoot = circuitInput.newLocalExitRoot;
             }
-
+            if (update) {
+                circuitInput.smtProofs = smtProofsObject;
+                await fs.writeFileSync(`${pathProcessorTests.split('.')[0]}-input.json`, JSON.stringify(circuitInput, null, 2));
+            }
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
         }
         if (update) {
