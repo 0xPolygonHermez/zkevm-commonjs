@@ -17,6 +17,7 @@ const smtUtils = require('./smt-utils');
 const { getCurrentDB } = require('./smt-utils');
 const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
 const { decodeCustomRawTxProverMethod, computeEffectiveGasPrice } = require('./processor-utils');
+const { valueToHexStr } = require('./utils');
 
 module.exports = class Processor {
     /**
@@ -29,13 +30,15 @@ module.exports = class Processor {
      * @param {String} sequencerAddress . sequencer address
      * @param {Array[Field]} accInputHash - accumulate input hash
      * @param {Array[Field]} globalExitRoot - global exit root
-     * @param {Number} timestamp - Timestamp of the batch
+     * @param {Number} timestampLimit - timestampLimit of the batch
      * @param {Number} chainID - L2 chainID
      * @param {Number} forkID - L2 rom fork identifier
+     * @param {Number} isForced - Flag for forced batch
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
-     * @param {Number} options.newBatchGasLimit New batch gas limit
+     * @param {Number} options.newBlockGasLimit New batch gas limit
+     * @param {Object} extraData - additional data to embed in the batch
      */
     constructor(
         db,
@@ -45,12 +48,14 @@ module.exports = class Processor {
         root,
         sequencerAddress,
         accInputHash,
-        globalExitRoot,
-        timestamp,
+        historicGERRoot,
+        timestampLimit,
         chainID,
         forkID,
+        isForced,
         vm,
         options,
+        extraData,
     ) {
         this.db = db;
         this.newNumBatch = numBatch;
@@ -69,21 +74,24 @@ module.exports = class Processor {
         this.oldStateRoot = root;
         this.currentStateRoot = root;
         this.oldAccInputHash = accInputHash;
-        this.globalExitRoot = globalExitRoot;
+        this.historicGERRoot = historicGERRoot;
 
         this.batchHashData = '0x';
         this.inputHash = '0x';
 
         this.sequencerAddress = sequencerAddress;
-        this.timestamp = timestamp;
+        this.timestampLimit = timestampLimit;
         this.chainID = chainID;
         this.forkID = forkID;
+        this.isForced = isForced;
 
         this.vm = vm;
         this.evmSteps = [];
         this.updatedAccounts = {};
         this.isLegacyTx = false;
+        this.isInvalid = false;
         this.options = options;
+        this.extraData = extraData;
     }
 
     /**
@@ -107,11 +115,13 @@ module.exports = class Processor {
         // Check the validity of rawTxs
         await this._decodeAndCheckRawTx();
 
-        // Set global exit root
-        await this._setGlobalExitRoot();
-
         // Process transactions and update the state
         await this._processTx();
+
+        // if batch has been invalid, revert current
+        if (this.isInvalid) {
+            this._rollbackBatch();
+        }
 
         // Read Local exit root
         await this._readLocalExitRoot();
@@ -144,6 +154,14 @@ module.exports = class Processor {
             // Decode raw transaction using prover method
             let txDecoded;
             let rlpSignData;
+
+            // check is changeL2Blocktx
+            if (rawTx.startsWith('0x0b')) {
+                txDecoded = await this.decodeChangeL2BlockTx(rawTx);
+                this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
+                continue;
+            }
+
             try {
                 const decodedObject = decodeCustomRawTxProverMethod(rawTx);
                 txDecoded = decodedObject.txDecoded;
@@ -190,20 +208,37 @@ module.exports = class Processor {
         }
     }
 
+    async decodeChangeL2BlockTx(_rawTx) {
+        const tx = {};
+
+        let offsetChars = 0;
+        const serializedTx = _rawTx.startsWith('0x') ? _rawTx.slice(2) : _rawTx;
+
+        tx.type = parseInt(serializedTx.slice(offsetChars, offsetChars + 1 * 2), 16);
+        offsetChars += 1 * 2;
+
+        tx.deltaTimestamp = Scalar.fromString(serializedTx.slice(offsetChars, offsetChars + 8 * 2), 16);
+        offsetChars += 8 * 2;
+
+        tx.indexHistoricalGERTree = parseInt(serializedTx.slice(offsetChars, offsetChars + 4 * 2), 16);
+
+        return tx;
+    }
+
     /**
      * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT
      * Not store global exit root if it is zero
      * Not overwrite storage position if timestamp is already set
      * This will be performed before process the transactions
      */
-    async _setGlobalExitRoot() {
+    async _setGlobalExitRoot(globalExitRoot, timestamp) {
         // return if globalExitRoot is 0
-        if (Scalar.eq(smtUtils.h4toScalar(this.globalExitRoot), Scalar.e(0))) {
+        if (Scalar.eq(globalExitRoot, Scalar.e(0))) {
             return;
         }
 
         // check if timestamp is already set
-        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [smtUtils.h4toString(this.globalExitRoot), Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
         const globalExitRootPosScalar = Scalar.e(globalExitRootPos).toString();
 
         const resTimestamp = await stateUtils.getContractStorage(
@@ -219,7 +254,7 @@ module.exports = class Processor {
 
         // Set globalExitRoot - timestamp
         const newStorageEntry = {};
-        newStorageEntry[globalExitRootPos] = this.timestamp;
+        newStorageEntry[globalExitRootPos] = timestamp;
 
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
@@ -229,10 +264,11 @@ module.exports = class Processor {
         );
 
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
+
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(this.timestamp),
+            toBuffer(valueToHexStr(timestamp, true)),
         );
 
         // store data in internal DB
@@ -252,6 +288,7 @@ module.exports = class Processor {
         for (let k = 0; k < keys.length; k++) {
             storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
         }
+
         await this.db.setValue(keyDumpStorage, storage);
     }
 
@@ -293,10 +330,38 @@ module.exports = class Processor {
         for (let i = 0; i < this.decodedTxs.length; i++) {
             const currentDecodedTx = this.decodedTxs[i];
 
+            /*
+             * First transaction must be a ChangeL2BlockTx is is not forced. Otherwise, invalid batch
+             * This will be ensured by the blob
+             */
+            if (i === 0 && currentDecodedTx.tx.type !== Constants.TX_CHANGE_L2_BLOCK && !this.isForced) {
+                this.isInvalid = true;
+
+                return;
+            }
+            // If is a forced batch, we create a changeL2Block at the begginning
+            if (i === 0 && this.isForced) {
+                const err = await this._processForcedChangeL2BlockTx(currentDecodedTx.tx);
+                if (err) {
+                    this.isInvalid = true;
+
+                    return;
+                }
+            }
             if (currentDecodedTx.isInvalid) {
                 continue;
             } else {
                 const currenTx = currentDecodedTx.tx;
+                if (currenTx.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    // Final function call that saves internal DB storage keys
+                    const err = await this._processChangeL2BlockTx(currenTx);
+                    if (err) {
+                        this.isInvalid = true;
+
+                        return;
+                    }
+                    continue;
+                }
                 // Get from state
                 const oldStateFrom = await stateUtils.getState(currenTx.from, this.smt, this.currentStateRoot);
 
@@ -342,10 +407,10 @@ module.exports = class Processor {
                 // Build block information
                 const blockData = {};
                 blockData.header = {};
-                blockData.header.timestamp = new BN(Scalar.e(this.timestamp));
+                blockData.header.timestamp = new BN(Scalar.e(await this._getTimestamp()));
                 blockData.header.coinbase = new Address(toBuffer(this.sequencerAddress));
-                blockData.header.gasLimit = this.options.newBatchGasLimit
-                    ? new BN(Scalar.e(this.options.newBatchGasLimit)) : new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
+                blockData.header.gasLimit = this.options.newBlockGasLimit
+                    ? new BN(Scalar.e(this.options.newBlockGasLimit)) : new BN(Scalar.e(Constants.BLOCK_GAS_LIMIT));
                 blockData.header.difficulty = new BN(Scalar.e(Constants.BATCH_DIFFICULTY));
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
@@ -399,8 +464,6 @@ module.exports = class Processor {
                             Scalar.e(accountSeq.balance),
                             Scalar.e(accountSeq.nonce),
                         );
-
-                        await this._updateSystemStorage();
 
                         // Clear touched accounts
                         this.vm.stateManager._customTouched.clear();
@@ -497,12 +560,141 @@ module.exports = class Processor {
                     }
                 }
 
-                await this._updateSystemStorage();
-
                 // Clear touched accounts
                 this.vm.stateManager._customTouched.clear();
             }
         }
+    }
+
+    /**
+     * Read the timestamp, which is a variable stored in the system smart contract
+     */
+    async _getTimestamp() {
+        const res = await stateUtils.getContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            [Constants.TIMESTAMP_STORAGE_POS],
+        );
+
+        return res[Constants.TIMESTAMP_STORAGE_POS];
+    }
+
+    /**
+     * Verify merkle proof
+     * @param {BigNumber} leaf - Leaf value
+     * @param {Array} smtProof - Array of sibilings
+     * @param {Number} index - Index of the leaf
+     * @param {BigNumber} root - Merkle root
+     * @returns {Boolean} - Whether the merkle proof is correct or not
+     */
+    verifyMerkleProof(leaf, smtProof, index, root) {
+        let value = leaf;
+        for (let i = 0; i < smtProof.length; i++) {
+            if (Math.floor(index / 2 ** i) % 2 !== 0) {
+                value = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [smtProof[i], value]);
+            } else {
+                value = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [value, smtProof[i]]);
+            }
+        }
+
+        return value === root;
+    }
+
+    /**
+     * Write timestamp in the system smart contract
+     * @param {BigInt} - timestamp
+     */
+    async _setTimestamp(timestamp) {
+        // Update smt with the new timestamp
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            { [Constants.TIMESTAMP_STORAGE_POS]: timestamp },
+        );
+
+        // Update the vm with the new timestamp
+        const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
+
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(`0x${Constants.TIMESTAMP_STORAGE_POS.toString(16).padStart(64, '0')}`),
+            toBuffer(valueToHexStr(timestamp, true)),
+        );
+    }
+
+    async _processForcedChangeL2BlockTx(tx) {
+        const currentTimestamp = await this._getTimestamp();
+
+        // Verify deltaTimestamp + currentTimestamp =< limitTimestamp
+        if (Scalar.gt(currentTimestamp, this.timestampLimit)) {
+            return true;
+        }
+
+        // Verify newGER | indexHistoricalGERTree belong to historicGERRoot
+        if (!this.options.skipVerifyGER) {
+            if (typeof tx.smtProof === 'undefined') {
+                throw new Error('BatchProcessor:_processChangeL2BlockTx:: missing smtProof parameter in changeL2Block tx');
+            }
+
+            if (this.verifyMerkleProof(tx.newGER, tx.smtProof, tx.indexHistoricalGERTree, this.historicGERRoot)) {
+                return true;
+            }
+        }
+
+        // set new timestamp
+        await this._setTimestamp(this.timestampLimit);
+
+        // set new GER
+        await this._setGlobalExitRoot(smtUtils.h4toString(this.historicGERRoot), this.timestampLimit);
+
+        /*
+         * read block number, increase it by 1 and write it
+         * write new blockchash
+         */
+        await this._updateSystemStorage();
+
+        return false;
+    }
+
+    async _processChangeL2BlockTx(tx) {
+        // If is forced batch, invalidate
+        if (this.isForced) {
+            return true;
+        }
+        const currentTimestamp = await this._getTimestamp();
+
+        // Verify deltaTimestamp + currentTimestamp =< limitTimestamp
+        if (Scalar.gt(Scalar.add(currentTimestamp, tx.deltaTimestamp), this.timestampLimit)) {
+            return true;
+        }
+        const newGER = this.extraData.GERS[tx.indexHistoricalGERTree];
+        // Verify newGER | indexHistoricalGERTree belong to historicGERRoot
+        if (!this.options.skipVerifyGER && tx.indexHistoricalGERTree !== 0) {
+            if (typeof tx.smtProof === 'undefined') {
+                throw new Error('BatchProcessor:_processChangeL2BlockTx:: missing smtProof parameter in changeL2Block tx');
+            }
+
+            if (this.verifyMerkleProof(newGER, tx.smtProof, tx.indexHistoricalGERTree, this.historicGERRoot)) {
+                return true;
+            }
+        }
+
+        // set new timestamp
+        const newTimestamp = Scalar.add(currentTimestamp, tx.deltaTimestamp);
+        await this._setTimestamp(newTimestamp);
+
+        // set new GER
+        await this._setGlobalExitRoot(newGER, newTimestamp);
+
+        /*
+         * read block number, increase it by 1 and write it
+         * write new blockchash
+         */
+        await this._updateSystemStorage();
+
+        return false;
     }
 
     /**
@@ -511,32 +703,35 @@ module.exports = class Processor {
     async _updateSystemStorage() {
         if (this.options.skipUpdateSystemStorage) return;
 
-        // Set system addres storage with updated values
-        const lastTxCount = await stateUtils.getContractStorage(
+        // Get last block number and increse it by 1
+        const lastBlockNumber = await stateUtils.getContractStorage(
             Constants.ADDRESS_SYSTEM,
             this.smt,
             this.currentStateRoot,
-            [Constants.LAST_TX_STORAGE_POS], // Storage key of last tx count
+            [Constants.LAST_TX_STORAGE_POS], // Storage key of last block num
         );
-        const newTxCount = Number(Scalar.add(lastTxCount[Constants.LAST_TX_STORAGE_POS], 1n));
-        // Update smt with new last tx count
+
+        const newBlockNumber = Number(Scalar.add(lastBlockNumber[Constants.LAST_TX_STORAGE_POS], 1n));
+
+        // Update zkEVM smt with the new block number
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_SYSTEM,
             this.smt,
             this.currentStateRoot,
-            { [Constants.LAST_TX_STORAGE_POS]: newTxCount },
+            { [Constants.LAST_TX_STORAGE_POS]: newBlockNumber },
         );
-        // Update vm with new last tx count
+
+        // Update VM with the new block number
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
 
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(`0x${Constants.LAST_TX_STORAGE_POS.toString(16).padStart(64, '0')}`),
-            toBuffer(Number(newTxCount)),
+            toBuffer(Number(newBlockNumber)),
         );
 
         // Update smt with new state root
-        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [newTxCount, Constants.STATE_ROOT_STORAGE_POS]);
+        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [newBlockNumber, Constants.STATE_ROOT_STORAGE_POS]);
         const tmpStateRoot = smtUtils.h4toString(this.currentStateRoot);
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_SYSTEM,
@@ -570,6 +765,11 @@ module.exports = class Processor {
         await this.db.setValue(keyDumpStorage, storage);
     }
 
+    _rollbackBatch() {
+        this.currentStateRoot = this.oldStateRoot;
+        this.updatedAccounts = {};
+    }
+
     /**
      * Compute stark input
      */
@@ -579,7 +779,7 @@ module.exports = class Processor {
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
         const oldAccInputHash = smtUtils.h4toString(this.oldAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
-        const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
+        const historicGERRoot = smtUtils.h4toString(this.historicGERRoot);
 
         this.batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
@@ -588,9 +788,10 @@ module.exports = class Processor {
         const newAccInputHash = calculateAccInputHash(
             oldAccInputHash,
             this.batchHashData,
-            globalExitRoot,
-            this.timestamp,
+            historicGERRoot,
+            this.timestampLimit,
             this.sequencerAddress,
+            this.isForced,
         );
 
         this.newAccInputHash = smtUtils.stringToH4(newAccInputHash);
@@ -605,9 +806,10 @@ module.exports = class Processor {
             newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
             forkID: this.forkID,
+            isForced: this.isForced,
             batchL2Data: this.getBatchL2Data(),
-            globalExitRoot,
-            timestamp: this.timestamp,
+            historicGERRoot,
+            timestampLimit: this.timestampLimit.toString(),
             sequencerAddr: this.sequencerAddress,
             batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
@@ -638,6 +840,7 @@ module.exports = class Processor {
             this.newNumBatch,
             this.chainID,
             this.forkID,
+            this.isForced,
             aggregatorAddress,
         );
     }
