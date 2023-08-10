@@ -2,10 +2,10 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-continue */
 
-const ethers = require('ethers');
-const { expect } = require('chai');
 const fs = require('fs');
 const path = require('path');
+const ethers = require('ethers');
+const { expect } = require('chai');
 const { Scalar } = require('ffjavascript');
 const { processorUtils } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
