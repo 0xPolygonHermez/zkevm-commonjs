@@ -344,6 +344,11 @@
         "txs": [],
         "expectedNewRoot": "0xf5c30bbb2b8a1bdd2b881cc575b2acbd13578c7cd64250fe8b6770fa95f915b3",
         "expectedNewLeafs": {
+          "0x000000000000000000000000000000005ca1ab1e": {
+            "balance": "0",
+            "nonce": "0",
+            "storage": {}
+          },
           "0x0000000000000000000000000000000000000000": {
             "balance": "0",
             "nonce": "0"
@@ -378,6 +383,11 @@
         "txs": [],
         "expectedNewRoot": "0xf5c30bbb2b8a1bdd2b881cc575b2acbd13578c7cd64250fe8b6770fa95f915b3",
         "expectedNewLeafs": {
+          "0x000000000000000000000000000000005ca1ab1e": {
+            "balance": "0",
+            "nonce": "0",
+            "storage": {}
+          },
           "0x0000000000000000000000000000000000000000": {
             "balance": "0",
             "nonce": "0"
