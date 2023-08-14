@@ -29,6 +29,22 @@ module.exports.SMT_KEY_SC_LENGTH = 4;
 module.exports.SMT_KEY_TOUCHED_ADDR = 5;
 module.exports.SMT_KEY_TOUCHED_SLOTS = 6;
 
+// SMT block header constant keys
+module.exports.SMT_KEY_BLOCK_HEADER_PARAM = 7;
+module.exports.SMT_KEY_BLOCK_HEADER_TRANSACTION_HASH = 8;
+module.exports.SMT_KEY_BLOCK_HEADER_STATUS = 9;
+module.exports.SMT_KEY_BLOCK_HEADER_CUMULATIVE_GAS_USED = 10;
+module.exports.SMT_KEY_BLOCK_HEADER_LOGS = 11;
+
+// SMT block header data leaf keys
+module.exports.INDEX_BLOCK_HEADER_PARAM_BLOCK_HASH = 0;
+module.exports.INDEX_BLOCK_HEADER_PARAM_COINBASE = 1;
+module.exports.INDEX_BLOCK_HEADER_PARAM_NUMBER = 2;
+module.exports.INDEX_BLOCK_HEADER_PARAM_GAS_LIMIT = 3;
+module.exports.INDEX_BLOCK_HEADER_PARAM_TIMESTAMP = 4;
+module.exports.INDEX_BLOCK_HEADER_PARAM_GER = 5;
+module.exports.INDEX_BLOCK_HEADER_PARAM_GAS_USED = 6;
+
 // SMT constant
 module.exports.BYTECODE_ELEMENTS_HASH = 8;
 module.exports.BYTECODE_BYTES_ELEMENT = 7;
@@ -48,7 +64,7 @@ module.exports.ADDRESS_SYSTEM = '0x000000000000000000000000000000005ca1ab1e';
 module.exports.LAST_BLOCK_STORAGE_POS = 0;
 module.exports.STATE_ROOT_STORAGE_POS = 1;
 module.exports.TIMESTAMP_STORAGE_POS = 2;
-module.exports.LAST_TX_STORAGE_POS = 0;
+module.exports.BLOCK_INFO_ROOT_STORAGE_POS = 3;
 
 // Bridge Leaf Types
 module.exports.BRIDGE_LEAF_TYPE_ASSET = 0;
