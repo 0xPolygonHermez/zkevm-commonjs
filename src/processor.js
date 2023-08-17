@@ -150,6 +150,7 @@ module.exports = class Processor {
      * B: Valid ChainID
      * C: Valid signature
      */
+    // COMMENT: check here the TX_GAS_LIMIT
     async _decodeAndCheckRawTx() {
         if (this.decodedTxs.length !== 0) {
             throw new Error('Transactions array should be empty');
@@ -164,6 +165,7 @@ module.exports = class Processor {
             let rlpSignData;
 
             // check is changeL2Blocktx
+            // COMMENT: use constant on transaction type
             if (rawTx.startsWith('0x0b')) {
                 txDecoded = await this.decodeChangeL2BlockTx(rawTx);
                 this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
@@ -216,6 +218,10 @@ module.exports = class Processor {
         }
     }
 
+    // COMMENT: mocve to another file since this is a utils
+    // if it is possible kind of:
+    // or: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/batch-utils.js#L177
+    // or: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/batch-utils.js#L195
     async decodeChangeL2BlockTx(_rawTx) {
         const tx = {};
 
@@ -334,9 +340,12 @@ module.exports = class Processor {
      * update state
      * finally pay all the fees to the sequencer address
      */
+    // COMMENT: I think it is cleaner in such a way: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/batch-processor.js#L216-L217
     async _processTx() {
         for (let i = 0; i < this.decodedTxs.length; i++) {
             const currentDecodedTx = this.decodedTxs[i];
+
+            // COMMENT: I would move all the checks that must be done in noder to consider the batch valid into a separate function
 
             /*
              * First transaction must be a ChangeL2BlockTx is is not forced. Otherwise, invalid batch
@@ -348,6 +357,8 @@ module.exports = class Processor {
                 return;
             }
             // If is a forced batch, we create a changeL2Block at the begginning
+            // COMMENT: this should be done before the loop
+            // since forceBatch does not have any chnageL2Block transaction
             if (i === 0 && this.isForced) {
                 const err = await this._processChangeL2BlockTx(currentDecodedTx.tx);
                 if (err) {
@@ -437,6 +448,7 @@ module.exports = class Processor {
                     // Increment block gas used
                     this.cumulativeGasUsed += bufferToInt(txResult.receipt.gasUsed);
                     // Fill block info tree with tx receipt
+                    // COMMENT: this function, despite being just a line, I will move it to an utils
                     const txHash = await smtUtils.linearPoseidon(`0x${currenTx.nonce.slice(2)}${currenTx.gasPrice.slice(2)}${currenTx.gasLimit.slice(2)}${currenTx.to.slice(2)}${currenTx.value.slice(2)}${currenTx.data.slice(2)}${currenTx.from.slice(2)}`);
                     await this.fillReceiptTree(txResult.receipt, txHash);
                     this.txIndex += 1;
@@ -735,6 +747,8 @@ module.exports = class Processor {
         let newTimestamp;
         let newGER;
         if (this.isForced) {
+            // COMMENT: if it is a forced batch: set the timestamp to the liitTimestamp only if limitTimestamp is > currentTimestamp
+            // we are forcing the sequencer to be up-to-date
             // Verify currentTimestamp =< limitTimestamp
             if (Scalar.gt(currentTimestamp, this.timestampLimit)) {
                 return true;
@@ -752,6 +766,9 @@ module.exports = class Processor {
         // Verify newGER | indexHistoricalGERTree belong to historicGERRoot
         if (!this.options.skipVerifyGER && tx.indexHistoricalGERTree !== 0) {
             if (typeof tx.smtProof === 'undefined') {
+                // COMMENT: make all errors over the zkevm-commonjs with this structure
+                // ${class}:${function}:: ${reason}
+                // if it is not in a class --> ${function}:: ${reason}
                 throw new Error('BatchProcessor:_processChangeL2BlockTx:: missing smtProof parameter in changeL2Block tx');
             }
 

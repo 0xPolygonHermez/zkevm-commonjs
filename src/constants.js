@@ -72,3 +72,12 @@ module.exports.BRIDGE_LEAF_TYPE_MESSAGE = 1;
 
 // Tx Types
 module.exports.TX_CHANGE_L2_BLOCK = 11;
+// COMMENT: I would start some kind of constant separation. Like:
+// https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/compression/compressor-constants.js#L1
+
+// COMMENT: If there is time...I would also start to do wrappers for transactions to differentiate transactions depending on its type...in order to be ready if more transactions typoes are coming:
+// For example: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/tx-utils.js#L45
+// or: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/compression/compressor-utils.js#L83
+// or: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/batch-utils.js#L177
+// or: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/batch-utils.js#L195
+// we are going to introduce those chnages when the blob is introduced. If we now have tine to introduce those changes, it would be less painful

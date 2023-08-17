@@ -23,7 +23,7 @@ function calculateAccInputHash(
     const oldAccInputHashHex = `0x${Scalar.e(oldAccInputHash).toString(16).padStart(64, '0')}`;
 
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes1'],
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes1'], // COMMENT: 'isForced' is a 'bool' type on the smart contract
         [
             oldAccInputHashHex,
             batchHashData,

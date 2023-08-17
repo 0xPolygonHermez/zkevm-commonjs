@@ -172,6 +172,9 @@ describe('Processor', async function () {
                 const txData = txs[j];
 
                 if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    // COMMENT: this function cpuld be moved to a file like:
+                    // // or: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/batch-utils.js#L177
+                    // or: https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/batch-utils.js#L195
                     let data = Scalar.e(0);
 
                     let offsetBits = 0;
@@ -238,6 +241,8 @@ describe('Processor', async function () {
                     continue;
                 }
 
+                // COMMENT: all the following code could be avoid if using ethers library like
+                // https://github.com/0xPolygonHermez/zkevm-commonjs/blob/feature/data-compression/src/tx-utils.js#L45
                 let customRawTx;
                 const address = genesis.find((o) => o.address === txData.from);
                 const wallet = new ethers.Wallet(address.pvtKey);

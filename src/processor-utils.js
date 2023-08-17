@@ -24,6 +24,9 @@ function unarrayifyInteger(data, offset, length) {
  * @param {String} customRawTx -  Custom raw transaction
  * @returns {String} - Standar raw transaction
  */
+// COMMENT: take into account new tx type
+// as mentioned in other comments, creating a wrapper for every single tx type would be the best
+// therefore inside the wrapper detect tx type and parse it accordingly
 function customRawTxToRawTx(customRawTx) {
     const signatureCharacters = Constants.SIGNATURE_BYTES * 2;
     const effectivePercentageCharacters = Constants.EFFECTIVE_PERCENTAGE_BYTES * 2;
@@ -126,6 +129,8 @@ function rawTxToCustomRawTx(rawTx, effectivePercentage) {
  * @param {String} encodedTransactions -  Reduced array
  * @returns {Array} - Array of rawTxs
  */
+// COMMENT: this function is very useful when debugging since it allows to get batchL2Data from L1 & decodes
+// changeL2Block tx should be added
 function encodedStringToArray(encodedTransactions) {
     const encodedTxBytes = ethers.utils.arrayify(encodedTransactions);
     const decodedRawTx = [];

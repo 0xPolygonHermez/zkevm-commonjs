@@ -49,6 +49,12 @@ class ZkEVMDB {
      * @param {Number} options.newBlockGasLimit New batch gas limit
      * @param {Object} extraData - additional data to embed in the batch
      */
+    // COMMENT: Now the block limit is 2**32 - 1, but we keep the 30M for a single transaction
+    // we can have in a block several txs at athe same tiem that goes over the 30M limit
+    // my suggestion is:
+    // 1. No changes on the 'processor' when processing the block: `blockData.header.gasLimit`
+    // 2. Add check prior to execute txs: "gasLimitTxSigned < (typeof newBlockGasLimit === 'undefined') ? TX_GAS_LIMIT : newBlockGasLimit;
+    // 3. change the name to newTxGasLimit
     async buildBatch(
         timestampLimit,
         sequencerAddress,
@@ -56,7 +62,7 @@ class ZkEVMDB {
         isForced,
         maxNTx = Constants.DEFAULT_MAX_TX,
         options = {},
-        extraData,
+        extraData, // COMMENT: what does it contain ? If it is an object add in comments all object properties
     ) {
         return new Processor(
             this.db,

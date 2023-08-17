@@ -38,6 +38,7 @@ function valueToHexStr(_value, prefix = false) {
     return prefix ? `0x${valueHex}` : valueHex;
 }
 
+// COMMENT: Export function
 /**
  * Gets current fuction name being called
  * @returns {String} function name
