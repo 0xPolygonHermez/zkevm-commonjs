@@ -100,6 +100,7 @@ module.exports = class Processor {
         this.extraData = extraData;
         this.cumulativeGasUsed = 0;
         this.txIndex = 0;
+        this.logIndex = 0;
         this.blockInfoRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
     }
 
@@ -434,7 +435,6 @@ module.exports = class Processor {
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
                 try {
-                    const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
                     const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock, effectivePercentage: currenTx.effectivePercentage });
                     this.evmSteps.push(txResult.execResult.evmSteps);
 
@@ -775,9 +775,10 @@ module.exports = class Processor {
         this.blockInfoRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.blockInfoRoot = await initBlockHeader(this.smt, this.blockInfoRoot, this.previousBlockHash, this.sequencerAddress, newBlockNumber, Constants.BLOCK_GAS_LIMIT, newTimestamp, newGER);
 
-        // Reset txIndex, cumulativeGasUsed and blockInfoRoot
+        // Reset txIndex, cumulativeGasUsed, logIndex and blockInfoRoot
         this.txIndex = 0;
         this.cumulativeGasUsed = 0;
+        this.logIndex = 0;
 
         // store data in internal DB
         const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
@@ -802,15 +803,14 @@ module.exports = class Processor {
         this.blockInfoRoot = await setTxStatus(this.smt, this.blockInfoRoot, this.txIndex, txReceipt.status);
         // Set tx gas used at smt
         this.blockInfoRoot = await setCumulativeGasUsed(this.smt, this.blockInfoRoot, this.txIndex, this.cumulativeGasUsed);
-        let logIndex = 0;
         for (const log of txReceipt.logs) {
             // Loop logs
             const bTopics = log[1];
             const topics = bTopics.reduce((previousValue, currentValue) => previousValue + currentValue.toString('hex'), '');
             // Encode log: linearPoseidon(logData + topics)
             const encoded = await smtUtils.linearPoseidon(`0x${log[2].toString('hex')}${topics}`);
-            this.blockInfoRoot = await setTxLog(this.smt, this.blockInfoRoot, this.txIndex, logIndex, encoded);
-            logIndex += 1;
+            this.blockInfoRoot = await setTxLog(this.smt, this.blockInfoRoot, this.txIndex, this.logIndex, encoded);
+            this.logIndex += 1;
         }
     }
 
