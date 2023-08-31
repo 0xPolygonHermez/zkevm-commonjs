@@ -18,8 +18,8 @@ const smtUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
-const { decodeCustomRawTxProverMethod, computeEffectiveGasPrice } = require('./processor-utils');
-const { valueToHexStr } = require('./utils');
+const { decodeCustomRawTxProverMethod, computeEffectiveGasPrice, computeL2TxHash } = require('./processor-utils');
+const { valueToHexStr, getFuncName } = require('./utils');
 const {
     initBlockHeader, setBlockGasUsed, setTxStatus, setTxHash, setCumulativeGasUsed, setTxLog,
 } = require('./block-utils');
@@ -111,7 +111,7 @@ module.exports = class Processor {
     addRawTx(rawTx) {
         this._isNotBuilded();
         if (this.rawTxs.length >= this.maxNTx) {
-            throw new Error('Batch is already full of transactions');
+            throw new Error(`${getFuncName()}: Batch is already full of transactions`);
         }
         this.rawTxs.push(rawTx);
     }
@@ -154,7 +154,7 @@ module.exports = class Processor {
      */
     async _decodeAndCheckRawTx() {
         if (this.decodedTxs.length !== 0) {
-            throw new Error('Transactions array should be empty');
+            throw new Error(`${getFuncName()}: Transactions array should be empty`);
         }
 
         // Checks transactions:
@@ -166,7 +166,7 @@ module.exports = class Processor {
             let rlpSignData;
 
             // check is changeL2Blocktx
-            if (rawTx.startsWith('0x0b')) {
+            if (rawTx.startsWith(`0x${Constants.TX_CHANGE_L2_BLOCK.toString(16).padStart(2, '0')}`)) {
                 txDecoded = await this.decodeChangeL2BlockTx(rawTx);
                 this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
                 continue;
@@ -411,6 +411,12 @@ module.exports = class Processor {
                     continue;
                 }
 
+                // Check TX_GAS_LIMIT
+                if (Number(currenTx.gasLimit) > Constants.TX_GAS_LIMIT) {
+                    currentDecodedTx.isInvalid = true;
+                    currentDecodedTx.reason = 'TX INVALID: Gas limit exceeds maximum allowed';
+                    continue;
+                }
                 // Run tx in the EVM
                 const evmTx = Transaction.fromTxData({
                     nonce: currenTx.nonce,
@@ -443,7 +449,7 @@ module.exports = class Processor {
                     // Increment block gas used
                     this.cumulativeGasUsed += bufferToInt(txResult.receipt.gasUsed);
                     // Fill block info tree with tx receipt
-                    const txHash = await smtUtils.linearPoseidon(`0x${currenTx.nonce.slice(2)}${currenTx.gasPrice.slice(2)}${currenTx.gasLimit.slice(2)}${currenTx.to.slice(2)}${currenTx.value.slice(2)}${currenTx.data.slice(2)}${currenTx.from.slice(2)}`);
+                    const txHash = await computeL2TxHash(currenTx);
                     await this.fillReceiptTree(txResult.receipt, txHash);
                     this.txIndex += 1;
 
@@ -758,7 +764,7 @@ module.exports = class Processor {
         // Verify newGER | indexHistoricalGERTree belong to historicGERRoot
         if (!this.options.skipVerifyGER && tx.indexHistoricalGERTree !== 0) {
             if (typeof tx.smtProof === 'undefined') {
-                throw new Error('BatchProcessor:_processChangeL2BlockTx:: missing smtProof parameter in changeL2Block tx');
+                throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing smtProof parameter in changeL2Block tx`);
             }
 
             if (this.verifyMerkleProof(newGER, tx.smtProof, tx.indexHistoricalGERTree, this.historicGERRoot)) {
@@ -924,14 +930,14 @@ module.exports = class Processor {
      * Throw error if batch is already builded
      */
     _isNotBuilded() {
-        if (this.builded) throw new Error('Batch already builded');
+        if (this.builded) throw new Error(`${getFuncName()}: Batch already builded`);
     }
 
     /**
      * Throw error if batch is already builded
      */
     _isBuilded() {
-        if (!this.builded) throw new Error('Batch must first be builded');
+        if (!this.builded) throw new Error(`${getFuncName()}: Batch must first be builded`);
     }
 
     /**

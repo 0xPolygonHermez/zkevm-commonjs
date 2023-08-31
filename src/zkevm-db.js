@@ -48,6 +48,7 @@ class ZkEVMDB {
      * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smrt contract at the end of processable transactions
      * @param {Number} options.newBlockGasLimit New batch gas limit
      * @param {Object} extraData - additional data to embed in the batch
+     *                           - { GERS: {} } - Global exit roots key: value -> txIndex (in batch): globalExitRoot
      */
     async buildBatch(
         timestampLimit,

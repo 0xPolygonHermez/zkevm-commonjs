@@ -69,7 +69,7 @@ function hexString2byteArray(_hex) {
     const hex = _hex.startsWith('0x') ? _hex.slice(2) : _hex;
 
     if (hex.length % 2 !== 0) {
-        throw new Error('Must have an even number of hex digits to convert to bytes');
+        throw new Error(`${getFuncName()}: Must have an even number of hex digits to convert to bytes`);
     }
 
     const numBytes = hex.length / 2;
@@ -117,4 +117,5 @@ module.exports = {
     sha256Snark,
     padZeros,
     valueToHexStr,
+    getFuncName,
 };
