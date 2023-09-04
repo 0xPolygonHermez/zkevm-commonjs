@@ -33,11 +33,18 @@ function customRawTxToRawTx(customRawTx) {
     const txFields = ethers.utils.RLP.decode(rlpSignData);
 
     const signatureParams = ethers.utils.splitSignature(signature);
-
-    const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
-    const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
-    const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
-    const rlpFields = [...txFields.slice(0, -3), v, r, s];
+    let rlpFields;
+    if (txFields[6] === undefined) {
+        const v = ethers.utils.hexlify(signatureParams.v);
+        const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+        const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+        rlpFields = [...txFields, v, r, s];
+    } else {
+        const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
+        const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+        const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+        rlpFields = [...txFields.slice(0, -3), v, r, s];
+    }
 
     return ethers.utils.RLP.encode(rlpFields);
 }
