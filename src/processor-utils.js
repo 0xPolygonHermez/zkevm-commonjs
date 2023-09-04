@@ -161,8 +161,8 @@ function encodedStringToArray(encodedTransactions) {
                 throw new Error('encodedTxBytes array too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES)));
-            offset = offset + 1 + length + Constants.SIGNATURE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + 1 + Constants.SIGNATURE_BYTES)));
+            offset = offset + 1 + length + 1 + Constants.SIGNATURE_BYTES;
         } else {
             throw new Error('Error');
         }
