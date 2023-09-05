@@ -1,19 +1,22 @@
+/* eslint-disable global-require */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-continue */
 
-const ethers = require('ethers');
-const { expect } = require('chai');
 const fs = require('fs');
 const path = require('path');
+const ethers = require('ethers');
+const { expect } = require('chai');
 const { Scalar } = require('ffjavascript');
 const { processorUtils } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor utils', () => {
     let testVectors;
+    let testVectorsEffGasPrice;
 
     before(async () => {
         testVectors = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'zkevm-db/state-transition.json')));
+        testVectorsEffGasPrice = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'effective-gas-price/effective-gas-price.json')));
     });
 
     it('Check encode and decode transactions', async () => {
@@ -77,7 +80,10 @@ describe('Processor utils', () => {
                         const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
                         const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
                         const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
-                        customRawTx = signData.concat(r).concat(s).concat(v);
+                        if (typeof tx.effectivePercentage === 'undefined') {
+                            tx.effectivePercentage = 'ff';
+                        }
+                        customRawTx = signData.concat(r).concat(s).concat(v).concat(tx.effectivePercentage);
                     } else {
                         const rawTxEthers = await walletMap[txData.from].signTransaction(tx);
                         customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
@@ -162,6 +168,32 @@ describe('Processor utils', () => {
 
             const out = processorUtils.addressToHexStringRlp(input);
             expect(out).to.be.equal(expectedOut);
+        }
+    });
+
+    it('computeEffectiveGasPrice', async () => {
+        for (let i = 0; i < testVectorsEffGasPrice.length; i++) {
+            const { gasPrice, effectivePercentage, expectedOutput } = testVectorsEffGasPrice[i];
+
+            const computedOutput = `0x${processorUtils.computeEffectiveGasPrice(gasPrice, effectivePercentage).toString(16)}`;
+            expect(computedOutput).to.be.equal(expectedOutput);
+        }
+    });
+
+    it('encodedStringToArray', async () => {
+        for (let i = 0; i < testVectors.length; i++) {
+            const {
+                batchL2Data,
+                txs,
+            } = testVectors[i];
+
+            const arrayTxs = processorUtils.encodedStringToArray(batchL2Data);
+
+            expect(arrayTxs.length).to.be.equal(txs.length);
+
+            for (let j = 0; j < arrayTxs.length; j++) {
+                expect(arrayTxs[j]).to.be.equal(txs[j].customRawTx);
+            }
         }
     });
 });

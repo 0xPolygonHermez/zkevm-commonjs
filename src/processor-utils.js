@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
 const Constants = require('./constants');
@@ -19,24 +20,32 @@ function unarrayifyInteger(data, offset, length) {
 }
 
 /**
- * Convert a custom rawTx  [rlp(nonce, gasprice, gaslimit, to, value, data, chainId, 0, 0)|r|s|v]
+ * Convert a custom rawTx  [rlp(nonce, gasprice, gaslimit, to, value, data, chainId, 0, 0)|r|s|v|effectivePercentage]
  * to a standard raw tx [rlp(nonce, gasprice, gaslimit, to, value, data, r, s, v)]
  * @param {String} customRawTx -  Custom raw transaction
  * @returns {String} - Standar raw transaction
  */
 function customRawTxToRawTx(customRawTx) {
     const signatureCharacters = Constants.SIGNATURE_BYTES * 2;
-    const rlpSignData = customRawTx.slice(0, -signatureCharacters);
-    const signature = `0x${customRawTx.slice(-signatureCharacters)}`;
+    const effectivePercentageCharacters = Constants.EFFECTIVE_PERCENTAGE_BYTES * 2;
+    const rlpSignData = customRawTx.slice(0, -(signatureCharacters + effectivePercentageCharacters));
+    const signature = `0x${customRawTx.slice(-(signatureCharacters + effectivePercentageCharacters), -effectivePercentageCharacters)}`;
 
     const txFields = ethers.utils.RLP.decode(rlpSignData);
 
     const signatureParams = ethers.utils.splitSignature(signature);
-
-    const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
-    const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
-    const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
-    const rlpFields = [...txFields.slice(0, -3), v, r, s];
+    let rlpFields;
+    if (txFields[6] === undefined) {
+        const v = ethers.utils.hexlify(signatureParams.v);
+        const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+        const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+        rlpFields = [...txFields, v, r, s];
+    } else {
+        const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
+        const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+        const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+        rlpFields = [...txFields.slice(0, -3), v, r, s];
+    }
 
     return ethers.utils.RLP.encode(rlpFields);
 }
@@ -97,7 +106,7 @@ function addressToHexStringRlp(address) {
  * @param {String} rawTx - Standar raw transaction
  * @returns {String} - Custom raw transaction
  */
-function rawTxToCustomRawTx(rawTx) {
+function rawTxToCustomRawTx(rawTx, effectivePercentage) {
     const tx = ethers.utils.parseTransaction(rawTx);
     const signData = ethers.utils.RLP.encode([
         toHexStringRlp(tx.nonce),
@@ -113,8 +122,11 @@ function rawTxToCustomRawTx(rawTx) {
     const r = tx.r.slice(2);
     const s = tx.s.slice(2);
     const v = (tx.v - tx.chainId * 2 - 35 + 27).toString(16).padStart(2, '0'); // 1 byte
+    if (typeof effectivePercentage === 'undefined') {
+        effectivePercentage = 'ff';
+    }
 
-    return signData.concat(r).concat(s).concat(v);
+    return signData.concat(r).concat(s).concat(v).concat(effectivePercentage);
 }
 
 /**
@@ -140,20 +152,18 @@ function encodedStringToArray(encodedTransactions) {
                 throw new Error('encodedTxBytes long segment too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(
-                encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES),
-            ));
-            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES)));
+            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
         } else if (encodedTxBytes[offset] >= 0xc0) {
             const length = encodedTxBytes[offset] - 0xc0;
             if (offset + 1 + length > encodedTxBytes.length) {
                 throw new Error('encodedTxBytes array too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES)));
-            offset = offset + 1 + length + Constants.SIGNATURE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES)));
+            offset = offset + 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
         } else {
-            throw new Error('Error');
+            throw new Error('Error encodedStringToArray');
         }
     }
 
@@ -283,6 +293,7 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     const lenR = 32;
     const lenS = 32;
     const lenV = 1;
+    const lenEffectivePercentage = 1;
 
     txDecoded.r = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenR));
     offset += lenR;
@@ -290,8 +301,28 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     offset += lenS;
     txDecoded.v = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenV));
     offset += lenV;
+    txDecoded.effectivePercentage = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenEffectivePercentage));
+    offset += lenEffectivePercentage;
+    if (txDecoded.effectivePercentage === '0x') {
+        txDecoded.effectivePercentage = '0xff';
+    }
 
     return { txDecoded, rlpSignData };
+}
+
+/**
+ * Computes the effective gas price for a transaction
+ * @param {String | BigInt} gasPrice in hex string or BigInt
+ * @param {String | BigInt} effectivePercentage in hex string or BigInt
+ * @returns effectiveGasPrice as BigInt
+ */
+function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
+    const effectivegasPrice = Scalar.div(
+        Scalar.mul(Scalar.e(gasPrice), (Scalar.e(Number(effectivePercentage) + 1))),
+        256,
+    );
+
+    return effectivegasPrice;
 }
 
 module.exports = {
@@ -302,4 +333,5 @@ module.exports = {
     arrayToEncodedString,
     encodedStringToArray,
     addressToHexStringRlp,
+    computeEffectiveGasPrice,
 };

@@ -14,6 +14,7 @@ module.exports.DB_STARK_INPUT = ethers.utils.id(('ZKEVM_DB_STARK_INPUT'));
 // Default values and global constants
 module.exports.DEFAULT_MAX_TX = 1000;
 module.exports.SIGNATURE_BYTES = 32 + 32 + 1;
+module.exports.EFFECTIVE_PERCENTAGE_BYTES = 1;
 module.exports.FrSNARK = Scalar.e('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 module.exports.FrSTARK = Scalar.e('18446744069414584321');
 

@@ -7,8 +7,9 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable guard-for-in */
 
-const { Scalar } = require('ffjavascript');
 const fs = require('fs');
+const path = require('path');
+const { Scalar } = require('ffjavascript');
 const { argv } = require('yargs');
 
 const ethers = require('ethers');
@@ -17,7 +18,6 @@ const {
     Address, toBuffer,
 } = require('ethereumjs-util');
 const { defaultAbiCoder } = require('@ethersproject/abi');
-const path = require('path');
 const lodash = require('lodash');
 
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
