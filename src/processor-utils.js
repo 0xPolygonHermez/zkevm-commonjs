@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
 const Constants = require('./constants');
@@ -33,11 +34,18 @@ function customRawTxToRawTx(customRawTx) {
     const txFields = ethers.utils.RLP.decode(rlpSignData);
 
     const signatureParams = ethers.utils.splitSignature(signature);
-
-    const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
-    const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
-    const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
-    const rlpFields = [...txFields.slice(0, -3), v, r, s];
+    let rlpFields;
+    if (txFields[6] === undefined) {
+        const v = ethers.utils.hexlify(signatureParams.v);
+        const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+        const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+        rlpFields = [...txFields, v, r, s];
+    } else {
+        const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
+        const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+        const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+        rlpFields = [...txFields.slice(0, -3), v, r, s];
+    }
 
     return ethers.utils.RLP.encode(rlpFields);
 }
@@ -144,20 +152,18 @@ function encodedStringToArray(encodedTransactions) {
                 throw new Error('encodedTxBytes long segment too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(
-                encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES),
-            ));
-            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES)));
+            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
         } else if (encodedTxBytes[offset] >= 0xc0) {
             const length = encodedTxBytes[offset] - 0xc0;
             if (offset + 1 + length > encodedTxBytes.length) {
                 throw new Error('encodedTxBytes array too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES)));
-            offset = offset + 1 + length + Constants.SIGNATURE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES)));
+            offset = offset + 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
         } else {
-            throw new Error('Error');
+            throw new Error('Error encodedStringToArray');
         }
     }
 

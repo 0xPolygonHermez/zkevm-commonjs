@@ -179,4 +179,21 @@ describe('Processor utils', () => {
             expect(computedOutput).to.be.equal(expectedOutput);
         }
     });
+
+    it('encodedStringToArray', async () => {
+        for (let i = 0; i < testVectors.length; i++) {
+            const {
+                batchL2Data,
+                txs,
+            } = testVectors[i];
+
+            const arrayTxs = processorUtils.encodedStringToArray(batchL2Data);
+
+            expect(arrayTxs.length).to.be.equal(txs.length);
+
+            for (let j = 0; j < arrayTxs.length; j++) {
+                expect(arrayTxs[j]).to.be.equal(txs[j].customRawTx);
+            }
+        }
+    });
 });
