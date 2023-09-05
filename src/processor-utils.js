@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
 const Constants = require('./constants');
@@ -151,20 +152,18 @@ function encodedStringToArray(encodedTransactions) {
                 throw new Error('encodedTxBytes long segment too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(
-                encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES),
-            ));
-            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES)));
+            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
         } else if (encodedTxBytes[offset] >= 0xc0) {
             const length = encodedTxBytes[offset] - 0xc0;
             if (offset + 1 + length > encodedTxBytes.length) {
                 throw new Error('encodedTxBytes array too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + 1 + Constants.SIGNATURE_BYTES)));
-            offset = offset + 1 + length + 1 + Constants.SIGNATURE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES)));
+            offset = offset + 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
         } else {
-            throw new Error('Error');
+            throw new Error('Error encodedStringToArray');
         }
     }
 

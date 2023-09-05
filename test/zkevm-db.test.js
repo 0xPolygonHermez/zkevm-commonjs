@@ -106,6 +106,7 @@ describe('ZkEVMDB', function () {
             expectedOldRoot,
             txs,
             expectedNewRoot,
+            batchL2Data,
             sequencerAddress,
             globalExitRoot,
             timestamp,
@@ -241,13 +242,16 @@ describe('ZkEVMDB', function () {
 
         const newRoot = batch.currentStateRoot;
         const { newAccInputHash } = batch;
+        const computedBatchL2Data = await batch.getBatchL2Data();
 
         if (update) {
             testVectors[0].expectedNewRoot = smtUtils.h4toString(newRoot);
             testVectors[0].expectedNewAccInputHash = smtUtils.h4toString(newAccInputHash);
+            testVectors[0].batchL2Data = computedBatchL2Data;
         } else {
             expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
             expect(smtUtils.h4toString(newAccInputHash)).to.be.equal(expectedNewAccInputHash);
+            expect(computedBatchL2Data).to.be.equal(batchL2Data);
         }
 
         // checks previous consolidate zkEVMDB
