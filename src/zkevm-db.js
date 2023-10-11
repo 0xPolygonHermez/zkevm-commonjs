@@ -62,6 +62,7 @@ class ZkEVMDB {
             this.forkID,
             clone(this.vm),
             options,
+            this.smt.maxLevel,
         );
     }
 

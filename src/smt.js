@@ -18,6 +18,11 @@ class SMT {
         this.hash = hash;
         this.F = F;
         this.empty = [F.zero, F.zero, F.zero, F.zero];
+        this.maxLevel = 0;
+    }
+
+    setMaxLevel(level) {
+        this.maxLevel = level;
     }
 
     /**
@@ -66,6 +71,7 @@ class SMT {
 
         const keys = self.splitKey(key);
         let level = 0;
+        let currentLevel = 0;
         let proofHashCounter = 0;
 
         const accKey = [];
@@ -99,7 +105,7 @@ class SMT {
 
         level -= 1;
         accKey.pop();
-
+        currentLevel = level;
         // calculate hash to validate oldRoot
         proofHashCounter = nodeIsZero(oldRoot, F) ? 0 : (siblings.slice(0, level + 1).length + (((foundVal ?? 0n) === 0n) ? 0 : 2));
 
@@ -245,7 +251,6 @@ class SMT {
         }
 
         siblings = siblings.slice(0, level + 1);
-
         while (level >= 0) {
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
             proofHashCounter += 1;
@@ -255,6 +260,10 @@ class SMT {
                     siblings[level][keys[level] * 4 + j] = newRoot[j];
                 }
             }
+        }
+        // Update max level in case last insertion increased smt size
+        if (this.maxLevel < currentLevel) {
+            this.maxLevel = currentLevel;
         }
 
         return {

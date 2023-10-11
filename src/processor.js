@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-continue */
 const ethers = require('ethers');
@@ -8,11 +9,13 @@ const {
 } = require('ethereumjs-util');
 
 const { Scalar } = require('ffjavascript');
+const _ = require('lodash');
 const SMT = require('./smt');
 const TmpSmtDB = require('./tmp-smt-db');
 const Constants = require('./constants');
 const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
+const VirtualCountersManager = require('./virtual-counters-manager');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
@@ -51,6 +54,7 @@ module.exports = class Processor {
         forkID,
         vm,
         options,
+        smtLevels,
     ) {
         this.db = db;
         this.newNumBatch = numBatch;
@@ -60,7 +64,8 @@ module.exports = class Processor {
         this.F = poseidon.F;
         this.tmpSmtDB = new TmpSmtDB(db);
         this.smt = new SMT(this.tmpSmtDB, poseidon, poseidon.F);
-
+        this.smt.maxLevel = smtLevels;
+        this.initSmtLevels = smtLevels;
         this.rawTxs = [];
         this.decodedTxs = [];
         this.builded = false;
@@ -80,10 +85,12 @@ module.exports = class Processor {
         this.forkID = forkID;
 
         this.vm = vm;
+        this.oldVm = _.cloneDeep(vm);
         this.evmSteps = [];
         this.updatedAccounts = {};
         this.isLegacyTx = false;
         this.options = options;
+        this.vcm = new VirtualCountersManager(options.vcmConfig);
     }
 
     /**
@@ -120,6 +127,10 @@ module.exports = class Processor {
         await this._computeStarkInput();
 
         this.builded = true;
+        // Check virtual counters
+        const virtualCounters = this.vcm.getCurrentSpentCounters();
+
+        return { virtualCounters };
     }
 
     /**
@@ -290,7 +301,48 @@ module.exports = class Processor {
      * finally pay all the fees to the sequencer address
      */
     async _processTx() {
+        this.vcm.setSMTLevels((2 ** this.smt.maxLevel + 250000).toString(2).length);
+        // Compute init processing counters
+        this.vcm.computeFunctionCounters('batchProcessing', { batchL2DataLength: (this.rawTxs.join('').length - this.rawTxs.length * 2) / 2 });
         for (let i = 0; i < this.decodedTxs.length; i++) {
+            if (this.decodedTxs[i].isInvalid) {
+                // Worst case scenario with fake signature
+                this.vcm.computeFunctionCounters('rlpParsing', {
+                    txRLPLength: (this.rawTxs[i].length - 2) / 2,
+                    txDataLen: (this.rawTxs[i].length - 2) / 2,
+                    v: Scalar.e('0x1b'),
+                    r: Scalar.e('0xd693b532a80fed6392b428604171fb32fdbf953728a3a7ecc7d4062b1652c042'),
+                    s: Scalar.e('0x24e9c602ac800b983b035700a14b23f78a253ab762deab5dc27e3555a750b354'),
+                    gasPriceLen: 32,
+                    gasLimitLen: 8,
+                    valueLen: 32,
+                    chainIdLen: 8,
+                    nonceLen: 8,
+                });
+                continue;
+            }
+            const txDataLen = this.decodedTxs[i].tx.data ? (this.decodedTxs[i].tx.data.length - 2) / 2 : 0;
+            this.vcm.computeFunctionCounters('rlpParsing', {
+                txRLPLength: (this.rawTxs[i].length - 2) / 2,
+                txDataLen,
+                v: Scalar.e(this.decodedTxs[i].tx.v === '0x' ? 0 : this.decodedTxs[i].tx.v),
+                r: Scalar.e(this.decodedTxs[i].tx.r),
+                s: Scalar.e(this.decodedTxs[i].tx.s),
+                gasPriceLen: (this.decodedTxs[i].tx.gasPrice.length - 2) / 2,
+                gasLimitLen: (this.decodedTxs[i].tx.gasLimit.length - 2) / 2,
+                valueLen: (this.decodedTxs[i].tx.value.length - 2) / 2,
+                chainIdLen: typeof this.decodedTxs[i].tx.chainID === 'undefined' ? 0 : (ethers.utils.hexlify(this.decodedTxs[i].tx.chainID).length - 2) / 2,
+                nonceLen: (this.decodedTxs[i].tx.nonce.length - 2) / 2,
+            });
+        }
+        for (let i = 0; i < this.decodedTxs.length; i++) {
+            /**
+             * Set vcm poseidon levels. Maxmimun (teorical) levels that can be added in a tx is 250k.
+             * We count how much can the smt increase in a tx and compute the virtual poseidons with this worst case scenario.
+             */
+            const maxLevelPerTx = (2 ** this.smt.maxLevel + 250000).toString(2).length;
+            this.vcm.setSMTLevels(maxLevelPerTx);
+
             const currentDecodedTx = this.decodedTxs[i];
 
             if (currentDecodedTx.isInvalid) {
@@ -319,8 +371,8 @@ module.exports = class Processor {
                 }
                 const v = this.isLegacyTx ? currenTx.v : Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35;
 
-                const bytecodeLength = await stateUtils.getContractBytecodeLength(currenTx.from, this.smt, this.currentStateRoot);
-                if (bytecodeLength > 0) {
+                const bytecodeLen = await stateUtils.getContractBytecodeLength(currenTx.from, this.smt, this.currentStateRoot);
+                if (bytecodeLen > 0) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: EIP3607 Do not allow transactions for which tx.sender has any code deployed';
                     continue;
@@ -350,8 +402,25 @@ module.exports = class Processor {
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
                 try {
-                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock, effectivePercentage: currenTx.effectivePercentage });
-                    this.evmSteps.push(txResult.execResult.evmSteps);
+                    // init custom counters snapshot
+                    this.vcm.initCustomSnapshot(i);
+                    const txResult = await this.vm.runTx({
+                        tx: evmTx, block: evmBlock, effectivePercentage: currenTx.effectivePercentage, vcm: this.vcm,
+                    });
+                    // Compute counters
+                    let bytecodeLength;
+                    let isDeploy = false;
+                    if (typeof currentDecodedTx.tx.to === 'undefined' || currentDecodedTx.tx.to.length <= 2) {
+                        bytecodeLength = txResult.execResult.returnValue.length;
+                        isDeploy = true;
+                    } else {
+                        bytecodeLength = await stateUtils.getContractBytecodeLength(currentDecodedTx.tx.to, this.smt, this.currentStateRoot);
+                    }
+                    this.vcm.computeFunctionCounters('processTx', { bytecodeLength, isDeploy });
+                    this.evmSteps.push({
+                        steps: txResult.execResult.evmSteps,
+                        counters: this.vcm.computeCustomSnapshotConsumption(i),
+                    });
 
                     currentDecodedTx.receipt = txResult.receipt;
                     currentDecodedTx.createdAddress = txResult.createdAddress;
@@ -501,6 +570,14 @@ module.exports = class Processor {
 
                 // Clear touched accounts
                 this.vm.stateManager._customTouched.clear();
+                /**
+                 * We check how much the smt has increased. In case it has increased more than expected, it means we may have a pow attack so we have to recompute counters cost with this new smt levels
+                 * We re run the batch with a new malxLevel value at the smt
+                 */
+                if (this.smt.maxLevel > maxLevelPerTx) {
+                    this._rollbackBatch();
+                    i = 0;
+                }
             }
         }
     }
@@ -568,6 +645,12 @@ module.exports = class Processor {
             storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
         }
         await this.db.setValue(keyDumpStorage, storage);
+    }
+
+    _rollbackBatch() {
+        this.currentStateRoot = this.oldStateRoot;
+        this.vm = _.cloneDeep(this.oldVm);
+        this.updatedAccounts = {};
     }
 
     /**
