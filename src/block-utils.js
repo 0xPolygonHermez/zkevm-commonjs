@@ -4,6 +4,7 @@ const constants = require('./constants');
 const {
     keyBlockHeaderParams, keyTxLogs, keyTxStatus, keyTxHash, keyTxCumulativeGasUsed,
 } = require('./block-keys-utils');
+
 /**
  * Set a state of an ethereum address
  * @param {Object} smt merkle tree structure
@@ -14,15 +15,17 @@ const {
  * @param {Scalar|Number} gasLimit block gas limit
  * @param {Scalar|Number} timestamp block timestamp
  * @param {String} GER block's global exit root
+ * @param {String} blockHashL1 block hash L1
  * @returns {Array[Field]} new state root
  */
-async function initBlockHeader(smt, root, oldBlockHash, coinbase, blockNumber, gasLimit, timestamp, GER) {
+async function initBlockHeader(smt, root, oldBlockHash, coinbase, blockNumber, gasLimit, timestamp, GER, blockHashL1) {
     const keyBlockHash = await keyBlockHeaderParams(constants.INDEX_BLOCK_HEADER_PARAM_BLOCK_HASH);
     const keyCoinbase = await keyBlockHeaderParams(constants.INDEX_BLOCK_HEADER_PARAM_COINBASE);
     const keyBlockNumber = await keyBlockHeaderParams(constants.INDEX_BLOCK_HEADER_PARAM_NUMBER);
     const keyGasLimit = await keyBlockHeaderParams(constants.INDEX_BLOCK_HEADER_PARAM_GAS_LIMIT);
     const keyTimestamp = await keyBlockHeaderParams(constants.INDEX_BLOCK_HEADER_PARAM_TIMESTAMP);
     const keyGER = await keyBlockHeaderParams(constants.INDEX_BLOCK_HEADER_PARAM_GER);
+    const keyBlockHashL1 = await keyBlockHeaderParams(constants.INDEX_BLOCK_HEADER_PARAM_BLOCK_HASH_L1);
 
     let result = await smt.set(root, keyBlockHash, Scalar.e(oldBlockHash));
     result = await smt.set(result.newRoot, keyCoinbase, Scalar.e(coinbase));
@@ -30,6 +33,7 @@ async function initBlockHeader(smt, root, oldBlockHash, coinbase, blockNumber, g
     result = await smt.set(result.newRoot, keyGasLimit, Scalar.e(gasLimit));
     result = await smt.set(result.newRoot, keyTimestamp, Scalar.e(timestamp));
     result = await smt.set(result.newRoot, keyGER, Scalar.e(GER));
+    result = await smt.set(result.newRoot, keyBlockHashL1, Scalar.e(blockHashL1));
 
     return result.newRoot;
 }

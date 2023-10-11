@@ -18,11 +18,16 @@ const smtUtils = require('./smt-utils');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
-const { decodeCustomRawTxProverMethod, computeEffectiveGasPrice, computeL2TxHash } = require('./processor-utils');
+const {
+    decodeCustomRawTxProverMethod, computeEffectiveGasPrice, computeL2TxHash,
+    decodeChangeL2BlockTx,
+} = require('./processor-utils');
 const { valueToHexStr, getFuncName } = require('./utils');
 const {
     initBlockHeader, setBlockGasUsed, setTxStatus, setTxHash, setCumulativeGasUsed, setTxLog,
 } = require('./block-utils');
+const { verifyMerkleProof } = require('./mt-bridge-utils');
+const { getL1InfoTreeValue } = require('./l1-info-tree-utils');
 
 module.exports = class Processor {
     /**
@@ -34,16 +39,21 @@ module.exports = class Processor {
      * @param {Array[Field]} root - state root
      * @param {String} sequencerAddress . sequencer address
      * @param {Array[Field]} accInputHash - accumulate input hash
-     * @param {Array[Field]} globalExitRoot - global exit root
+     * @param {Array[Field]} l1InfoRoot - l1 info root
      * @param {Number} timestampLimit - timestampLimit of the batch
      * @param {Number} chainID - L2 chainID
      * @param {Number} forkID - L2 rom fork identifier
-     * @param {Number} isForced - Flag for forced batch
+     * @param {String} forcedBlockHashL1 - blockhash L1 in forced batches
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
+     * @param {Bool} options.skipVerifyL1InfoRoot Skips verification smt proof against the L1InfoRoot
      * @param {Number} options.newBlockGasLimit New batch gas limit
-     * @param {Object} extraData - additional data to embed in the batch
+     * @param {Object} extraData - additional data embedded in the batch
+     * @param {Array[Object]} extraData.l1Info - L1Info - object with the following [key - value] ==> [indexL1InfoTree - L1InfoLeaf]
+     * @param {String} extraData.l1Info[x].globalExitRoot - global exit root
+     * @param {String} extraData.l1Info[x].blockHash - l1 block hash at blockNumber - 1
+     * @param {BigInt} extraData.l1Info[x].timestamp - l1 block timestamp at blockNumber
      */
     constructor(
         db,
@@ -53,11 +63,11 @@ module.exports = class Processor {
         root,
         sequencerAddress,
         accInputHash,
-        historicGERRoot,
+        l1InfoRoot,
         timestampLimit,
         chainID,
         forkID,
-        isForced,
+        forcedBlockHashL1,
         vm,
         options,
         extraData,
@@ -80,7 +90,7 @@ module.exports = class Processor {
         this.previousBlockHash = root;
         this.currentStateRoot = root;
         this.oldAccInputHash = accInputHash;
-        this.historicGERRoot = historicGERRoot;
+        this.l1InfoRoot = l1InfoRoot;
 
         this.batchHashData = '0x';
         this.inputHash = '0x';
@@ -89,7 +99,9 @@ module.exports = class Processor {
         this.timestampLimit = timestampLimit;
         this.chainID = chainID;
         this.forkID = forkID;
-        this.isForced = isForced;
+        this.forcedBlockHashL1 = (typeof forcedBlockHashL1 === 'undefined') ? Constants.ZERO_BYTES32 : forcedBlockHashL1;
+        this.isForced = Scalar.neq(0, this.forcedBlockHashL1);
+        this.l1InfoTree = {};
 
         this.vm = vm;
         this.evmSteps = [];
@@ -125,10 +137,12 @@ module.exports = class Processor {
         // Check the validity of rawTxs
         await this._decodeAndCheckRawTx();
 
-        // Process transactions and update the state
-        await this._processTx();
+        // Process transactions and update the state if RLP decoding has not been invalid
+        if (!this.isInvalid) {
+            await this._processTx();
+        }
 
-        // if batch has been invalid, revert current
+        // if batch has been invalid, revert current state root
         if (this.isInvalid) {
             this._rollbackBatch();
         }
@@ -165,9 +179,9 @@ module.exports = class Processor {
             let txDecoded;
             let rlpSignData;
 
-            // check is changeL2Blocktx
+            // check is changeL2Block transaction
             if (rawTx.startsWith(`0x${Constants.TX_CHANGE_L2_BLOCK.toString(16).padStart(2, '0')}`)) {
-                txDecoded = await this.decodeChangeL2BlockTx(rawTx);
+                txDecoded = await decodeChangeL2BlockTx(rawTx);
                 this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
                 continue;
             }
@@ -178,6 +192,7 @@ module.exports = class Processor {
                 rlpSignData = decodedObject.rlpSignData;
             } catch (error) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Failed to RLP decode signing data', tx: txDecoded });
+                this.isInvalid = true;
                 continue;
             }
             txDecoded.from = undefined;
@@ -218,53 +233,19 @@ module.exports = class Processor {
         }
     }
 
-    async decodeChangeL2BlockTx(_rawTx) {
-        const tx = {};
-
-        let offsetChars = 0;
-        const serializedTx = _rawTx.startsWith('0x') ? _rawTx.slice(2) : _rawTx;
-
-        tx.type = parseInt(serializedTx.slice(offsetChars, offsetChars + 1 * 2), 16);
-        offsetChars += 1 * 2;
-
-        tx.deltaTimestamp = Scalar.fromString(serializedTx.slice(offsetChars, offsetChars + 8 * 2), 16);
-        offsetChars += 8 * 2;
-
-        tx.indexHistoricalGERTree = parseInt(serializedTx.slice(offsetChars, offsetChars + 4 * 2), 16);
-
-        return tx;
-    }
-
     /**
      * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT
-     * Not store global exit root if it is zero
-     * Not overwrite storage position if timestamp is already set
      * This will be performed before process the transactions
+     * @param {String} globalExitRoot - global exit root
+     * @param {String} blockhash - block hash
      */
-    async _setGlobalExitRoot(globalExitRoot, timestamp) {
-        // return if globalExitRoot is 0
-        if (Scalar.eq(globalExitRoot, Scalar.e(0))) {
-            return;
-        }
-
-        // check if timestamp is already set
+    async _setGlobalExitRoot(globalExitRoot, blockhash) {
+        // compute globalExitRootPos storage position
         const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-        const globalExitRootPosScalar = Scalar.e(globalExitRootPos).toString();
 
-        const resTimestamp = await stateUtils.getContractStorage(
-            Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
-            this.smt,
-            this.currentStateRoot,
-            [globalExitRootPos],
-        );
-
-        if (Scalar.neq(resTimestamp[globalExitRootPosScalar], Scalar.e(0))) {
-            return;
-        }
-
-        // Set globalExitRoot - timestamp
+        // Set globalExitRoot - blockchash
         const newStorageEntry = {};
-        newStorageEntry[globalExitRootPos] = timestamp;
+        newStorageEntry[globalExitRootPos] = blockhash;
 
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
@@ -278,7 +259,7 @@ module.exports = class Processor {
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(valueToHexStr(timestamp, true)),
+            toBuffer(blockhash),
         );
 
         // store data in internal DB
@@ -300,6 +281,35 @@ module.exports = class Processor {
         }
 
         await this.db.setValue(keyDumpStorage, storage);
+    }
+
+    /**
+     * Checks if GER is != 0 and if it does not exist in the global exit root manager
+     * @param {String} globalExitRoot - global exit root
+     * @returns {Bool} - flag indicating if l1Info needs to be writen
+     */
+    async _shouldWriteL1Info(globalExitRoot) {
+        // return if globalExitRoot is 0
+        if (Scalar.eq(globalExitRoot, Scalar.e(0))) {
+            return false;
+        }
+
+        // check if blockchash is already set
+        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+        const globalExitRootPosScalar = Scalar.e(globalExitRootPos).toString();
+
+        const resBlockhash = await stateUtils.getContractStorage(
+            Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+            this.smt,
+            this.currentStateRoot,
+            [globalExitRootPos],
+        );
+
+        if (Scalar.neq(resBlockhash[globalExitRootPosScalar], Scalar.e(0))) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -340,16 +350,15 @@ module.exports = class Processor {
         for (let i = 0; i < this.decodedTxs.length; i++) {
             const currentDecodedTx = this.decodedTxs[i];
 
-            /*
-             * First transaction must be a ChangeL2BlockTx is is not forced. Otherwise, invalid batch
-             * This will be ensured by the blob
-             */
+            // First transaction must be a ChangeL2BlockTx if the batch is not a forced one. Otherwise, invalid batch
+            // This will be ensured by the blob
             if (i === 0 && currentDecodedTx.tx.type !== Constants.TX_CHANGE_L2_BLOCK && !this.isForced) {
                 this.isInvalid = true;
 
                 return;
             }
-            // If is a forced batch, we create a changeL2Block at the begginning
+
+            // If it is a forced batch, we create a changeL2Block at the beginning
             if (i === 0 && this.isForced) {
                 const err = await this._processChangeL2BlockTx(currentDecodedTx.tx);
                 if (err) {
@@ -361,16 +370,16 @@ module.exports = class Processor {
             if (currentDecodedTx.isInvalid) {
                 continue;
             } else {
-                const currenTx = currentDecodedTx.tx;
-                if (currenTx.type === Constants.TX_CHANGE_L2_BLOCK) {
-                    // If is forced batch, invalidate
+                const currentTx = currentDecodedTx.tx;
+                if (currentTx.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    // If it is forced batch, invalidate
                     if (this.isForced) {
                         this.isInvalid = true;
 
                         return;
                     }
                     // Final function call that saves internal DB storage keys
-                    const err = await this._processChangeL2BlockTx(currenTx);
+                    const err = await this._processChangeL2BlockTx(currentTx);
                     if (err) {
                         this.isInvalid = true;
 
@@ -383,28 +392,28 @@ module.exports = class Processor {
                     continue;
                 }
                 // Get from state
-                const oldStateFrom = await stateUtils.getState(currenTx.from, this.smt, this.currentStateRoot);
+                const oldStateFrom = await stateUtils.getState(currentTx.from, this.smt, this.currentStateRoot);
 
                 // A: VALID NONCE
-                if (Number(oldStateFrom.nonce) !== Number(currenTx.nonce)) {
+                if (Number(oldStateFrom.nonce) !== Number(currentTx.nonce)) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: Invalid nonce';
                     continue;
                 }
 
                 // B: ENOUGH UPFRONT TX COST
-                const effectiveGasPrice = computeEffectiveGasPrice(currenTx.gasPrice, currenTx.effectivePercentage);
-                const gasLimitCost = Scalar.mul(Scalar.e(currenTx.gasLimit), effectiveGasPrice);
-                const upfronTxCost = Scalar.add(gasLimitCost, Scalar.e(currenTx.value));
+                const effectiveGasPrice = computeEffectiveGasPrice(currentTx.gasPrice, currentTx.effectivePercentage);
+                const gasLimitCost = Scalar.mul(Scalar.e(currentTx.gasLimit), effectiveGasPrice);
+                const upfronTxCost = Scalar.add(gasLimitCost, Scalar.e(currentTx.value));
 
                 if (Scalar.gt(upfronTxCost, Scalar.e(oldStateFrom.balance))) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: Not enough funds to pay total transaction cost';
                     continue;
                 }
-                const v = this.isLegacyTx ? currenTx.v : Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35;
+                const v = this.isLegacyTx ? currentTx.v : Number(currentTx.v) - 27 + currentTx.chainID * 2 + 35;
 
-                const bytecodeLength = await stateUtils.getContractBytecodeLength(currenTx.from, this.smt, this.currentStateRoot);
+                const bytecodeLength = await stateUtils.getContractBytecodeLength(currentTx.from, this.smt, this.currentStateRoot);
                 if (bytecodeLength > 0) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: EIP3607 Do not allow transactions for which tx.sender has any code deployed';
@@ -416,7 +425,7 @@ module.exports = class Processor {
                     ? Constants.TX_GAS_LIMIT
                     : this.options.newBlockGasLimit;
 
-                if (Scalar.gt(currenTx.gasLimit, Scalar.e(gasLimitTx))) {
+                if (Scalar.gt(currentTx.gasLimit, Scalar.e(gasLimitTx))) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: Gas limit exceeds maximum allowed';
                     continue;
@@ -424,15 +433,15 @@ module.exports = class Processor {
 
                 // Run tx in the EVM
                 const evmTx = Transaction.fromTxData({
-                    nonce: currenTx.nonce,
-                    gasPrice: currenTx.gasPrice,
-                    gasLimit: currenTx.gasLimit,
-                    to: currenTx.to,
-                    value: currenTx.value,
-                    data: currenTx.data,
+                    nonce: currentTx.nonce,
+                    gasPrice: currentTx.gasPrice,
+                    gasLimit: currentTx.gasLimit,
+                    to: currentTx.to,
+                    value: currentTx.value,
+                    data: currentTx.data,
                     v,
-                    r: currenTx.r,
-                    s: currenTx.s,
+                    r: currentTx.r,
+                    s: currentTx.s,
                 });
 
                 // Build block information
@@ -446,7 +455,7 @@ module.exports = class Processor {
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
                 try {
-                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock, effectivePercentage: currenTx.effectivePercentage });
+                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock, effectivePercentage: currentTx.effectivePercentage });
                     this.evmSteps.push(txResult.execResult.evmSteps);
 
                     currentDecodedTx.receipt = txResult.receipt;
@@ -454,7 +463,7 @@ module.exports = class Processor {
                     // Increment block gas used
                     this.cumulativeGasUsed += bufferToInt(txResult.receipt.gasUsed);
                     // Fill block info tree with tx receipt
-                    const txHash = await computeL2TxHash(currenTx);
+                    const txHash = await computeL2TxHash(currentTx);
                     await this.fillReceiptTree(txResult.receipt, txHash);
                     this.txIndex += 1;
 
@@ -472,11 +481,11 @@ module.exports = class Processor {
                         } else currentDecodedTx.reason = txResult.execResult.exceptionError;
 
                         // UPDATE sender account adding the nonce and substracting the gas spended
-                        const senderAcc = await this.vm.stateManager.getAccount(Address.fromString(currenTx.from));
-                        this.updatedAccounts[currenTx.from] = senderAcc;
+                        const senderAcc = await this.vm.stateManager.getAccount(Address.fromString(currentTx.from));
+                        this.updatedAccounts[currentTx.from] = senderAcc;
                         // Update smt with touched accounts
                         this.currentStateRoot = await stateUtils.setAccountState(
-                            currenTx.from,
+                            currentTx.from,
                             this.smt,
                             this.currentStateRoot,
                             Scalar.e(senderAcc.balance),
@@ -628,6 +637,7 @@ module.exports = class Processor {
             toBuffer(`0x${Constants.BLOCK_INFO_ROOT_STORAGE_POS.toString(16).padStart(64, '0')}`),
             toBuffer(smtUtils.h4toString(this.blockInfoRoot)),
         );
+
         // add system address to updatedAccounts
         const account = await this.vm.stateManager.getAccount(addressInstance);
         this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
@@ -661,27 +671,6 @@ module.exports = class Processor {
     }
 
     /**
-     * Verify merkle proof
-     * @param {BigNumber} leaf - Leaf value
-     * @param {Array} smtProof - Array of sibilings
-     * @param {Number} index - Index of the leaf
-     * @param {BigNumber} root - Merkle root
-     * @returns {Boolean} - Whether the merkle proof is correct or not
-     */
-    verifyMerkleProof(leaf, smtProof, index, root) {
-        let value = leaf;
-        for (let i = 0; i < smtProof.length; i++) {
-            if (Math.floor(index / 2 ** i) % 2 !== 0) {
-                value = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [smtProof[i], value]);
-            } else {
-                value = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [value, smtProof[i]]);
-            }
-        }
-
-        return value === root;
-    }
-
-    /**
      * Write timestamp in the system smart contract
      * @param {BigInt} - timestamp
      */
@@ -705,7 +694,7 @@ module.exports = class Processor {
     }
 
     async _processChangeL2BlockTx(tx) {
-        // write old blockhash (oldStateRoot / accInputHash) on storage
+        // write old blockhash (oldStateRoot) on storage
         // Get old blockNumber
         const oldBlockNumber = await stateUtils.getContractStorage(
             Constants.ADDRESS_SYSTEM,
@@ -713,6 +702,7 @@ module.exports = class Processor {
             this.currentStateRoot,
             [Constants.LAST_BLOCK_STORAGE_POS], // Storage key of last block num
         );
+
         // Set block hash (current state root) on storage
         const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [oldBlockNumber[Constants.LAST_BLOCK_STORAGE_POS], Constants.STATE_ROOT_STORAGE_POS]);
         this.previousBlockHash = smtUtils.h4toString(this.currentStateRoot);
@@ -724,12 +714,14 @@ module.exports = class Processor {
         );
 
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
+
         // Update vm with new state root
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(stateRootPos),
             toBuffer(this.previousBlockHash),
         );
+
         // Compute new block number
         const newBlockNumber = Number(Scalar.add(oldBlockNumber[Constants.LAST_BLOCK_STORAGE_POS], 1n));
 
@@ -740,6 +732,7 @@ module.exports = class Processor {
             this.currentStateRoot,
             { [Constants.LAST_BLOCK_STORAGE_POS]: newBlockNumber },
         );
+
         // Update vm with the new block number
         await this.vm.stateManager.putContractStorage(
             addressInstance,
@@ -747,44 +740,95 @@ module.exports = class Processor {
             toBuffer(Number(newBlockNumber)),
         );
 
+        // get last timestamp
         const currentTimestamp = await this._getTimestamp();
 
-        let newTimestamp;
-        let newGER;
+        // final timestamp, GER and blockHashL1 of the block
+        let finalTimestamp = 0;
+        let finalGER = '0x0000000000000000000000000000000000000000000000000000000000000000';
+        let finalBlockHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
         if (this.isForced) {
-            // Verify currentTimestamp =< limitTimestamp
-            if (Scalar.gt(currentTimestamp, this.timestampLimit)) {
-                return true;
+            const timestampForced = this.timestampLimit;
+            const lastGERForced = smtUtils.h4toString(this.l1InfoRoot);
+
+            // Update timestamp only if limitTimestamp > currentTimestamp
+            if (Scalar.gt(this.timestampLimit, currentTimestamp)) {
+                // set new timestamp
+                finalTimestamp = timestampForced;
+                await this._setTimestamp(timestampForced);
             }
-            newTimestamp = this.timestampLimit;
-            newGER = smtUtils.h4toString(this.historicGERRoot);
+
+            // set forced global exit root and default blockHash
+            finalGER = lastGERForced;
+            finalBlockHash = this.forcedBlockHashL1;
+            // forced batch has no enforced blockhash
+            await this._setGlobalExitRoot(lastGERForced, finalBlockHash);
         } else {
-            // Verify deltaTimestamp + currentTimestamp =< limitTimestamp
-            if (Scalar.gt(Scalar.add(currentTimestamp, tx.deltaTimestamp), this.timestampLimit)) {
+            const newTimestamp = Scalar.add(currentTimestamp, Scalar.e(tx.deltaTimestamp));
+
+            // Verify deltaTimestamp + currentTimestamp <= limitTimestamp
+            if (Scalar.gt(newTimestamp, this.timestampLimit)) {
                 return true;
             }
-            newTimestamp = Scalar.add(currentTimestamp, tx.deltaTimestamp);
-            newGER = this.extraData.GERS[tx.indexHistoricalGERTree];
-        }
-        // Verify newGER | indexHistoricalGERTree belong to historicGERRoot
-        if (!this.options.skipVerifyGER && tx.indexHistoricalGERTree !== 0) {
-            if (typeof tx.smtProof === 'undefined') {
-                throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing smtProof parameter in changeL2Block tx`);
-            }
 
-            if (this.verifyMerkleProof(newGER, tx.smtProof, tx.indexHistoricalGERTree, this.historicGERRoot)) {
-                return true;
+            // write timestamp
+            finalTimestamp = newTimestamp;
+            await this._setTimestamp(newTimestamp);
+
+            // verify l1InfoRoot data if index != 0
+            if (tx.indexL1InfoTree !== 0) {
+                const l1Info = this.extraData.l1Info[tx.indexL1InfoTree];
+
+                // Verify l1Info & indexL1InfoTree belong to l1InfoRoot
+                const valueLeaf = getL1InfoTreeValue(
+                    l1Info.globalExitRoot,
+                    l1Info.blockHash,
+                    l1Info.timestamp,
+                );
+
+                if (!this.options.skipVerifyL1InfoRoot) {
+                    if (typeof this.extraData.l1Info[tx.indexL1InfoTree] === 'undefined') {
+                        throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing smtProof`);
+                    }
+
+                    // fulfill l1InfoTree information
+                    this.l1InfoTree[tx.indexL1InfoTree] = l1Info;
+
+                    if (!verifyMerkleProof(valueLeaf, l1Info.smtProof, tx.indexL1InfoTree, smtUtils.h4toString(this.l1InfoRoot))) {
+                        return true;
+                    }
+                }
+
+                // Verify newTimestamp >= l1InfoRoot.timestamp
+                if (Scalar.lt(newTimestamp, l1Info.timestamp)) {
+                    return true;
+                }
+
+                // write l1Info data depending if the global exit root already exist or is zero
+                finalGER = l1Info.globalExitRoot;
+                const writeL1Info = this._shouldWriteL1Info(l1Info.globalExitRoot);
+
+                if (writeL1Info) {
+                    finalBlockHash = l1Info.blockHash;
+                    this._setGlobalExitRoot(l1Info.globalExitRoot, l1Info.blockHash);
+                }
             }
         }
-        // set new timestamp
-        await this._setTimestamp(newTimestamp);
-
-        // set new GER
-        await this._setGlobalExitRoot(newGER, newTimestamp);
 
         // setup new block tree
         this.blockInfoRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
-        this.blockInfoRoot = await initBlockHeader(this.smt, this.blockInfoRoot, this.previousBlockHash, this.sequencerAddress, newBlockNumber, Constants.BLOCK_GAS_LIMIT, newTimestamp, newGER);
+        this.blockInfoRoot = await initBlockHeader(
+            this.smt,
+            this.blockInfoRoot,
+            this.previousBlockHash,
+            this.sequencerAddress,
+            newBlockNumber,
+            Constants.BLOCK_GAS_LIMIT,
+            finalTimestamp,
+            finalGER,
+            finalBlockHash,
+        );
 
         // Reset txIndex, cumulativeGasUsed, logIndex and blockInfoRoot
         this.txIndex = 0;
@@ -794,7 +838,7 @@ module.exports = class Processor {
         // store data in internal DB
         const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
 
-        // update smart contract it storage
+        // update smart contract storage
         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
         const storage = await this.db.getValue(keyDumpStorage) || {};
         const keys = Object.keys(sto).map((k) => `0x${k}`);
@@ -839,7 +883,7 @@ module.exports = class Processor {
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
         const oldAccInputHash = smtUtils.h4toString(this.oldAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
-        const historicGERRoot = smtUtils.h4toString(this.historicGERRoot);
+        const l1InfoRoot = smtUtils.h4toString(this.l1InfoRoot);
 
         this.batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
@@ -848,13 +892,18 @@ module.exports = class Processor {
         const newAccInputHash = calculateAccInputHash(
             oldAccInputHash,
             this.batchHashData,
-            historicGERRoot,
+            l1InfoRoot,
             this.timestampLimit,
             this.sequencerAddress,
-            this.isForced,
+            this.forcedBlockHashL1,
         );
 
         this.newAccInputHash = smtUtils.stringToH4(newAccInputHash);
+
+        // add flag to skip l1InfoTree verification
+        if (this.options.skipVerifyL1InfoRoot === true) {
+            this.l1InfoTree.skipVerifyL1InfoRoot = true;
+        }
 
         this.starkInput = {
             oldStateRoot,
@@ -866,13 +915,14 @@ module.exports = class Processor {
             newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
             forkID: this.forkID,
-            isForced: this.isForced,
+            forcedBlockHashL1: this.forcedBlockHashL1,
             batchL2Data: this.getBatchL2Data(),
-            historicGERRoot,
+            l1InfoRoot,
             timestampLimit: this.timestampLimit.toString(),
             sequencerAddr: this.sequencerAddress,
             batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
+            l1InfoTree: this.l1InfoTree,
             db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
         };
     }
@@ -893,15 +943,14 @@ module.exports = class Processor {
         return calculateSnarkInput(
             oldStateRoot,
             newStateRoot,
+            newLocalExitRoot,
             oldAccInputHash,
             newAccInputHash,
-            newLocalExitRoot,
             this.oldNumBatch,
             this.newNumBatch,
             this.chainID,
-            this.forkID,
-            this.isForced,
             aggregatorAddress,
+            this.forkID,
         );
     }
 

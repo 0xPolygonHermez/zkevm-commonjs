@@ -8,6 +8,7 @@ const ethers = require('ethers');
 const { expect } = require('chai');
 const { Scalar } = require('ffjavascript');
 const { processorUtils } = require('../index');
+const { Constants } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('Processor utils', () => {
@@ -44,6 +45,11 @@ describe('Processor utils', () => {
              */
             for (let j = 0; j < txs.length; j++) {
                 const txData = txs[j];
+
+                if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    continue;
+                }
+
                 const tx = {
                     to: txData.to,
                     nonce: txData.nonce,
