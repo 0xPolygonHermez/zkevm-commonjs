@@ -412,11 +412,16 @@ module.exports = class Processor {
                 }
 
                 // Check TX_GAS_LIMIT
-                if (Number(currenTx.gasLimit) > Constants.TX_GAS_LIMIT) {
+                const gasLimitTx = (typeof this.options.newBlockGasLimit === 'undefined')
+                    ? Constants.TX_GAS_LIMIT
+                    : this.options.newBlockGasLimit;
+
+                if (Scalar.gt(currenTx.gasLimit, Scalar.e(gasLimitTx))) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: Gas limit exceeds maximum allowed';
                     continue;
                 }
+
                 // Run tx in the EVM
                 const evmTx = Transaction.fromTxData({
                     nonce: currenTx.nonce,
