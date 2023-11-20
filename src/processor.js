@@ -787,13 +787,13 @@ module.exports = class Processor {
                     l1Info.timestamp,
                 );
 
+                // fulfill l1InfoTree information
+                this.l1InfoTree[tx.indexL1InfoTree] = l1Info;
+
                 if (!this.options.skipVerifyL1InfoRoot) {
                     if (typeof this.extraData.l1Info[tx.indexL1InfoTree] === 'undefined') {
                         throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing smtProof`);
                     }
-
-                    // fulfill l1InfoTree information
-                    this.l1InfoTree[tx.indexL1InfoTree] = l1Info;
 
                     if (!verifyMerkleProof(valueLeaf, l1Info.smtProof, tx.indexL1InfoTree, smtUtils.h4toString(this.l1InfoRoot))) {
                         return true;
