@@ -10,10 +10,10 @@ describe('contractUtils', function () {
     this.timeout(10000);
     let testVector;
 
-    const expectedBatchHashData = '0x80cc22bc1a205c21f2b8c87e6185e1215fb60e3d83c609fd3bf3cdc586a6244b';
+    const expectedBatchHashData = '0x5e7875ab198c4d93379c92990a5d0111af59a0e62b2c4a0e3898e5bd24a18e58';
     // TODO: input taken from pil-stark
-    const expectedStarkHashExecutor = '0xef046bcaca930591f7c941cad928406dd1402a4e33b4dc704c519d130a05dd9f';
-    const expectedSnarkInputHash = '594262252873243840875998239270722753577223730670772204748849761598102435680';
+    const expectedStarkHashExecutor = '0xcfae2cfa3b8f3f12abce1bccd90e9b203dfdbe56c0c412114f2d3e67c9a897db';
+    const expectedSnarkInputHash = '18866106746266856524258279357742200690030828045012096945213758495992135252470';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
@@ -33,17 +33,19 @@ describe('contractUtils', function () {
     it('calculateStarkInput', async () => {
         const {
             oldAccInputHash,
-            historicGERRoot,
+            l1InfoRoot,
             timestampLimit,
             sequencerAddr,
+            forcedBlockHashL1,
         } = testVector;
 
         const computedGlobalHash = await contractUtils.calculateAccInputHash(
             oldAccInputHash,
             expectedBatchHashData,
-            historicGERRoot,
+            l1InfoRoot,
             timestampLimit,
             sequencerAddr,
+            forcedBlockHashL1,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedStarkHashExecutor);

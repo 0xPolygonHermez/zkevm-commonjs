@@ -3,6 +3,8 @@ const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
 const Constants = require('./constants');
 const smtUtils = require('./smt-utils');
+const { valueToHexStr } = require('./utils');
+
 /**
  * Extract an integer from a byte array
  * @param {Uint8Array} data - Byte array
@@ -102,7 +104,7 @@ function addressToHexStringRlp(address) {
 
 /**
  * Convert a standar rawTx of ethereum [rlp(nonce,gasprice,gaslimit,to,value,data,r,s,v)]
- * to our custom raw tx [rlp(nonce,gasprice,gaslimit,to,value,data,0,0)|r|s|v]
+ * to our custom raw tx [rlp(nonce,gasprice,gaslimit,to,value,data,0,0)|r|s|v|effectivePercentage]
  * @param {String} rawTx - Standar raw transaction
  * @returns {String} - Custom raw transaction
  */
@@ -141,7 +143,12 @@ function encodedStringToArray(encodedTransactions) {
     let offset = 0;
 
     while (offset < encodedTxBytes.length) {
-        if (encodedTxBytes[offset] >= 0xf8) {
+        if (encodedTxBytes[offset] === Constants.TX_CHANGE_L2_BLOCK) {
+            const bytesToRead = 1 + Constants.DELTA_TIMESTAMP_BYTES + Constants.INDEX_L1INFOTREE_BYTES;
+            const tx = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + bytesToRead));
+            decodedRawTx.push(tx);
+            offset += bytesToRead;
+        } else if (encodedTxBytes[offset] >= 0xf8) {
             const lengthLength = encodedTxBytes[offset] - 0xf7;
             if (offset + 1 + lengthLength > encodedTxBytes.length) {
                 throw new Error('encodedTxBytes short segment too short');
@@ -152,16 +159,18 @@ function encodedStringToArray(encodedTransactions) {
                 throw new Error('encodedTxBytes long segment too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES)));
-            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
+            const bytesToRead = 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + bytesToRead)));
+            offset += bytesToRead;
         } else if (encodedTxBytes[offset] >= 0xc0) {
             const length = encodedTxBytes[offset] - 0xc0;
             if (offset + 1 + length > encodedTxBytes.length) {
                 throw new Error('encodedTxBytes array too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES)));
-            offset = offset + 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
+            const bytesToRead = 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + bytesToRead)));
+            offset += bytesToRead;
         } else {
             throw new Error('Error encodedStringToArray');
         }
@@ -297,10 +306,25 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
 
     txDecoded.r = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenR));
     offset += lenR;
+    // r: assert to read 32 bytes
+    if (txDecoded.r.length !== (2 + 2 * lenR)) {
+        throw new Error('Invalid signature length: R');
+    }
+
     txDecoded.s = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenS));
     offset += lenS;
+    // s: assert to read 32 bytes
+    if (txDecoded.s.length !== (2 + 2 * lenS)) {
+        throw new Error('Invalid signature length: S');
+    }
+
     txDecoded.v = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenV));
     offset += lenV;
+    // v: assert to read 32 bytes
+    if (txDecoded.v.length !== (2 + 2 * lenV)) {
+        throw new Error('Invalid signature length: V');
+    }
+
     txDecoded.effectivePercentage = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenEffectivePercentage));
     offset += lenEffectivePercentage;
     if (txDecoded.effectivePercentage === '0x') {
@@ -336,6 +360,56 @@ async function computeL2TxHash(tx) {
     return txHash;
 }
 
+/**
+ * Decode string into a changeL2Transaction transaction type
+ * @param {String} _rawTx
+ * @returns {Object} transaction object
+ */
+async function decodeChangeL2BlockTx(_rawTx) {
+    const tx = {};
+
+    let offsetChars = 0;
+    const serializedTx = _rawTx.startsWith('0x') ? _rawTx.slice(2) : _rawTx;
+
+    let charsToRead = Constants.TYPE_BYTES * 2;
+
+    tx.type = parseInt(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
+    offsetChars += charsToRead;
+
+    charsToRead = Constants.DELTA_TIMESTAMP_BYTES * 2;
+    tx.deltaTimestamp = Scalar.fromString(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
+    offsetChars += charsToRead;
+
+    charsToRead = Constants.INDEX_L1INFOTREE_BYTES * 2;
+    tx.indexL1InfoTree = parseInt(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
+
+    return tx;
+}
+
+/**
+ * Serialize transaction for the batch
+ * fields: [type | deltaTimestamp | indexL1InfoTree ]
+ * bytes:  [  1  |       4        |         4       ]
+ * @param {Object} tx - transaction object
+ * @returns {String} - Serialized tx in hexadecimal string
+ */
+function serializeChangeL2Block(tx) {
+    let data = Scalar.e(0);
+
+    let offsetBits = 0;
+
+    data = Scalar.add(data, Scalar.shl(tx.indexL1InfoTree, offsetBits));
+    offsetBits += Constants.INDEX_L1INFOTREE_BYTES * 8;
+
+    data = Scalar.add(data, Scalar.shl(tx.deltaTimestamp, offsetBits));
+    offsetBits += Constants.DELTA_TIMESTAMP_BYTES * 8;
+
+    data = Scalar.add(data, Scalar.shl(tx.type, offsetBits));
+    offsetBits += Constants.TYPE_BYTES * 8;
+
+    return valueToHexStr(data).padStart(offsetBits / 4, '0');
+}
+
 module.exports = {
     decodeCustomRawTxProverMethod,
     rawTxToCustomRawTx,
@@ -346,4 +420,6 @@ module.exports = {
     addressToHexStringRlp,
     computeEffectiveGasPrice,
     computeL2TxHash,
+    decodeChangeL2BlockTx,
+    serializeChangeL2Block,
 };

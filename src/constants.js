@@ -43,7 +43,8 @@ module.exports.INDEX_BLOCK_HEADER_PARAM_NUMBER = 2;
 module.exports.INDEX_BLOCK_HEADER_PARAM_GAS_LIMIT = 3;
 module.exports.INDEX_BLOCK_HEADER_PARAM_TIMESTAMP = 4;
 module.exports.INDEX_BLOCK_HEADER_PARAM_GER = 5;
-module.exports.INDEX_BLOCK_HEADER_PARAM_GAS_USED = 6;
+module.exports.INDEX_BLOCK_HEADER_PARAM_BLOCK_HASH_L1 = 6;
+module.exports.INDEX_BLOCK_HEADER_PARAM_GAS_USED = 7;
 
 // SMT constant
 module.exports.BYTECODE_ELEMENTS_HASH = 8;
@@ -58,9 +59,10 @@ module.exports.GLOBAL_EXIT_ROOT_STORAGE_POS = 0;
 module.exports.LOCAL_EXIT_ROOT_STORAGE_POS = 1;
 module.exports.BLOCK_GAS_LIMIT = 2 ** 32 - 1;
 module.exports.TX_GAS_LIMIT = 30000000;
-
 module.exports.BATCH_DIFFICULTY = 0;
 module.exports.ADDRESS_SYSTEM = '0x000000000000000000000000000000005ca1ab1e';
+
+// Adress system storage slots
 module.exports.LAST_BLOCK_STORAGE_POS = 0;
 module.exports.STATE_ROOT_STORAGE_POS = 1;
 module.exports.TIMESTAMP_STORAGE_POS = 2;
@@ -72,3 +74,11 @@ module.exports.BRIDGE_LEAF_TYPE_MESSAGE = 1;
 
 // Tx Types
 module.exports.TX_CHANGE_L2_BLOCK = 11;
+
+// Tx Type 11: Change L2 Block constants
+module.exports.DELTA_TIMESTAMP_BYTES = 4;
+module.exports.INDEX_L1INFOTREE_BYTES = 4;
+module.exports.TYPE_BYTES = 1;
+
+// Common
+module.exports.ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';

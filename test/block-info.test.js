@@ -119,15 +119,36 @@ describe('Block info tests', function () {
              * rawTxs would be the calldata inserted in the contract
              */
             const txProcessed = [];
+            const extraData = { l1Info: {} };
 
             for (let k = 0; k < batches.length; k++) {
                 const {
-                    txs, expectedNewRoot, expectedNewLeafs, batchL2Data, historicGERRoot,
-                    inputHash, timestampLimit, batchHashData, newLocalExitRoot,
+                    txs, expectedNewRoot, expectedNewLeafs, batchL2Data, l1InfoRoot,
+                    inputHash, timestampLimit, batchHashData, newLocalExitRoot, forcedBlockHashL1,
                 } = batches[k];
                 const rawTxs = [];
                 for (let j = 0; j < txs.length; j++) {
                     const txData = txs[j];
+
+                    if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                        const rawChangeL2BlockTx = processorUtils.serializeChangeL2Block(txData);
+
+                        // Append l1Info to l1Info object
+                        extraData.l1Info[txData.indexL1InfoTree] = txData.l1Info;
+
+                        const customRawTx = `0x${rawChangeL2BlockTx}`;
+                        rawTxs.push(customRawTx);
+                        txProcessed.push(txData);
+
+                        if (!update) {
+                            expect(customRawTx).to.equal(txData.customRawTx);
+                        } else {
+                            txData.customRawTx = customRawTx;
+                        }
+
+                        // eslint-disable-next-line no-continue
+                        continue;
+                    }
 
                     const tx = {
                         to: txData.to,
@@ -219,7 +240,18 @@ describe('Block info tests', function () {
                     txProcessed.push(txData);
                 }
 
-                const batch = await zkEVMDB.buildBatch(timestampLimit, sequencerAddress, smtUtils.stringToH4(historicGERRoot));
+                const batch = await zkEVMDB.buildBatch(
+                    timestampLimit,
+                    sequencerAddress,
+                    smtUtils.stringToH4(l1InfoRoot),
+                    forcedBlockHashL1,
+                    Constants.DEFAULT_MAX_TX,
+                    {
+                        skipVerifyL1InfoRoot: false,
+                    },
+                    {},
+                );
+
                 for (let j = 0; j < rawTxs.length; j++) {
                     batch.addRawTx(rawTxs[j]);
                 }
@@ -330,7 +362,7 @@ describe('Block info tests', function () {
                         caller: Address.zero(),
                         data: Buffer.from(encodedData.slice(2), 'hex'),
                     });
-                    expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(historicGERRoot.slice(2));
+                    expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(l1InfoRoot.slice(2));
                 }
 
                 // Check the circuit input

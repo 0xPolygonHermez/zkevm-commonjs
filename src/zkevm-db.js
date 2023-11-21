@@ -41,20 +41,22 @@ class ZkEVMDB {
      * Return a new Processor with the current RollupDb state
      * @param {Number} timestampLimit - Timestamp limit of the batch
      * @param {String} sequencerAddress - ethereum address represented as hex
-     * @param {Array[Field]} historicGERRoot - global exit root
-     * @param {Number} isForced - Forced batch flag
+     * @param {Array[Field]} l1InfoRoot - global exit root
+     * @param {Number} forcedBlockHashL1 - Forced blockHash
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      * @param {Object} options - additional batch options
      * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smrt contract at the end of processable transactions
      * @param {Number} options.newBlockGasLimit New batch gas limit
-     * @param {Object} extraData - additional data to embed in the batch
-     *                           - { GERS: {} } - Global exit roots key: value -> txIndex (in batch): globalExitRoot
+     * @param {Object} extraData - additional data to embedded in the batch
+     * @param {String} extraData.l1Info[x].globalExitRoot - global exit root
+     * @param {String} extraData.l1Info[x].blockHash - l1 block hash at blockNumber - 1
+     * @param {BigInt} extraData.l1Info[x].timestamp - l1 block timestamp
      */
     async buildBatch(
         timestampLimit,
         sequencerAddress,
-        historicGERRoot,
-        isForced,
+        l1InfoRoot,
+        forcedBlockHashL1,
         maxNTx = Constants.DEFAULT_MAX_TX,
         options = {},
         extraData,
@@ -67,11 +69,11 @@ class ZkEVMDB {
             this.stateRoot,
             sequencerAddress,
             this.accInputHash,
-            historicGERRoot,
+            l1InfoRoot,
             timestampLimit,
             this.chainID,
             this.forkID,
-            isForced,
+            forcedBlockHashL1,
             clone(this.vm),
             options,
             extraData,
@@ -196,7 +198,7 @@ class ZkEVMDB {
 
             const dataBatch = {
                 transactions: value.batchL2Data,
-                historicGERRoot: value.historicGERRoot,
+                l1InfoRoot: value.l1InfoRoot,
                 timestampLimit: value.timestampLimit,
                 forceBatchesTimestamp: [],
             };

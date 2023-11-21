@@ -13,3 +13,4 @@ module.exports.getPoseidon = require('./src/poseidon_opt');
 module.exports.MTBridge = require('./src/mt-bridge');
 module.exports.mtBridgeUtils = require('./src/mt-bridge-utils');
 module.exports.Database = require('./src/database');
+module.exports.l1InfoTreeUtils = require('./src/l1-info-tree-utils');
