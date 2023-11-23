@@ -80,5 +80,8 @@ module.exports.DELTA_TIMESTAMP_BYTES = 4;
 module.exports.INDEX_L1INFOTREE_BYTES = 4;
 module.exports.TYPE_BYTES = 1;
 
+// Bridge
+module.exports.GLOBAL_INDEX_MAINNET_FLAG = Scalar.pow(2, 64);
+
 // Common
 module.exports.ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';

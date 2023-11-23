@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - develop
+      - feature/fork-etrog
 
 jobs:
   build:
