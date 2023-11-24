@@ -1,0 +1,50 @@
+[
+  {
+    "indexLocal": "0",
+    "indexRollup": "0",
+    "isMainnet": false,
+    "expectedGlobalIndex": "0"
+  },
+  {
+    "indexLocal": "0",
+    "indexRollup": "0",
+    "isMainnet": true,
+    "expectedGlobalIndex": "18446744073709551616"
+  },
+  {
+    "indexLocal": "1",
+    "indexRollup": "0",
+    "isMainnet": false,
+    "expectedGlobalIndex": "1"
+  },
+  {
+    "indexLocal": "1",
+    "indexRollup": "0",
+    "isMainnet": true,
+    "expectedGlobalIndex": "18446744073709551617"
+  },
+  {
+    "indexLocal": "0",
+    "indexRollup": "1",
+    "isMainnet": false,
+    "expectedGlobalIndex": "4294967296"
+  },
+  {
+    "indexLocal": "0",
+    "indexRollup": "1",
+    "isMainnet": true,
+    "expectedGlobalIndex": "18446744073709551616"
+  },
+  {
+    "indexLocal": "18446744073709551615",
+    "indexRollup": "18446744073709551615",
+    "isMainnet": false,
+    "expectedGlobalIndex": "79228162532711081662958534655"
+  },
+  {
+    "indexLocal": "18446744073709551615",
+    "indexRollup": "18446744073709551615",
+    "isMainnet": true,
+    "expectedGlobalIndex": "36893488147419103231"
+  }
+]
