@@ -71,6 +71,8 @@ class SMT {
         const accKey = [];
         let foundKey;
         let siblings = [];
+        let siblingsLeftChild = [];
+        let siblingsRightChild = [];
 
         let insKey;
         let insValue;
@@ -83,6 +85,7 @@ class SMT {
         let foundVal;
 
         while (!nodeIsZero(r, F) && (typeof (foundKey) === 'undefined')) {
+            console.log(`SMT-SET(LIB) OLD_ROOT LEVEL=${level} ROOT=[${r.    map(x => x.toString(16).padStart(16,'0')).join('_')}]`);
             siblings[level] = await self.db.getSmtNode(r);
             if (isOneSiblings(siblings[level], F)) {
                 foundOldValH = siblings[level].slice(4, 8);
@@ -231,8 +234,18 @@ class SMT {
                 } else {
                     mode = 'deleteNotFound';
                 }
+
+                if (mode === 'deleteNotFound') {
+                    const _key = keys[level];
+                    const _root = siblings[level].slice((1 - _key) * 4, (1 - _key) * 4 + 4);
+                    const res = await self.db.getSmtNode(_root);
+                    siblingsLeftChild[level] = res.slice(0, 4);
+                    siblingsRightChild[level] = res.slice(4, 8);
+                    proofHashCounter += 1;
+                }
             } else {
-                mode = 'deleteLast';
+                // mode = 'deleteLast';
+                mode = 'deleteNotFound';
                 newRoot = [F.zero, F.zero, F.zero, F.zero];
             }
         } else {
@@ -247,8 +260,10 @@ class SMT {
         siblings = siblings.slice(0, level + 1);
 
         while (level >= 0) {
+
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
-            proofHashCounter += 1;
+            console.log(`SMT-SET(LIB) NEW_ROOT LEVEL=${level} ROOT=${newRoot.map(x => x.toString(16).padStart(16,'0')).join('_')} <= (${siblings[level].slice(0, 4).map(x => x.toString(16).padStart(16,'0')).join('_')},${siblings[level].slice(4, 8).map(x => x.toString(16).padStart(16,'0')).join('_')},${siblings[level].slice(8, 12).join('_')})`);
+            if (mode != 'zeroToZero') proofHashCounter += 1;
             level -= 1;
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
@@ -262,6 +277,8 @@ class SMT {
             newRoot,
             key,
             siblings,
+            siblingsLeftChild,
+            siblingsRightChild,
             insKey,
             insValue,
             isOld0,
