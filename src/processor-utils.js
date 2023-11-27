@@ -351,11 +351,11 @@ function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
 
 /**
  * Computes the L2 transaction hash from a transaction
- * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, gasLimit, to, value, data, from in hex string
+ * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, gasLimit, to, value, data, from, effectivePercentage in hex string
  * @returns computed l2 tx hash
  */
 async function computeL2TxHash(tx) {
-    const txHash = await smtUtils.linearPoseidon(`0x${tx.nonce.slice(2)}${tx.gasPrice.slice(2)}${tx.gasLimit.slice(2)}${tx.to.slice(2)}${tx.value.slice(2)}${tx.data.slice(2)}${tx.from.slice(2)}`);
+    const txHash = await smtUtils.linearPoseidon(`0x${tx.nonce.slice(2)}${tx.gasPrice.slice(2)}${tx.gasLimit.slice(2)}${tx.to.slice(2)}${tx.value.slice(2)}${tx.data.slice(2)}${tx.from.slice(2)}${tx.effectivePercentage.slice(2)}`);
 
     return txHash;
 }
