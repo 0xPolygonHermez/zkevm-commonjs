@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define */
 /* eslint-disable max-len */
 const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
@@ -355,9 +356,32 @@ function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
  * @returns computed l2 tx hash
  */
 async function computeL2TxHash(tx) {
-    const txHash = await smtUtils.linearPoseidon(`0x${tx.nonce.slice(2)}${tx.gasPrice.slice(2)}${tx.gasLimit.slice(2)}${tx.to.slice(2)}${tx.value.slice(2)}${tx.data.slice(2)}${tx.from.slice(2)}${tx.effectivePercentage.slice(2)}`);
+    const hash = `${formatL2TxHashParam(tx.nonce)}${formatL2TxHashParam(tx.gasPrice)}${formatL2TxHashParam(tx.gasLimit)}${formatL2TxHashParam(tx.to)}${formatL2TxHashParam(tx.value)}${formatL2TxHashParam(tx.data)}${formatL2TxHashParam(tx.from)}${formatL2TxHashParam(tx.effectivePercentage)}`;
+    const txHash = await smtUtils.linearPoseidon(hash);
 
     return txHash;
+}
+
+function formatL2TxHashParam(param) {
+    if (param.startsWith('0x')) {
+        param = param.slice(2);
+    }
+    if (param === '00') {
+        return param;
+    }
+    // Remove leading zeros
+    param = param.replace(/^0+/, '');
+    // format to bytes
+    if (param.length % 2 === 1) {
+        param = `0${param}`;
+    }
+    // Checks hex correctness
+    const res = Buffer.from(param, 'hex').toString('hex');
+    if (res === '' || res.length !== param.length) {
+        throw new Error('Invalid hex string');
+    }
+
+    return res;
 }
 
 /**

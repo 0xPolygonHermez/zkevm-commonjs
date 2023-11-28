@@ -202,4 +202,20 @@ describe('Processor utils', () => {
             }
         }
     });
+
+    it('computeL2TxHash', async () => {
+        const txs = require('./helpers/test-vectors/l2-tx-hash/txs.json');
+        for (let i = 0; i < txs.length; i++) {
+            const tx = txs[i];
+            try {
+                const txHash = await processorUtils.computeL2TxHash(tx);
+                expect(txHash).to.be.equal(tx.l2TxHash);
+            } catch (e) {
+                if (e.message !== 'Invalid hex string') {
+                    throw e;
+                }
+                expect(tx.l2TxHash).to.be.equal('failed');
+            }
+        }
+    });
 });
