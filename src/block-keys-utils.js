@@ -107,10 +107,31 @@ async function keyTxLogs(_txIndex, _logIndex) {
     return poseidon(key1, hk0);
 }
 
+/**
+ * Leaf type 12:
+ *   hk0: H([0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0])
+ *   key: H([txIndex[0:4], txIndex[4:8], txIndex[8:12], txIndex[12:16], txIndex[16:20], 0, SMT_KEY_BLOCK_HEADER_EFFECTIVE_PERCENTAGE, 0], [hk0[0], hk0[1], hk0[2], hk0[3]])
+ * @param {Number} txIndex - current tx index
+ * @returns {Scalar} - key computed
+ */
+async function keyTxEffectivePercentage(_txIndex) {
+    const poseidon = await getPoseidon();
+    const { F } = poseidon;
+
+    const constant = F.e(constants.SMT_KEY_BLOCK_HEADER_EFFECTIVE_PERCENTAGE);
+    const txIndex = scalar2fea(F, Scalar.e(_txIndex));
+
+    const key1 = [txIndex[0], txIndex[1], txIndex[2], txIndex[3], txIndex[4], txIndex[5], constant, F.zero];
+    const key1Capacity = stringToH4(constants.HASH_POSEIDON_ALL_ZEROES);
+
+    return poseidon(key1, key1Capacity);
+}
+
 module.exports = {
     keyBlockHeaderParams,
     keyTxLogs,
     keyTxStatus,
     keyTxHash,
     keyTxCumulativeGasUsed,
+    keyTxEffectivePercentage,
 };

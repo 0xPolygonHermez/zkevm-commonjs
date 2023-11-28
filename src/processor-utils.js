@@ -352,11 +352,11 @@ function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
 
 /**
  * Computes the L2 transaction hash from a transaction
- * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, gasLimit, to, value, data, from, effectivePercentage in hex string
+ * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, gasLimit, to, value, data, from in hex string
  * @returns computed l2 tx hash
  */
 async function computeL2TxHash(tx) {
-    const hash = `${formatL2TxHashParam(tx.nonce)}${formatL2TxHashParam(tx.gasPrice)}${formatL2TxHashParam(tx.gasLimit)}${formatL2TxHashParam(tx.to)}${formatL2TxHashParam(tx.value)}${formatL2TxHashParam(tx.data)}${formatL2TxHashParam(tx.from)}${formatL2TxHashParam(tx.effectivePercentage)}`;
+    const hash = `${formatL2TxHashParam(tx.nonce)}${formatL2TxHashParam(tx.gasPrice)}${formatL2TxHashParam(tx.gasLimit)}${formatL2TxHashParam(tx.to)}${formatL2TxHashParam(tx.value)}${formatL2TxHashParam(tx.data)}${formatL2TxHashParam(tx.from)}`;
     const txHash = await smtUtils.linearPoseidon(hash);
 
     return txHash;
@@ -366,11 +366,9 @@ function formatL2TxHashParam(param) {
     if (param.startsWith('0x')) {
         param = param.slice(2);
     }
-    if (param === '00') {
+    if (param === '00' || param === '') {
         return param;
     }
-    // Remove leading zeros
-    param = param.replace(/^0+/, '');
     // format to bytes
     if (param.length % 2 === 1) {
         param = `0${param}`;
