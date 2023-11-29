@@ -102,7 +102,7 @@ async function setCumulativeGasUsed(smt, root, txIndex, cumulativeGasUsed) {
  * @param {Object} smt merkle tree structure
  * @param {Array[Field]} root merkle tree root
  * @param {Number} txIndex transaction index
- * @param {Number|String(hex)} effectivePercentage transaction effectivePercentage
+ * @param {Number|String} effectivePercentage transaction effectivePercentage
  * @returns {Array[Field]} new state root
  */
 async function setEffectivePercentage(smt, root, txIndex, effectivePercentage) {
