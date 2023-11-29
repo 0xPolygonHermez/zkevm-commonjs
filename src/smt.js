@@ -71,8 +71,8 @@ class SMT {
         const accKey = [];
         let foundKey;
         let siblings = [];
-        let siblingsLeftChild = [];
-        let siblingsRightChild = [];
+        let siblingLeftChild = [F.zero, F.zero, F.zero, F.zero];
+        let siblingRightChild = [F.zero, F.zero, F.zero, F.zero];
 
         let insKey;
         let insValue;
@@ -239,8 +239,8 @@ class SMT {
                     const _key = keys[level];
                     const _root = siblings[level].slice((1 - _key) * 4, (1 - _key) * 4 + 4);
                     const res = await self.db.getSmtNode(_root);
-                    siblingsLeftChild[level] = res.slice(0, 4);
-                    siblingsRightChild[level] = res.slice(4, 8);
+                    siblingLeftChild = res.slice(0, 4);
+                    siblingRightChild = res.slice(4, 8);
                     proofHashCounter += 1;
                 }
             } else {
@@ -277,8 +277,8 @@ class SMT {
             newRoot,
             key,
             siblings,
-            siblingsLeftChild,
-            siblingsRightChild,
+            siblingLeftChild,
+            siblingRightChild,
             insKey,
             insValue,
             isOld0,
