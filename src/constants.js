@@ -35,6 +35,7 @@ module.exports.SMT_KEY_BLOCK_HEADER_TRANSACTION_HASH = 8;
 module.exports.SMT_KEY_BLOCK_HEADER_STATUS = 9;
 module.exports.SMT_KEY_BLOCK_HEADER_CUMULATIVE_GAS_USED = 10;
 module.exports.SMT_KEY_BLOCK_HEADER_LOGS = 11;
+module.exports.SMT_KEY_BLOCK_HEADER_EFFECTIVE_PERCENTAGE = 12;
 
 // SMT block header data leaf keys
 module.exports.INDEX_BLOCK_HEADER_PARAM_BLOCK_HASH = 0;

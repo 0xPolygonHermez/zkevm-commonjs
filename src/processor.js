@@ -24,7 +24,7 @@ const {
 } = require('./processor-utils');
 const { valueToHexStr, getFuncName } = require('./utils');
 const {
-    initBlockHeader, setBlockGasUsed, setTxStatus, setTxHash, setCumulativeGasUsed, setTxLog,
+    initBlockHeader, setBlockGasUsed, setTxStatus, setTxHash, setCumulativeGasUsed, setTxLog, setEffectivePercentage,
 } = require('./block-utils');
 const { verifyMerkleProof } = require('./mt-bridge-utils');
 const { getL1InfoTreeValue } = require('./l1-info-tree-utils');
@@ -469,7 +469,7 @@ module.exports = class Processor {
                     this.cumulativeGasUsed += bufferToInt(txResult.receipt.gasUsed);
                     // Fill block info tree with tx receipt
                     const txHash = await computeL2TxHash(currentTx);
-                    await this.fillReceiptTree(txResult.receipt, txHash);
+                    await this.fillReceiptTree(txResult.receipt, txHash, currentTx.effectivePercentage);
                     this.txIndex += 1;
 
                     // Check transaction completed
@@ -862,7 +862,7 @@ module.exports = class Processor {
         return false;
     }
 
-    async fillReceiptTree(txReceipt, txHash) {
+    async fillReceiptTree(txReceipt, txHash, effectivePercentage) {
         // Set tx hash at smt
         this.blockInfoRoot = await setTxHash(this.smt, this.blockInfoRoot, this.txIndex, txHash);
         // Set tx status at smt
@@ -878,6 +878,8 @@ module.exports = class Processor {
             this.blockInfoRoot = await setTxLog(this.smt, this.blockInfoRoot, this.txIndex, this.logIndex, encoded);
             this.logIndex += 1;
         }
+        // Set tx effective percentage at smt
+        this.blockInfoRoot = await setEffectivePercentage(this.smt, this.blockInfoRoot, this.txIndex, effectivePercentage);
     }
 
     _rollbackBatch() {

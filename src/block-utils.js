@@ -2,7 +2,7 @@ const { Scalar } = require('ffjavascript');
 
 const constants = require('./constants');
 const {
-    keyBlockHeaderParams, keyTxLogs, keyTxStatus, keyTxHash, keyTxCumulativeGasUsed,
+    keyBlockHeaderParams, keyTxLogs, keyTxStatus, keyTxHash, keyTxCumulativeGasUsed, keyTxEffectivePercentage,
 } = require('./block-keys-utils');
 
 /**
@@ -98,6 +98,21 @@ async function setCumulativeGasUsed(smt, root, txIndex, cumulativeGasUsed) {
 }
 
 /**
+ * Set effective percentage to smt
+ * @param {Object} smt merkle tree structure
+ * @param {Array[Field]} root merkle tree root
+ * @param {Number} txIndex transaction index
+ * @param {Number|String(hex)} effectivePercentage transaction effectivePercentage
+ * @returns {Array[Field]} new state root
+ */
+async function setEffectivePercentage(smt, root, txIndex, effectivePercentage) {
+    const keyStatus = await keyTxEffectivePercentage(txIndex);
+    const result = await smt.set(root, keyStatus, Scalar.e(effectivePercentage));
+
+    return result.newRoot;
+}
+
+/**
  * Set logs to smt
  * @param {Number} logIndex current tx index
  * @param {Object} smt merkle tree structure
@@ -121,4 +136,5 @@ module.exports = {
     setTxStatus,
     setCumulativeGasUsed,
     setTxLog,
+    setEffectivePercentage,
 };
