@@ -49,6 +49,8 @@ module.exports = class Processor {
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
      * @param {Bool} options.skipVerifyL1InfoRoot Skips verification smt proof against the L1InfoRoot
      * @param {Number} options.newBlockGasLimit New batch gas limit
+     * @param {Bool} options.skipFirstChangeL2Block Skips verification that first transaction must be a ChangeL2BlockTx
+     * @param {Bool} options.skipWriteBlockInfoRoot Skips writing blockL2Info root on L2
      * @param {Object} extraData - additional data embedded in the batch
      * @param {Array[Object]} extraData.l1Info - L1Info - object with the following [key - value] ==> [indexL1InfoTree - L1InfoLeaf]
      * @param {String} extraData.l1Info[x].globalExitRoot - global exit root
@@ -350,12 +352,15 @@ module.exports = class Processor {
         for (let i = 0; i < this.decodedTxs.length; i++) {
             const currentDecodedTx = this.decodedTxs[i];
 
-            // First transaction must be a ChangeL2BlockTx if the batch is not a forced one. Otherwise, invalid batch
-            // This will be ensured by the blob
-            if (i === 0 && currentDecodedTx.tx.type !== Constants.TX_CHANGE_L2_BLOCK && !this.isForced) {
-                this.isInvalid = true;
+            // skip verification first tx is a changeL2Block
+            if (this.options.skipFirstChangeL2Block !== true) {
+                // First transaction must be a ChangeL2BlockTx if the batch is not a forced one. Otherwise, invalid batch
+                // This will be ensured by the blob
+                if (i === 0 && currentDecodedTx.tx.type !== Constants.TX_CHANGE_L2_BLOCK && !this.isForced) {
+                    this.isInvalid = true;
 
-                return;
+                    return;
+                }
             }
 
             // If it is a forced batch, we create a changeL2Block at the beginning
@@ -620,8 +625,14 @@ module.exports = class Processor {
 
     // Write values at storage at the end of block processing
     async consolidateBlock() {
-        // Set block gasUsed at block header on finshed processing al txs
+        // Set block gasUsed at block header on finished processing all txs
         this.blockInfoRoot = await setBlockGasUsed(this.smt, this.blockInfoRoot, this.cumulativeGasUsed);
+
+        // set blockInfoRoot to write to 0 in order to avoid a SR change
+        if (this.options.skipWriteBlockInfoRoot === true) {
+            this.blockInfoRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        }
+
         // Set blockInfoRoot on storage
         // Current state root will be the block hash, stored in SC at the begginning of next block
         this.currentStateRoot = await stateUtils.setContractStorage(
@@ -925,6 +936,17 @@ module.exports = class Processor {
             l1InfoTree: this.l1InfoTree,
             db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
         };
+
+        //  add flags
+        // skipFirstChangeL2Block
+        if (this.options.skipFirstChangeL2Block === true) {
+            this.starkInput.skipFirstChangeL2Block = true;
+        }
+
+        // skipWriteBlockInfoRoot
+        if (this.options.skipWriteBlockInfoRoot === true) {
+            this.starkInput.skipWriteBlockInfoRoot = true;
+        }
     }
 
     /**
