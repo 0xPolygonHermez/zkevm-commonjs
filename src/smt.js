@@ -236,15 +236,15 @@ class SMT {
                 }
 
                 if (mode === 'deleteNotFound') {
-                    const _key = keys[level];
-                    const _root = siblings[level].slice((1 - _key) * 4, (1 - _key) * 4 + 4);
-                    const res = await self.db.getSmtNode(_root);
+                    const siblingKey = keys[level] ? 0 : 1;
+                    const siblingRoot = siblings[level].slice(siblingKey * 4, siblingKey * 4 + 4);
+                    const res = await self.db.getSmtNode(siblingRoot);
                     siblingLeftChild = res.slice(0, 4);
                     siblingRightChild = res.slice(4, 8);
                     proofHashCounter += 1;
                 }
             } else {
-                // mode = 'deleteLast';
+                // previous was deleteLast mode, but it's a variant of deleteNotFound
                 mode = 'deleteNotFound';
                 newRoot = [F.zero, F.zero, F.zero, F.zero];
             }
@@ -258,12 +258,13 @@ class SMT {
         }
 
         siblings = siblings.slice(0, level + 1);
+        const proofHashCounterIncrement = (mode == 'zeroToZero') ? 0 : 1;
 
         while (level >= 0) {
 
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
             console.log(`SMT-SET(LIB) NEW_ROOT LEVEL=${level} ROOT=${newRoot.map(x => x.toString(16).padStart(16,'0')).join('_')} <= (${siblings[level].slice(0, 4).map(x => x.toString(16).padStart(16,'0')).join('_')},${siblings[level].slice(4, 8).map(x => x.toString(16).padStart(16,'0')).join('_')},${siblings[level].slice(8, 12).join('_')})`);
-            if (mode != 'zeroToZero') proofHashCounter += 1;
+            proofHashCounter += proofHashCounterIncrement;
             level -= 1;
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
