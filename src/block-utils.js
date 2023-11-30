@@ -1,9 +1,12 @@
+/* eslint-disable no-restricted-syntax */
+/* eslint-disable no-undef */
 const { Scalar } = require('ffjavascript');
 
 const constants = require('./constants');
 const {
     keyBlockHeaderParams, keyTxLogs, keyTxStatus, keyTxHash, keyTxCumulativeGasUsed, keyTxEffectivePercentage,
 } = require('./block-keys-utils');
+const { linearPoseidon } = require('./smt-utils');
 
 /**
  * Set a state of an ethereum address
@@ -60,7 +63,7 @@ async function setBlockGasUsed(smt, root, gasUsed) {
  * @param {String} hash transaction status
  * @returns {Array[Field]} new state root
  */
-async function setTxHash(smt, root, txIndex, hash) {
+async function setL2TxHash(smt, root, txIndex, hash) {
     const keyHash = await keyTxHash(txIndex);
     const result = await smt.set(root, keyHash, Scalar.e(hash));
 
@@ -102,7 +105,7 @@ async function setCumulativeGasUsed(smt, root, txIndex, cumulativeGasUsed) {
  * @param {Object} smt merkle tree structure
  * @param {Array[Field]} root merkle tree root
  * @param {Number} txIndex transaction index
- * @param {Number|String(hex)} effectivePercentage transaction effectivePercentage
+ * @param {Number|String} effectivePercentage transaction effectivePercentage
  * @returns {Array[Field]} new state root
  */
 async function setEffectivePercentage(smt, root, txIndex, effectivePercentage) {
@@ -129,12 +132,58 @@ async function setTxLog(smt, root, txIndex, logIndex, logValue) {
     return res.newRoot;
 }
 
+/**
+ * Fill block info tree with tx receipt
+ * @param {Object} smt sparse merkle tree structure
+ * @param {Array[Field]} currentBlockInfoRoot smt current root
+ * @param {Number} txIndex current transaction index
+ * @param {Object} logs array object of logs
+ * @param {Number} logIndex current log index in the block
+ * @param {Number} status value 0/1
+ * @param {String} l2TxHash l2 transaction hash in hex string
+ * @param {Number} cumulativeGasUsed cumulative gas used in the block
+ * @param {String} effectivePercentage effective percentage in hex string (1 byte)
+ * @returns new block info root
+ */
+async function fillReceiptTree(
+    smt,
+    currentBlockInfoRoot,
+    txIndex,
+    logs,
+    logIndex,
+    status,
+    l2TxHash,
+    cumulativeGasUsed,
+    effectivePercentage,
+) {
+    // Set tx hash at smt
+    currentBlockInfoRoot = await setL2TxHash(smt, currentBlockInfoRoot, txIndex, l2TxHash);
+    // Set tx status at smt
+    currentBlockInfoRoot = await setTxStatus(smt, currentBlockInfoRoot, txIndex, status);
+    // Set tx gas used at smt
+    currentBlockInfoRoot = await setCumulativeGasUsed(smt, currentBlockInfoRoot, txIndex, cumulativeGasUsed);
+    for (const log of logs) {
+        // Loop logs
+        const bTopics = log[1];
+        const topics = bTopics.reduce((previousValue, currentValue) => previousValue + currentValue.toString('hex'), '');
+        // Encode log: linearPoseidon(logData + topics)
+        const encoded = await linearPoseidon(`0x${log[2].toString('hex')}${topics}`);
+        currentBlockInfoRoot = await setTxLog(smt, currentBlockInfoRoot, txIndex, logIndex, encoded);
+        logIndex += 1;
+    }
+    // Set tx effective percentage at smt
+    currentBlockInfoRoot = await setEffectivePercentage(smt, currentBlockInfoRoot, txIndex, effectivePercentage);
+
+    return currentBlockInfoRoot;
+}
+
 module.exports = {
     initBlockHeader,
     setBlockGasUsed,
-    setTxHash,
+    setL2TxHash,
     setTxStatus,
     setCumulativeGasUsed,
     setTxLog,
     setEffectivePercentage,
+    fillReceiptTree,
 };

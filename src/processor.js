@@ -24,7 +24,7 @@ const {
 } = require('./processor-utils');
 const { valueToHexStr, getFuncName } = require('./utils');
 const {
-    initBlockHeader, setBlockGasUsed, setTxStatus, setTxHash, setCumulativeGasUsed, setTxLog, setEffectivePercentage,
+    initBlockHeader, setBlockGasUsed, fillReceiptTree,
 } = require('./block-utils');
 const { verifyMerkleProof } = require('./mt-bridge-utils');
 const { getL1InfoTreeValue } = require('./l1-info-tree-utils');
@@ -468,8 +468,9 @@ module.exports = class Processor {
                     // Increment block gas used
                     this.cumulativeGasUsed += bufferToInt(txResult.receipt.gasUsed);
                     // Fill block info tree with tx receipt
-                    const txHash = await computeL2TxHash(currentTx);
-                    await this.fillReceiptTree(txResult.receipt, txHash, currentTx.effectivePercentage);
+                    const l2TxHash = await computeL2TxHash(currentTx);
+                    this.blockInfoRoot = await fillReceiptTree(this.smt, this.blockInfoRoot, this.txIndex, txResult.receipt.logs, this.logIndex, txResult.receipt.status, l2TxHash, this.cumulativeGasUsed, currentTx.effectivePercentage);
+                    this.logIndex += txResult.receipt.logs.length;
                     this.txIndex += 1;
 
                     // Check transaction completed
@@ -860,26 +861,6 @@ module.exports = class Processor {
         await this.db.setValue(keyDumpStorage, storage);
 
         return false;
-    }
-
-    async fillReceiptTree(txReceipt, txHash, effectivePercentage) {
-        // Set tx hash at smt
-        this.blockInfoRoot = await setTxHash(this.smt, this.blockInfoRoot, this.txIndex, txHash);
-        // Set tx status at smt
-        this.blockInfoRoot = await setTxStatus(this.smt, this.blockInfoRoot, this.txIndex, txReceipt.status);
-        // Set tx gas used at smt
-        this.blockInfoRoot = await setCumulativeGasUsed(this.smt, this.blockInfoRoot, this.txIndex, this.cumulativeGasUsed);
-        for (const log of txReceipt.logs) {
-            // Loop logs
-            const bTopics = log[1];
-            const topics = bTopics.reduce((previousValue, currentValue) => previousValue + currentValue.toString('hex'), '');
-            // Encode log: linearPoseidon(logData + topics)
-            const encoded = await smtUtils.linearPoseidon(`0x${log[2].toString('hex')}${topics}`);
-            this.blockInfoRoot = await setTxLog(this.smt, this.blockInfoRoot, this.txIndex, this.logIndex, encoded);
-            this.logIndex += 1;
-        }
-        // Set tx effective percentage at smt
-        this.blockInfoRoot = await setEffectivePercentage(this.smt, this.blockInfoRoot, this.txIndex, effectivePercentage);
     }
 
     _rollbackBatch() {

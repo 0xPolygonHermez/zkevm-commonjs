@@ -11,7 +11,6 @@ const fs = require('fs');
 const path = require('path');
 const { Scalar } = require('ffjavascript');
 const { argv } = require('yargs');
-
 const ethers = require('ethers');
 const { expect } = require('chai');
 const {
@@ -23,6 +22,8 @@ const lodash = require('lodash');
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
 const contractsPolygonHermez = require('@0xpolygonhermez/zkevm-contracts');
+const { initBlockHeader, fillReceiptTree, setBlockGasUsed } = require('../src/block-utils');
+const SMT = require('../src/smt');
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
 } = require('../index');
@@ -31,6 +32,7 @@ const { pathTestVectors } = require('./helpers/test-utils');
 describe('Block info tests', function () {
     this.timeout(50000);
     const pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info-batches.json');
+    const blockInfoTreeTests = path.join(pathTestVectors, 'block-info/block-info-tree.json');
     let update;
     let poseidon;
     let F;
@@ -386,6 +388,57 @@ describe('Block info tests', function () {
         }
         if (update) {
             await fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
+        }
+    });
+
+    it('Compute blockInfoTree tests', async () => {
+        // Loop state transition tests
+        const blockInfoTree = JSON.parse(fs.readFileSync(blockInfoTreeTests));
+        const db = new MemDB(F);
+        const smt = new SMT(db, poseidon, poseidon.F);
+        for (let i = 0; i < blockInfoTree.length; i++) {
+            const {
+                oldStateRoot, newBlockNumber, sequencerAddress, blockGasLimit, finalTimestamp, finalGER, finalBlockHash, txs,
+            } = blockInfoTree[i];
+            // Init block info root
+            let blockInfoRoot = [F.zero, F.zero, F.zero, F.zero];
+            blockInfoRoot = await initBlockHeader(
+                smt,
+                blockInfoRoot,
+                oldStateRoot,
+                sequencerAddress,
+                newBlockNumber,
+                blockGasLimit,
+                finalTimestamp,
+                finalGER,
+                finalBlockHash,
+            );
+            // loop txs
+            let logIndex = 0;
+            let cumulativeGasUsed = 0;
+            for (let j = 0; j < txs.length; j++) {
+                const tx = txs[j];
+                const {
+                    status, logs, l2TxHash, gasUsed, effectivePercentage,
+                } = tx;
+                cumulativeGasUsed += gasUsed;
+                // Init block header at beginning of block
+                blockInfoRoot = await fillReceiptTree(
+                    smt,
+                    blockInfoRoot,
+                    j,
+                    logs,
+                    logIndex,
+                    status,
+                    l2TxHash,
+                    cumulativeGasUsed,
+                    effectivePercentage,
+                );
+                logIndex += logs.length;
+                // Consolidate block
+                blockInfoRoot = await setBlockGasUsed(smt, blockInfoRoot, cumulativeGasUsed);
+                expect(smtUtils.h4toString(blockInfoRoot)).to.be.equal(blockInfoTree[i].finalBlockInfoRoot);
+            }
         }
     });
 });

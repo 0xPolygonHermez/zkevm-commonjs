@@ -362,6 +362,11 @@ async function computeL2TxHash(tx) {
     return txHash;
 }
 
+/**
+ * Formats a tx param to compute the linear poseidon hash of l2TxHash
+ * @param {String} param in hex string
+ * @returns formated param
+ */
 function formatL2TxHashParam(param) {
     if (param.startsWith('0x')) {
         param = param.slice(2);
@@ -374,12 +379,11 @@ function formatL2TxHashParam(param) {
         param = `0${param}`;
     }
     // Checks hex correctness
-    const res = Buffer.from(param, 'hex').toString('hex');
-    if (res === '' || res.length !== param.length) {
+    if (/^[0-9a-fA-F]+$/.test(param) === false) {
         throw new Error('Invalid hex string');
     }
 
-    return res;
+    return param;
 }
 
 /**
