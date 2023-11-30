@@ -7,6 +7,7 @@ const {
     keyBlockHeaderParams, keyTxLogs, keyTxStatus, keyTxHash, keyTxCumulativeGasUsed, keyTxEffectivePercentage,
 } = require('./block-keys-utils');
 const { linearPoseidon } = require('./smt-utils');
+
 /**
  * Set a state of an ethereum address
  * @param {Object} smt merkle tree structure
@@ -131,6 +132,19 @@ async function setTxLog(smt, root, txIndex, logIndex, logValue) {
     return res.newRoot;
 }
 
+/**
+ * Fill block info tree with tx receipt
+ * @param {Object} smt sparse merkle tree structure
+ * @param {Array[Field]} currentBlockInfoRoot smt current root
+ * @param {Number} txIndex current transaction index
+ * @param {Object} logs array object of logs
+ * @param {Number} logIndex current log index in the block
+ * @param {Number} status value 0/1
+ * @param {String} l2TxHash l2 transaction hash in hex string
+ * @param {Number} cumulativeGasUsed cumulative gas used in the block
+ * @param {String} effectivePercentage effective percentage in hex string (1 byte)
+ * @returns new block info root
+ */
 async function fillReceiptTree(
     smt,
     currentBlockInfoRoot,
