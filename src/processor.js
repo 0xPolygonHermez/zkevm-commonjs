@@ -917,7 +917,6 @@ module.exports = class Processor {
             batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
             l1InfoTree: this.l1InfoTree,
-            db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
         };
 
         //  add flags
@@ -930,6 +929,9 @@ module.exports = class Processor {
         if (this.options.skipWriteBlockInfoRoot === true) {
             this.starkInput.skipWriteBlockInfoRoot = true;
         }
+
+        // add DB
+        this.starkInput.db = await getCurrentDB(this.oldStateRoot, this.db, this.F);
     }
 
     /**

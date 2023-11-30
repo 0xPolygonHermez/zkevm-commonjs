@@ -29,16 +29,17 @@ const {
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
+const pathInputs = path.join(__dirname, '../tools/inputs-examples');
+
 describe('Block info tests', function () {
     this.timeout(50000);
     const pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info-batches.json');
     const blockInfoTreeTests = path.join(pathTestVectors, 'block-info/block-info-tree.json');
     let update;
+    let geninput;
     let poseidon;
     let F;
     let testVectors;
-    const chainID = 1000;
-    const forkID = 1;
 
     before(async () => {
         poseidon = await getPoseidon();
@@ -46,6 +47,7 @@ describe('Block info tests', function () {
         testVectors = JSON.parse(fs.readFileSync(pathProcessorTests));
 
         update = argv.update === true;
+        geninput = argv.geninput === true;
     });
 
     it('Check test vectors', async () => {
@@ -58,6 +60,8 @@ describe('Block info tests', function () {
                 sequencerAddress,
                 bridgeDeployed,
                 oldAccInputHash,
+                forkID,
+                chainID,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -127,6 +131,7 @@ describe('Block info tests', function () {
                 const {
                     txs, expectedNewRoot, expectedNewLeafs, batchL2Data, l1InfoRoot,
                     inputHash, timestampLimit, batchHashData, newLocalExitRoot, forcedBlockHashL1,
+                    skipFirstChangeL2Block, skipWriteBlockInfoRoot,
                 } = batches[k];
                 const rawTxs = [];
                 for (let j = 0; j < txs.length; j++) {
@@ -250,6 +255,8 @@ describe('Block info tests', function () {
                     Constants.DEFAULT_MAX_TX,
                     {
                         skipVerifyL1InfoRoot: false,
+                        skipFirstChangeL2Block,
+                        skipWriteBlockInfoRoot,
                     },
                     {},
                 );
@@ -382,6 +389,17 @@ describe('Block info tests', function () {
                     testVectors[i].batches[k].batchHashData = circuitInput.batchHashData;
                     testVectors[i].batches[k].inputHash = circuitInput.inputHash;
                     testVectors[i].batches[k].newLocalExitRoot = circuitInput.newLocalExitRoot;
+                }
+
+                if (update && geninput) {
+                    const dstFile = path.join(pathInputs, `${path.basename(pathProcessorTests, '.json')}-${i}-${k}-input.json`);
+                    const folfer = path.dirname(dstFile);
+
+                    if (!fs.existsSync(folfer)) {
+                        fs.mkdirSync(folfer);
+                    }
+
+                    await fs.writeFileSync(dstFile, JSON.stringify(circuitInput, null, 2));
                 }
             }
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
