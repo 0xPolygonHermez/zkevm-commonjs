@@ -71,6 +71,8 @@ class SMT {
         const accKey = [];
         let foundKey;
         let siblings = [];
+        let siblingLeftChild = [F.zero, F.zero, F.zero, F.zero];
+        let siblingRightChild = [F.zero, F.zero, F.zero, F.zero];
 
         let insKey;
         let insValue;
@@ -231,8 +233,18 @@ class SMT {
                 } else {
                     mode = 'deleteNotFound';
                 }
+
+                if (mode === 'deleteNotFound') {
+                    const siblingKey = keys[level] ? 0 : 1;
+                    const siblingRoot = siblings[level].slice(siblingKey * 4, siblingKey * 4 + 4);
+                    const res = await self.db.getSmtNode(siblingRoot);
+                    siblingLeftChild = res.slice(0, 4);
+                    siblingRightChild = res.slice(4, 8);
+                    proofHashCounter += 1;
+                }
             } else {
-                mode = 'deleteLast';
+                // previous was deleteLast mode, but it's a variant of deleteNotFound
+                mode = 'deleteNotFound';
                 newRoot = [F.zero, F.zero, F.zero, F.zero];
             }
         } else {
@@ -245,10 +257,11 @@ class SMT {
         }
 
         siblings = siblings.slice(0, level + 1);
+        const proofHashCounterIncrement = (mode === 'zeroToZero') ? 0 : 1;
 
         while (level >= 0) {
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
-            proofHashCounter += 1;
+            proofHashCounter += proofHashCounterIncrement;
             level -= 1;
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
@@ -262,6 +275,8 @@ class SMT {
             newRoot,
             key,
             siblings,
+            siblingLeftChild,
+            siblingRightChild,
             insKey,
             insValue,
             isOld0,
