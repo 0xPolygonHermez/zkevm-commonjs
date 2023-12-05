@@ -257,10 +257,9 @@ class SMT {
         }
 
         siblings = siblings.slice(0, level + 1);
-        const proofHashCounterIncrement = (mode == 'zeroToZero') ? 0 : 1;
+        const proofHashCounterIncrement = (mode === 'zeroToZero') ? 0 : 1;
 
         while (level >= 0) {
-
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
             proofHashCounter += proofHashCounterIncrement;
             level -= 1;
