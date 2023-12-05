@@ -85,7 +85,6 @@ class SMT {
         let foundVal;
 
         while (!nodeIsZero(r, F) && (typeof (foundKey) === 'undefined')) {
-            console.log(`SMT-SET(LIB) OLD_ROOT LEVEL=${level} ROOT=[${r.    map(x => x.toString(16).padStart(16,'0')).join('_')}]`);
             siblings[level] = await self.db.getSmtNode(r);
             if (isOneSiblings(siblings[level], F)) {
                 foundOldValH = siblings[level].slice(4, 8);
@@ -263,7 +262,6 @@ class SMT {
         while (level >= 0) {
 
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
-            console.log(`SMT-SET(LIB) NEW_ROOT LEVEL=${level} ROOT=${newRoot.map(x => x.toString(16).padStart(16,'0')).join('_')} <= (${siblings[level].slice(0, 4).map(x => x.toString(16).padStart(16,'0')).join('_')},${siblings[level].slice(4, 8).map(x => x.toString(16).padStart(16,'0')).join('_')},${siblings[level].slice(8, 12).join('_')})`);
             proofHashCounter += proofHashCounterIncrement;
             level -= 1;
             if (level >= 0) {
