@@ -77,6 +77,7 @@ class ZkEVMDB {
             clone(this.vm),
             options,
             extraData,
+            this.smt.maxLevel,
         );
     }
 

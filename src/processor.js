@@ -9,13 +9,14 @@ const { Block } = require('@ethereumjs/block');
 const {
     Address, BN, toBuffer, bufferToInt,
 } = require('ethereumjs-util');
-
+const { cloneDeep } = require('lodash');
 const { Scalar } = require('ffjavascript');
 const SMT = require('./smt');
 const TmpSmtDB = require('./tmp-smt-db');
 const Constants = require('./constants');
 const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
+const VirtualCountersManager = require('./virtual-counters-manager');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
@@ -74,6 +75,7 @@ module.exports = class Processor {
         vm,
         options,
         extraData,
+        smtLevels,
     ) {
         this.db = db;
         this.newNumBatch = numBatch;
@@ -83,7 +85,8 @@ module.exports = class Processor {
         this.F = poseidon.F;
         this.tmpSmtDB = new TmpSmtDB(db);
         this.smt = new SMT(this.tmpSmtDB, poseidon, poseidon.F);
-
+        this.smt.maxLevel = smtLevels;
+        this.initSmtLevels = smtLevels;
         this.rawTxs = [];
         this.decodedTxs = [];
         this.builded = false;
@@ -107,6 +110,7 @@ module.exports = class Processor {
         this.l1InfoTree = {};
 
         this.vm = vm;
+        this.oldVm = cloneDeep(vm);
         this.evmSteps = [];
         this.updatedAccounts = {};
         this.isLegacyTx = false;
@@ -117,6 +121,7 @@ module.exports = class Processor {
         this.txIndex = 0;
         this.logIndex = 0;
         this.blockInfoRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.vcm = new VirtualCountersManager(options.vcmConfig);
     }
 
     /**
@@ -157,6 +162,11 @@ module.exports = class Processor {
         await this._computeStarkInput();
 
         this.builded = true;
+
+        // Check virtual counters
+        const virtualCounters = this.vcm.getCurrentSpentCounters();
+
+        return { virtualCounters };
     }
 
     /**
@@ -343,14 +353,43 @@ module.exports = class Processor {
      * B: ENOUGH UPFRONT TX COST
      * Process transaction will perform the following operations
      * from: increase nonce
-     * from: substract total tx cost
+     * from: subtract total tx cost
      * from: refund unused gas
      * to: increase balance
      * update state
      * finally pay all the fees to the sequencer address
      */
     async _processTx() {
+        this.vcm.setSMTLevels((2 ** this.smt.maxLevel + 250000).toString(2).length);
+        // Compute init processing counters
+        this.vcm.computeFunctionCounters('batchProcessing', { batchL2DataLength: (this.rawTxs.join('').length - this.rawTxs.length * 2) / 2 });
+        // Compute rlp parsing counters
         for (let i = 0; i < this.decodedTxs.length; i++) {
+            if (this.decodedTxs[i].tx.type === Constants.TX_CHANGE_L2_BLOCK) {
+                this.vcm.computeFunctionCounters('decodeChangeL2BlockTx');
+            } else {
+                const txDataLen = this.decodedTxs[i].tx.data ? (this.decodedTxs[i].tx.data.length - 2) / 2 : 0;
+                this.vcm.computeFunctionCounters('rlpParsing', {
+                    txRLPLength: (this.rawTxs[i].length - 2) / 2,
+                    txDataLen,
+                    v: Scalar.e(this.decodedTxs[i].tx.v),
+                    r: Scalar.e(this.decodedTxs[i].tx.r),
+                    s: Scalar.e(this.decodedTxs[i].tx.s),
+                    gasPriceLen: (this.decodedTxs[i].tx.gasPrice.length - 2) / 2,
+                    gasLimitLen: (this.decodedTxs[i].tx.gasLimit.length - 2) / 2,
+                    valueLen: (this.decodedTxs[i].tx.value.length - 2) / 2,
+                    chainIdLen: typeof this.decodedTxs[i].tx.chainID === 'undefined' ? 0 : (ethers.utils.hexlify(this.decodedTxs[i].tx.chainID).length - 2) / 2,
+                    nonceLen: (this.decodedTxs[i].tx.nonce.length - 2) / 2,
+                });
+            }
+        }
+        for (let i = 0; i < this.decodedTxs.length; i++) {
+            /**
+             * Set vcm poseidon levels. Maximum (theorical) levels that can be added in a tx is 250k.
+             * We count how much can the smt increase in a tx and compute the virtual poseidons with this worst case scenario.
+             */
+            const maxLevelPerTx = (2 ** this.smt.maxLevel + 250000).toString(2).length;
+            this.vcm.setSMTLevels(maxLevelPerTx);
             const currentDecodedTx = this.decodedTxs[i];
 
             // skip verification first tx is a changeL2Block
@@ -419,8 +458,8 @@ module.exports = class Processor {
                 }
                 const v = this.isLegacyTx ? currentTx.v : Number(currentTx.v) - 27 + currentTx.chainID * 2 + 35;
 
-                const bytecodeLength = await stateUtils.getContractBytecodeLength(currentTx.from, this.smt, this.currentStateRoot);
-                if (bytecodeLength > 0) {
+                const bytecodeLen = await stateUtils.getContractBytecodeLength(currentTx.from, this.smt, this.currentStateRoot);
+                if (bytecodeLen > 0) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: EIP3607 Do not allow transactions for which tx.sender has any code deployed';
                     continue;
@@ -461,8 +500,25 @@ module.exports = class Processor {
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
                 try {
-                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock, effectivePercentage: currentTx.effectivePercentage });
-                    this.evmSteps.push(txResult.execResult.evmSteps);
+                    // init custom counters snapshot
+                    this.vcm.initCustomSnapshot(i);
+                    const txResult = await this.vm.runTx({
+                        tx: evmTx, block: evmBlock, effectivePercentage: currentTx.effectivePercentage, vcm: this.vcm,
+                    });
+                    // Compute counters
+                    let bytecodeLength;
+                    let isDeploy = false;
+                    if (typeof currentDecodedTx.tx.to === 'undefined' || currentDecodedTx.tx.to.length <= 2) {
+                        bytecodeLength = txResult.execResult.returnValue.length;
+                        isDeploy = true;
+                    } else {
+                        bytecodeLength = await stateUtils.getContractBytecodeLength(currentDecodedTx.tx.to, this.smt, this.currentStateRoot);
+                    }
+                    this.vcm.computeFunctionCounters('processTx', { bytecodeLength, isDeploy });
+                    this.evmSteps.push({
+                        steps: txResult.execResult.evmSteps,
+                        counters: this.vcm.computeCustomSnapshotConsumption(i),
+                    });
 
                     currentDecodedTx.receipt = txResult.receipt;
                     currentDecodedTx.createdAddress = txResult.createdAddress;
@@ -621,8 +677,15 @@ module.exports = class Processor {
                     await this.consolidateBlock();
                 }
             }
+            /**
+             * We check how much the smt has increased. In case it has increased more than expected, it means we may have a pow attack so we have to recompute counters cost with this new smt levels
+             * We re run the batch with a new maxLevel value at the smt
+             */
+            if (this.smt.maxLevel > maxLevelPerTx) {
+                this._rollbackBatch();
+                i = 0;
+            }
         }
-
         await this.consolidateBlock();
     }
 
@@ -708,6 +771,9 @@ module.exports = class Processor {
     }
 
     async _processChangeL2BlockTx(tx) {
+        // Reduce counters
+        this.vcm.computeFunctionCounters('processChangeL2Block');
+
         // write old blockhash (oldStateRoot) on storage
         // Get old blockNumber
         const oldBlockNumber = await stateUtils.getContractStorage(
@@ -867,6 +933,7 @@ module.exports = class Processor {
 
     _rollbackBatch() {
         this.currentStateRoot = this.oldStateRoot;
+        this.vm = cloneDeep(this.oldVm);
         this.updatedAccounts = {};
     }
 
