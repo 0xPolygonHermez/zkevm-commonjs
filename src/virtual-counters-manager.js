@@ -15,6 +15,8 @@ const { expectedModExpCounters } = require('./virtual-counters-manager-utils');
 
 const FPEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
 const FNEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+const FNEC_MINUS_ONE = Scalar.sub(FNEC, Scalar.e(1));
+
 module.exports = class VirtualCountersManager {
     /**
      * constructor class
@@ -290,7 +292,7 @@ module.exports = class VirtualCountersManager {
         this._divArith();
         this._mStore32();
         this._mStoreX();
-        this._ecPairing(inputsCount);
+        this._ecPairing(input.inputsCount);
     }
 
     _ecPairing(inputsCount) {
@@ -318,7 +320,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _modexp(bLen, mLen, eLen, base, exponent, modulus) {
-        const modexpCounters = expectedModExpCounters(bLen/32, mLen/32, eLen/32, base, exponent, modulus);
+        const modexpCounters = expectedModExpCounters(bLen / 32, mLen / 32, eLen / 32, base, exponent, modulus);
         this._reduceCounters(modexpCounters.steps, 'S');
         this._reduceCounters(modexpCounters.binaries, 'B');
         this._reduceCounters(modexpCounters.ariths, 'A');
@@ -639,24 +641,28 @@ module.exports = class VirtualCountersManager {
     opAnd(input) {
         this._opcode(input);
         this._reduceCounters(10, 'S');
+        this._reduceCounters(1, 'B');
         this._reduceCounters(MCP, 'P');
     }
 
     opOr(input) {
         this._opcode(input);
         this._reduceCounters(10, 'S');
+        this._reduceCounters(1, 'B');
         this._reduceCounters(MCP, 'P');
     }
 
     opXor(input) {
         this._opcode(input);
         this._reduceCounters(10, 'S');
+        this._reduceCounters(1, 'B');
         this._reduceCounters(MCP, 'P');
     }
 
     opNot(input) {
         this._opcode(input);
         this._reduceCounters(10, 'S');
+        this._reduceCounters(1, 'B');
         this._reduceCounters(MCP, 'P');
     }
 
@@ -1540,25 +1546,18 @@ module.exports = class VirtualCountersManager {
 
     _ecrecover(input) {
         this._checkInput(input, ['v', 'r', 's', 'isPrecompiled']);
-        // this._reduceCounters(6400, 'S');
-        // this._reduceCounters(1600, 'B');
-        // this._reduceCounters(1100, 'A');
-        this._reduceCounters(40, 'S');
-        this._reduceCounters(1, 'K');
-        this._reduceCounters(10, 'B');
-        this._invFnEc();
         // Check ecrecover fails for invalid r,s,v
         const sUpperLimit = input.isPrecompiled ? Scalar.sub(FNEC, 1) : Scalar.div(FNEC, 2);
-        if (input.r === 0n || Scalar.lt(FNEC - 1n, input.r) || input.s === 0n || Scalar.lt(sUpperLimit, input.s) || (input.v !== 27n && input.v !== 28n)) {
+        if (input.r === 0n || Scalar.lt(FNEC_MINUS_ONE, input.r) || input.s === 0n || Scalar.lt(sUpperLimit, input.s) || (input.v !== 27n && input.v !== 28n)) {
+            this._reduceCounters(45, 'S');
+            this._reduceCounters(2, 'A');
+            this._reduceCounters(8, 'B');
+
             return;
         }
-        this._multiCall('_mulFpEc', 2);
-        this._addFpEc();
-        this._sqrtFpEc();
         // Check if has sqrt to avoid counters at _checkSqrtFpEc
         const c = Scalar.mod(Scalar.add(Scalar.exp(input.r, 3), 7), FPEC);
         const Fec = new F1Field(FPEC);
-        // r = sqrt(c)
         let r = Fec.sqrt(c);
         const parity = input.v === 27n ? 0n : 1n;
         if (r === null) {
@@ -1568,55 +1567,18 @@ module.exports = class VirtualCountersManager {
         }
         const b = Number(Scalar.lt(r, FPEC));
         if (b === 0) {
-            this._checkSqrtFpEc();
+            // Don't has root
+            this._reduceCounters(4527, 'S');
+            this._reduceCounters(1014, 'A');
+            this._reduceCounters(10, 'B');
+
+            return;
         }
-        this._reduceCounters(1, 'A');
-        this._mulPointEc();
-    }
-
-    _mulPointEc() {
-        this._reduceCounters(6160, 'S');
-        this._reduceCounters(256 * 5, 'B');
-        this._reduceCounters(512, 'A');
-    }
-
-    _checkSqrtFpEc() {
-        this._reduceCounters(758, 'S');
-        this._multiCall('_sqFpEc', 254);
-        this._multiCall('_mulFpEc', 248);
-        this._reduceCounters(1, 'B');
-    }
-
-    _sqFpEc() {
-        this._reduceCounters(8, 'S');
-        this._reduceCounters(2, 'A');
-    }
-
-    _sqrtFpEc() {
-        this._reduceCounters(15, 'S');
-        this._reduceCounters(2, 'A');
-        this._reduceCounters(1, 'B');
-    }
-
-    _addFpEc() {
-        this._reduceCounters(7, 'S');
-        this._reduceCounters(2, 'A');
-    }
-
-    _mulFpEc() {
-        this._reduceCounters(7, 'S');
-        this._reduceCounters(2, 'A');
-    }
-
-    _mulFnEc() {
-        this._reduceCounters(7, 'S');
-        this._reduceCounters(2, 'A');
-    }
-
-    _invFnEc() {
-        this._reduceCounters(12, 'S');
-        this._reduceCounters(2, 'B');
-        this._reduceCounters(2, 'A');
+        // Has root
+        this._reduceCounters(6294, 'S');
+        this._reduceCounters(528, 'A');
+        this._reduceCounters(523, 'B');
+        this._reduceCounters(1, 'K');
     }
 
     _processContractCall(input) {
