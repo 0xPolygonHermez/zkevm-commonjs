@@ -208,8 +208,9 @@ describe('Processor utils', () => {
         for (let i = 0; i < txs.length; i++) {
             const tx = txs[i];
             try {
-                const txHash = await processorUtils.computeL2TxHash(tx);
+                const { txHash, dataEncoded } = await processorUtils.computeL2TxHash(tx, true);
                 expect(txHash).to.be.equal(tx.l2TxHash);
+                expect(dataEncoded).to.be.equal(tx.encoded);
             } catch (e) {
                 if (e.message !== 'Invalid hex string') {
                     throw e;
