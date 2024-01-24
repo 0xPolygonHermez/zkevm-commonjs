@@ -352,13 +352,13 @@ function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
 
 /**
  * Computes the L2 transaction hash from a transaction
- * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, gasLimit, to, value, data, from in hex string
+ * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, chainID, gasLimit, to, value, data, from in hex string
  * @returns computed l2 tx hash or object with txHash and dataEncoded uf returnEncoded is true
  */
 async function computeL2TxHash(tx, returnEncoded = false) {
-    // txType 00 for pre-EIP155 (no chainId) and 01 for legacy transactions
+    // txType 00 for pre-EIP155 (no chainID) and 01 for legacy transactions
     let txType = '01';
-    if (typeof tx.chainId === 'undefined' || tx.chainId === '00' || tx.chainId === '0x') {
+    if (typeof tx.chainID === 'undefined' || tx.chainID === '00' || tx.chainID === '0x') {
         txType = '00';
     }
     // Add txType, nonce, gasPrice and gasLimit
@@ -383,9 +383,9 @@ async function computeL2TxHash(tx, returnEncoded = false) {
     if (dataLength > 0) {
         hash += `${formatL2TxHashParam(tx.data, dataLength)}`;
     }
-    // Add chainId
-    if (typeof tx.chainId !== 'undefined') {
-        hash += `${formatL2TxHashParam(tx.chainId, 8)}`;
+    // Add chainID
+    if (typeof tx.chainID !== 'undefined') {
+        hash += `${formatL2TxHashParam(tx.chainID, 8)}`;
     }
     // Add from
     hash += `${formatL2TxHashParam(tx.from, 20)}`;
@@ -404,6 +404,11 @@ async function computeL2TxHash(tx, returnEncoded = false) {
  * @returns formatted param
  */
 function formatL2TxHashParam(param, paramLength) {
+    // Convert to hex string if param is a number
+    if (typeof param === 'number') {
+        param = param.toString(16);
+    }
+
     if (param.startsWith('0x')) {
         param = param.slice(2);
     }
