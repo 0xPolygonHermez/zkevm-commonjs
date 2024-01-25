@@ -352,12 +352,47 @@ function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
 
 /**
  * Computes the L2 transaction hash from a transaction
- * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, gasLimit, to, value, data, from in hex string
- * @returns computed l2 tx hash
+ * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, chainID, gasLimit, to, value, data, from in hex string
+ * @returns computed l2 tx hash or object with txHash and dataEncoded uf returnEncoded is true
  */
-async function computeL2TxHash(tx) {
-    const hash = `${formatL2TxHashParam(tx.nonce)}${formatL2TxHashParam(tx.gasPrice)}${formatL2TxHashParam(tx.gasLimit)}${formatL2TxHashParam(tx.to)}${formatL2TxHashParam(tx.value)}${formatL2TxHashParam(tx.data)}${formatL2TxHashParam(tx.from)}`;
+async function computeL2TxHash(tx, returnEncoded = false) {
+    // txType 00 for pre-EIP155 (no chainID) and 01 for legacy transactions
+    let txType = '01';
+    if (typeof tx.chainID === 'undefined' || tx.chainID === '00' || tx.chainID === '0x') {
+        txType = '00';
+    }
+    // Add txType, nonce, gasPrice and gasLimit
+    let hash = `${txType}`
+                + `${formatL2TxHashParam(tx.nonce, 8)}`
+                + `${formatL2TxHashParam(tx.gasPrice, 32)}`
+                + `${formatL2TxHashParam(tx.gasLimit, 8)}`;
+    // Check is deploy
+    if (typeof tx.to === 'undefined' || tx.to === '' || tx.to === '0x') {
+        hash += '01';
+    } else {
+        hash += `00${formatL2TxHashParam(tx.to, 20)}`;
+    }
+    // Add value
+    hash += `${formatL2TxHashParam(tx.value, 32)}`;
+    // Compute data length
+    if (tx.data.startsWith('0x')) {
+        tx.data = tx.data.slice(2);
+    }
+    const dataLength = Math.ceil(tx.data.length / 2);
+    hash += `${formatL2TxHashParam(dataLength.toString(16), 3)}`;
+    if (dataLength > 0) {
+        hash += `${formatL2TxHashParam(tx.data, dataLength)}`;
+    }
+    // Add chainID
+    if (typeof tx.chainID !== 'undefined') {
+        hash += `${formatL2TxHashParam(tx.chainID, 8)}`;
+    }
+    // Add from
+    hash += `${formatL2TxHashParam(tx.from, 20)}`;
     const txHash = await smtUtils.linearPoseidon(hash);
+    if (returnEncoded) {
+        return { txHash, dataEncoded: hash };
+    }
 
     return txHash;
 }
@@ -365,14 +400,17 @@ async function computeL2TxHash(tx) {
 /**
  * Formats a tx param to compute the linear poseidon hash of l2TxHash
  * @param {String} param in hex string
- * @returns formated param
+ * @param {Number} paramLength Length of the string param, used for left zero padding
+ * @returns formatted param
  */
-function formatL2TxHashParam(param) {
+function formatL2TxHashParam(param, paramLength) {
+    // Convert to hex string if param is a number
+    if (typeof param === 'number') {
+        param = param.toString(16);
+    }
+
     if (param.startsWith('0x')) {
         param = param.slice(2);
-    }
-    if (param === '00' || param === '') {
-        return param;
     }
     // format to bytes
     if (param.length % 2 === 1) {
@@ -382,6 +420,7 @@ function formatL2TxHashParam(param) {
     if (/^[0-9a-fA-F]+$/.test(param) === false) {
         throw new Error('Invalid hex string');
     }
+    param = param.padStart(paramLength * 2, '0');
 
     return param;
 }

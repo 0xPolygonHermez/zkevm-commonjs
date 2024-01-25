@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable multiline-comment-style */
 /* eslint-disable max-len */
 /* eslint-disable no-restricted-syntax */
@@ -527,6 +528,7 @@ module.exports = class Processor {
                     if (e.toString().includes('base fee exceeds gas limit')) {
                         continue;
                     } else {
+                        console.log(e);
                         throw Error(e);
                     }
                 }
