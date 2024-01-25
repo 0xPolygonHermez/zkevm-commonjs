@@ -176,8 +176,8 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(250, 'S');
         this._reduceCounters(1 + 1, 'B');
         this._reduceCounters(Math.ceil((txRLPLength + 1) / 136), 'K');
-        this._reduceCounters(Math.ceil((txRLPLength + 1) / 56), 'P');
-        this._reduceCounters(Math.ceil((txRLPLength + 1) / 56), 'D');
+        this._reduceCounters(Math.ceil((txRLPLength + 1) / 56) + 3, 'P');
+        this._reduceCounters(Math.ceil((txRLPLength + 1) / 56) + 3, 'D');
         this._multiCall('_addBatchHashData', 21);
         /**
          * We need to calculate the counters consumption of `_checkNonLeadingZeros`, which calls `_getLenBytes`
@@ -187,12 +187,16 @@ module.exports = class VirtualCountersManager {
          * gasPrice -> 256 bits -> 32 bytes
          * gasLimit -> 64 bits -> 8 bytes
          * value -> 256 bits -> 32 bytes
-         * dataLen -> 300000 bytes -> xxxx bytes
+         * dataLen -> 300000 bytes -> xxxx bytes -> only called when txDataLen >= 56 bytes
          * chainId -> 64 bits -> 8 bytes
          * nonce -> 64 bits -> 8 bytes
          */
         this._reduceCounters(6 * 7, 'S'); // Steps to call _checkNonLeadingZeros 7 times
-        [3, gasPriceLen, gasLimitLen, valueLen, txDataLen, chainIdLen, nonceLen].forEach((bytesLen) => {
+        const getLenBytesValues = [3, gasPriceLen, gasLimitLen, valueLen, chainIdLen, nonceLen];
+        if (txDataLen >= 56) {
+            getLenBytesValues.push(txDataLen);
+        }
+        getLenBytesValues.forEach((bytesLen) => {
             this._getLenBytes({ lenBytesInput: bytesLen });
         });
         this._divArith();
@@ -212,7 +216,7 @@ module.exports = class VirtualCountersManager {
     processTx(input) {
         this._checkInput(input, ['bytecodeLength', 'isDeploy']);
         this._reduceCounters(300, 'S');
-        this._reduceCounters(12 + 7, 'B');
+        this._reduceCounters(11 + 7, 'B');
         this._reduceCounters(14 * MCP, 'P');
         this._reduceCounters(5, 'D');
         this._reduceCounters(2, 'A');
