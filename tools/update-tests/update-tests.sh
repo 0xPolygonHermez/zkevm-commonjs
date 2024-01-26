@@ -17,7 +17,8 @@ npx mocha ./test/smt-genesis.test.js --update
 
 npx mocha ./test/block-info.test.js --update
 npx mocha ./test/processor.test.js --update
-npx mocha ./test/processor.test.js --update --e2e
-npx mocha ./test/processor.test.js --update --blockinfo
-npx mocha ./test/processor.test.js --update --selfdestruct
+npx mocha ./test/processor.test.js --update --e2e --geninput
+npx mocha ./test/processor.test.js --update --blockinfo --geninput
+npx mocha ./test/processor.test.js --update --selfdestruct --geninput
+npx mocha ./test/processor.test.js --update --etrog --geninput
 npx mocha ./test/zkevm-db.test.js --update

@@ -1,6 +1,8 @@
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 const fs = require('fs');
 const path = require('path');
+const lodash = require('lodash');
 const { Scalar } = require('ffjavascript');
 
 const ethers = require('ethers');
@@ -12,9 +14,10 @@ const {
     smtUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
+const { serializeChangeL2Block } = require('../index').processorUtils;
 
 describe('ZkEVMDB', function () {
-    this.timeout(5000);
+    this.timeout(100000);
     const pathZkevmDbTest = path.join(pathTestVectors, 'zkevm-db/state-transition.json');
     const pathZkevmDbTestRecursive = path.join(pathTestVectors, 'zkevm-db/recursive.json');
 
@@ -38,8 +41,8 @@ describe('ZkEVMDB', function () {
         const sequencerAddress = '0x0000000000000000000000000000000000000000';
         const genesisRoot = [F.zero, F.zero, F.zero, F.zero];
         const accHashInput = [F.zero, F.zero, F.zero, F.zero];
-        const globalExitRoot = [F.zero, F.zero, F.zero, F.zero];
-        const timestamp = 1;
+        const l1InfoRoot = [F.zero, F.zero, F.zero, F.zero];
+        const timestampLimit = 1;
         const genesis = [];
         const db = new MemDB(F);
         const chainID = 1000;
@@ -59,7 +62,7 @@ describe('ZkEVMDB', function () {
         );
 
         // build an empty batch
-        const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, globalExitRoot);
+        const batch = await zkEVMDB.buildBatch(timestampLimit, sequencerAddress, l1InfoRoot);
         await batch.executeTxs();
 
         // checks DB state previous consolidate zkEVMDB
@@ -108,13 +111,14 @@ describe('ZkEVMDB', function () {
             expectedNewRoot,
             batchL2Data,
             sequencerAddress,
-            globalExitRoot,
-            timestamp,
+            l1InfoRoot,
+            timestampLimit,
             newLocalExitRoot,
             oldAccInputHash,
             expectedNewAccInputHash,
             chainID,
             forkID,
+            forcedBlockHashL1,
         } = testVectors[0];
 
         const db = new MemDB(F);
@@ -124,6 +128,8 @@ describe('ZkEVMDB', function () {
         const addressArray = [];
         const amountArray = [];
         const nonceArray = [];
+
+        const extraData = { l1Info: {} };
 
         // create genesis block
         for (let j = 0; j < genesis.length; j++) {
@@ -163,6 +169,27 @@ describe('ZkEVMDB', function () {
         const rawTxs = [];
         for (let j = 0; j < txs.length; j++) {
             const txData = txs[j];
+
+            if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                const rawChangeL2BlockTx = serializeChangeL2Block(txData);
+
+                // Append l1Info to l1Info object
+                extraData.l1Info[txData.indexL1InfoTree] = txData.l1Info;
+
+                const customRawTx = `0x${rawChangeL2BlockTx}`;
+                rawTxs.push(customRawTx);
+                txProcessed.push(txData);
+
+                if (!update) {
+                    expect(customRawTx).to.equal(txData.customRawTx);
+                } else {
+                    txData.customRawTx = customRawTx;
+                }
+
+                // eslint-disable-next-line no-continue
+                continue;
+            }
+
             const tx = {
                 to: txData.to,
                 nonce: txData.nonce,
@@ -232,7 +259,18 @@ describe('ZkEVMDB', function () {
             forkID,
         );
 
-        const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
+        const batch = await zkEVMDB.buildBatch(
+            timestampLimit,
+            sequencerAddress,
+            smtUtils.stringToH4(l1InfoRoot),
+            forcedBlockHashL1,
+            Constants.DEFAULT_MAX_TX,
+            {
+                skipVerifyL1InfoRoot: false,
+            },
+            extraData,
+        );
+
         for (let j = 0; j < rawTxs.length; j++) {
             batch.addRawTx(rawTxs[j]);
         }
@@ -299,8 +337,8 @@ describe('ZkEVMDB', function () {
             expectedOldRoot,
             batches,
             sequencerAddress,
-            globalExitRoot,
-            timestamp,
+            l1InfoRoot,
+            timestampLimit,
             oldAccInputHash,
             chainID,
             forkID,
@@ -354,6 +392,7 @@ describe('ZkEVMDB', function () {
          * build, sign transaction and generate rawTxs
          * rawTxs would be the calldata inserted in the contract
          */
+        const extraData = { l1Info: {} };
         const rawBatches = [];
 
         for (let m = 0; m < batches.length; m++) {
@@ -362,6 +401,24 @@ describe('ZkEVMDB', function () {
 
             for (let j = 0; j < txs.length; j++) {
                 const txData = txs[j];
+
+                if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    const rawChangeL2BlockTx = serializeChangeL2Block(txData);
+
+                    // Append l1Info to l1Info object
+                    extraData.l1Info[txData.indexL1InfoTree] = txData.l1Info;
+
+                    const customRawTx = `0x${rawChangeL2BlockTx}`;
+                    rawTxs.push(customRawTx);
+
+                    if (!update) {
+                        expect(customRawTx).to.equal(txData.customRawTx);
+                    } else {
+                        txData.customRawTx = customRawTx;
+                    }
+                    // eslint-disable-next-line no-continue
+                    continue;
+                }
 
                 const tx = {
                     to: txData.to,
@@ -438,10 +495,22 @@ describe('ZkEVMDB', function () {
         // create batches
         for (let m = 0; m < rawBatches.length; m++) {
             const rawTxs = rawBatches[m];
-            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
+            const batch = await zkEVMDB.buildBatch(
+                timestampLimit,
+                sequencerAddress,
+                smtUtils.stringToH4(l1InfoRoot),
+                Constants.ZERO_BYTES32, // forcedBlockHashL1 == 0
+                Constants.DEFAULT_MAX_TX,
+                {
+                    skipVerifyL1InfoRoot: false,
+                },
+                extraData,
+            );
+
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }
+
             await batch.executeTxs();
             await zkEVMDB.consolidate(batch);
 
@@ -461,6 +530,52 @@ describe('ZkEVMDB', function () {
                 expect(newNumBatch).to.be.equal(batches[m].expectedNewNumBatch);
                 expect(smtUtils.h4toString(newLocalExitRoot)).to.be.equal(batches[m].expectedNewLocalExitRoot);
                 expect(batchL2Data).to.be.equal(batches[m].expectedBatchL2Data);
+            }
+
+            // Check balances and nonces
+            const updatedAccounts = batch.getUpdatedAccountsBatch();
+
+            const newLeafs = {};
+            // eslint-disable-next-line no-restricted-syntax, guard-for-in
+            for (const item in updatedAccounts) {
+                const address = item;
+                const account = updatedAccounts[address];
+                newLeafs[address] = {};
+
+                const newLeaf = await zkEVMDB.getCurrentAccountState(address);
+                expect(newLeaf.balance.toString()).to.equal(account.balance.toString());
+                expect(newLeaf.nonce.toString()).to.equal(account.nonce.toString());
+
+                const smtNewLeaf = await zkEVMDB.getCurrentAccountState(address);
+                expect(smtNewLeaf.balance.toString()).to.equal(account.balance.toString());
+                expect(smtNewLeaf.nonce.toString()).to.equal(account.nonce.toString());
+
+                newLeafs[address].balance = account.balance.toString();
+                newLeafs[address].nonce = account.nonce.toString();
+
+                const storage = await zkEVMDB.dumpStorage(address);
+                const hashBytecode = await zkEVMDB.getHashBytecode(address);
+                const bytecodeLength = await zkEVMDB.getLength(address);
+                newLeafs[address].storage = storage;
+                newLeafs[address].hashBytecode = hashBytecode;
+                newLeafs[address].bytecodeLength = bytecodeLength;
+            }
+
+            for (const leaf of genesis) {
+                if (!newLeafs[leaf.address.toLowerCase()]) {
+                    newLeafs[leaf.address] = { ...leaf };
+                    delete newLeafs[leaf.address].address;
+                    delete newLeafs[leaf.address].bytecode;
+                    delete newLeafs[leaf.address].contractName;
+                }
+            }
+
+            if (!update) {
+                for (const [address, leaf] of Object.entries(batches[m].expectedNewLeafs)) {
+                    expect(lodash.isEqual(leaf, newLeafs[address])).to.be.equal(true);
+                }
+            } else {
+                testVectorsRecursive[0].batches[m].expectedNewLeafs = newLeafs;
             }
         }
 
@@ -483,8 +598,8 @@ describe('ZkEVMDB', function () {
         const seqBatches = await zkEVMDB.sequenceMultipleBatches(initBatch, finalBatch);
 
         for (let i = 0; i < (finalBatch - initBatch); i++) {
-            expect(seqBatches[i].timestamp).to.equal(timestamp);
-            expect(seqBatches[i].globalExitRoot).to.equal(globalExitRoot);
+            expect(seqBatches[i].timestampLimit).to.equal(String(timestampLimit));
+            expect(seqBatches[i].l1InfoRoot).to.equal(l1InfoRoot);
             expect(seqBatches[i].transactions).to.equal(batches[i].expectedBatchL2Data);
         }
 

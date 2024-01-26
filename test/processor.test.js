@@ -29,6 +29,9 @@ const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
+const { serializeChangeL2Block } = require('../index').processorUtils;
+
+const pathInputs = path.join(__dirname, '../tools/inputs-examples');
 
 describe('Processor', async function () {
     this.timeout(100000);
@@ -36,16 +39,19 @@ describe('Processor', async function () {
     let pathProcessorTests;
 
     if (argv.e2e) {
-        pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition.json');
+        pathProcessorTests = path.join(pathTestVectors, 'end-to-end/state-transition-e2e.json');
     } else if (argv.blockinfo) {
         pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info.json');
     } else if (argv.selfdestruct) {
         pathProcessorTests = path.join(pathTestVectors, 'selfdestruct/selfdestruct.json');
+    } else if (argv.etrog) {
+        pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition-etrog.json');
     } else {
         pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
     }
 
     let update;
+    let geninput;
     let poseidon;
     let F;
 
@@ -56,7 +62,8 @@ describe('Processor', async function () {
         F = poseidon.F;
         testVectors = JSON.parse(fs.readFileSync(pathProcessorTests));
 
-        update = argv.update === true;
+        update = (argv.update === true);
+        geninput = (argv.geninput === true);
     });
 
     it('Check test vectors', async () => {
@@ -73,13 +80,13 @@ describe('Processor', async function () {
                 batchL2Data,
                 oldAccInputHash,
                 newLocalExitRoot,
-                globalExitRoot,
+                l1InfoRoot,
                 batchHashData,
                 inputHash,
-                timestamp,
-                bridgeDeployed,
+                timestampLimit,
                 chainID,
                 forkID,
+                forcedBlockHashL1,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -145,14 +152,47 @@ describe('Processor', async function () {
                 testVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
             }
 
+            const extraData = { l1Info: {} };
+            const batch = await zkEVMDB.buildBatch(
+                timestampLimit,
+                sequencerAddress,
+                smtUtils.stringToH4(l1InfoRoot),
+                forcedBlockHashL1,
+                Constants.DEFAULT_MAX_TX,
+                {
+                    skipVerifyL1InfoRoot: false,
+                },
+                extraData,
+            );
+
             /*
              * build, sign transaction and generate rawTxs
              * rawTxs would be the calldata inserted in the contract
              */
             const txProcessed = [];
             const rawTxs = [];
+
             for (let j = 0; j < txs.length; j++) {
                 const txData = txs[j];
+
+                if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    const rawChangeL2BlockTx = serializeChangeL2Block(txData);
+
+                    // Append l1Info to l1Info object
+                    extraData.l1Info[txData.indexL1InfoTree] = txData.l1Info;
+
+                    const customRawTx = `0x${rawChangeL2BlockTx}`;
+                    rawTxs.push(customRawTx);
+                    txProcessed.push(txData);
+
+                    if (!update) {
+                        expect(customRawTx).to.equal(txData.customRawTx);
+                    } else {
+                        txData.customRawTx = customRawTx;
+                    }
+
+                    continue;
+                }
 
                 const tx = {
                     to: txData.to,
@@ -219,7 +259,10 @@ describe('Processor', async function () {
                     const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
                     const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
                     const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
-                    customRawTx = signData.concat(r).concat(s).concat(v);
+                    if (typeof tx.effectivePercentage === 'undefined') {
+                        tx.effectivePercentage = 'ff';
+                    }
+                    customRawTx = signData.concat(r).concat(s).concat(v).concat(tx.effectivePercentage);
                 } else {
                     const rawTxEthers = await wallet.signTransaction(tx);
                     if (!update) {
@@ -243,7 +286,6 @@ describe('Processor', async function () {
                 txProcessed.push(txData);
             }
 
-            const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }
@@ -272,12 +314,13 @@ describe('Processor', async function () {
                     expect(currentTx.reason).to.be.equal(expectedTx.reason);
                 } catch (error) {
                     console.log({ currentTx }, { expectedTx }); // eslint-disable-line no-console
-                    throw new Error(`Batch Id : ${id} TxId:${expectedTx.id} ${error}`);
+                    throw new Error(`BatchId: ${id}, TxId: ${expectedTx.id} ${error}`);
                 }
             }
 
             // Check balances and nonces
             const updatedAccounts = batch.getUpdatedAccountsBatch();
+
             const newLeafs = {};
             for (const item in updatedAccounts) {
                 const address = item;
@@ -302,6 +345,7 @@ describe('Processor', async function () {
                 newLeafs[address].hashBytecode = hashBytecode;
                 newLeafs[address].bytecodeLength = bytecodeLength;
             }
+
             for (const leaf of genesis) {
                 if (!newLeafs[leaf.address.toLowerCase()]) {
                     newLeafs[leaf.address] = { ...leaf };
@@ -322,8 +366,6 @@ describe('Processor', async function () {
             // Check global and local exit roots
             const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
             const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32));
-            const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-            const globalExitRootPosBuffer = toBuffer(globalExitRootPos);
 
             // Check local exit root
             const localExitRootVm = await zkEVMDB.vm.stateManager.getContractStorage(addressInstanceGlobalExitRoot, localExitRootPosBuffer);
@@ -348,33 +390,6 @@ describe('Processor', async function () {
                 expect(localExitRootVm.toString('hex')).to.equal(newLocalExitRoot.slice(2));
             }
 
-            // Check global exit root
-            const timestampVm = await zkEVMDB.vm.stateManager.getContractStorage(
-                addressInstanceGlobalExitRoot,
-                globalExitRootPosBuffer,
-            );
-            const timestampSmt = (await stateUtils.getContractStorage(
-                Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
-                zkEVMDB.smt,
-                zkEVMDB.stateRoot,
-                [globalExitRootPos],
-            ))[Scalar.e(globalExitRootPos)];
-
-            expect(Scalar.fromString(timestampVm.toString('hex'), 16)).to.equal(timestampSmt);
-            expect(timestampSmt).to.equal(Scalar.e(batch.timestamp));
-
-            // Check through a call in the EVM
-            if (bridgeDeployed) {
-                const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(bytes32)']);
-                const encodedData = interfaceGlobal.encodeFunctionData('globalExitRootMap', [globalExitRoot]);
-                const globalExitRootResult = await zkEVMDB.vm.runCall({
-                    to: addressInstanceGlobalExitRoot,
-                    caller: Address.zero(),
-                    data: Buffer.from(encodedData.slice(2), 'hex'),
-                });
-                expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(ethers.utils.hexZeroPad(batch.timestamp, 32).slice(2));
-            }
-
             // Check the circuit input
             const circuitInput = await batch.getStarkInput();
 
@@ -392,8 +407,20 @@ describe('Processor', async function () {
                 testVectors[i].newLocalExitRoot = circuitInput.newLocalExitRoot;
             }
 
+            if (update && geninput) {
+                const dstFile = path.join(pathInputs, `${path.basename(pathProcessorTests, '.json')}-${i}-input.json`);
+                const folfer = path.dirname(dstFile);
+
+                if (!fs.existsSync(folfer)) {
+                    fs.mkdirSync(folfer);
+                }
+
+                await fs.writeFileSync(dstFile, JSON.stringify(circuitInput, null, 2));
+            }
+
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
         }
+
         if (update) {
             await fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
         }
