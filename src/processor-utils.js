@@ -23,8 +23,10 @@ function unarrayifyInteger(data, offset, length) {
 }
 
 /**
- * Convert a custom rawTx  [rlp(nonce, gasprice, gaslimit, to, value, data, chainId, 0, 0)|r|s|v|effectivePercentage]
- * to a standard raw tx [rlp(nonce, gasprice, gaslimit, to, value, data, r, s, v)]
+ * Convert a custom rawTx:
+ *   - preEIP155: [rlp(nonce, gasprice, gaslimit, to, value, data)|r|s|v|effectivePercentage]
+ *   - Legacy: [rlp(nonce, gasprice, gaslimit, to, value, data, chainId, 0, 0)|r|s|v|effectivePercentage]
+ * to a standard raw ethereum tx: [rlp(nonce, gasprice, gaslimit, to, value, data, r, s, v)]
  * @param {String} customRawTx -  Custom raw transaction
  * @returns {String} - Standar raw transaction
  */
@@ -104,27 +106,53 @@ function addressToHexStringRlp(address) {
 }
 
 /**
- * Convert a standar rawTx of ethereum [rlp(nonce,gasprice,gaslimit,to,value,data,r,s,v)]
- * to our custom raw tx [rlp(nonce,gasprice,gaslimit,to,value,data,0,0)|r|s|v|effectivePercentage]
+ * Convert a standard rawTx of ethereum [rlp(nonce,gasprice,gaslimit,to,value,data,r,s,v)]
+ * to our custom raw tx:
+ *   - preEIP155: [rlp(nonce,gasprice,gaslimit,to,value,data)|r|s|v|effectivePercentage]
+ *   - Legacy: [rlp(nonce,gasprice,gaslimit,to,value,data,chainId,0,0)|r|s|v|effectivePercentage]
  * @param {String} rawTx - Standar raw transaction
  * @returns {String} - Custom raw transaction
  */
 function rawTxToCustomRawTx(rawTx, effectivePercentage) {
     const tx = ethers.utils.parseTransaction(rawTx);
-    const signData = ethers.utils.RLP.encode([
-        toHexStringRlp(tx.nonce),
-        toHexStringRlp(tx.gasPrice),
-        toHexStringRlp(tx.gasLimit),
-        addressToHexStringRlp(tx.to || '0x'),
-        toHexStringRlp(tx.value),
-        toHexStringRlp(tx.data),
-        toHexStringRlp(tx.chainId),
-        '0x',
-        '0x',
-    ]);
-    const r = tx.r.slice(2);
-    const s = tx.s.slice(2);
-    const v = (tx.v - tx.chainId * 2 - 35 + 27).toString(16).padStart(2, '0'); // 1 byte
+
+    let signData;
+    let r;
+    let s;
+    let v;
+
+    // check preEIP155
+    if (tx.chainId === 0 && (tx.v === 27 || tx.v === 28)) {
+        signData = ethers.utils.RLP.encode([
+            toHexStringRlp(tx.nonce),
+            toHexStringRlp(tx.gasPrice),
+            toHexStringRlp(tx.gasLimit),
+            addressToHexStringRlp(tx.to || '0x'),
+            toHexStringRlp(tx.value),
+            toHexStringRlp(tx.data),
+        ]);
+
+        r = tx.r.slice(2);
+        s = tx.s.slice(2);
+        v = tx.v.toString(16).padStart(2, '0'); // 1 byte
+    } else {
+        signData = ethers.utils.RLP.encode([
+            toHexStringRlp(tx.nonce),
+            toHexStringRlp(tx.gasPrice),
+            toHexStringRlp(tx.gasLimit),
+            addressToHexStringRlp(tx.to || '0x'),
+            toHexStringRlp(tx.value),
+            toHexStringRlp(tx.data),
+            toHexStringRlp(tx.chainId),
+            '0x',
+            '0x',
+        ]);
+
+        r = tx.r.slice(2);
+        s = tx.s.slice(2);
+        v = (tx.v - tx.chainId * 2 - 35 + 27).toString(16).padStart(2, '0'); // 1 byte
+    }
+
     if (typeof effectivePercentage === 'undefined') {
         effectivePercentage = 'ff';
     }

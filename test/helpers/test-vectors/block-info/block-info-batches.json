@@ -588,7 +588,53 @@
             "indexL1InfoTree": 0,
             "reason": "",
             "customRawTx": "0x0b0000000100000000"
+          }
+        ],
+        "expectedNewRoot": "0x74a2715780b47d57d1a82a10d884ad6b86768567986f44f3fdc609622faec7c7",
+        "expectedNewLeafs": {
+          "0x000000000000000000000000000000005ca1ab1e": {
+            "balance": "0",
+            "nonce": "0",
+            "storage": {
+              "0x0000000000000000000000000000000000000000000000000000000000000000": "0x01",
+              "0x0000000000000000000000000000000000000000000000000000000000000002": "0x01",
+              "0xa6eef7e35abe7026729641147f7915573c7e97b47efa546f5f6e3230263bcb49": "0xf5c30bbb2b8a1bdd2b881cc575b2acbd13578c7cd64250fe8b6770fa95f915b3"
+            }
           },
+          "0x0000000000000000000000000000000000000000": {
+            "balance": "0",
+            "nonce": "0"
+          },
+          "0xae4bb80be56b819606589de61d5ec3b522eeb032": {
+            "balance": "0",
+            "nonce": "0"
+          },
+          "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
+            "balance": "100000000000000000000",
+            "nonce": "1",
+            "pvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e"
+          },
+          "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98": {
+            "balance": "0",
+            "nonce": "1",
+            "storage": {}
+          },
+          "0x4d5cf5032b2a844602278b01199ed191a86c93ff": {
+            "pvtKey": "0x4d27a600dce8c29b7bd080e29a26972377dbb04d7a27d919adbb602bf13cfd23",
+            "balance": "200000000000000000000",
+            "nonce": "0"
+          }
+        },
+        "batchL2Data": "0x0b0000000100000000",
+        "l1InfoRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
+        "newLocalExitRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "batchHashData": "0x7b643f52ec2fd0b23082647c621499c4a0ca105461bdf961d7c016ee411973ba",
+        "timestampLimit": 1944498040,
+        "skipFirstChangeL2Block": false,
+        "skipWriteBlockInfoRoot": true
+      },
+      {
+        "txs": [
           {
             "from": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
             "to": "0x1275fbb540c8efc58b812ba83b0d0b8b9917ae98",
@@ -641,12 +687,12 @@
             }
           }
         },
-        "batchL2Data": "0x0b0000000100000000ea80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae988084188ec3568203e880800a62ce9876e027f7a954f96c485c63c9bf043bd1fe1012c5634cf959bf7743190a601eedbcfef58146bdda9845fea5d9356b09d667010d557c73f83353a119a61cff",
+        "batchL2Data": "0xea80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae988084188ec3568203e880800a62ce9876e027f7a954f96c485c63c9bf043bd1fe1012c5634cf959bf7743190a601eedbcfef58146bdda9845fea5d9356b09d667010d557c73f83353a119a61cff",
         "l1InfoRoot": "0x090bcaf734c4f06c93954a827b45a6e8c67b8e0fd1e0a35a1c5982d6961828f9",
         "newLocalExitRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "batchHashData": "0xd4af160abcacc3dfdedd6047930d4fe4cc24fb5aacb6342111c141e529ca0952",
+        "batchHashData": "0x678a508ff7895915da8bf0f0f2c1a7f16bfb873d853f4c5e20fb15730d5d6ad2",
         "timestampLimit": 1944498040,
-        "skipFirstChangeL2Block": false,
+        "skipFirstChangeL2Block": true,
         "skipWriteBlockInfoRoot": true
       },
       {
