@@ -374,14 +374,15 @@ async function computeL2TxHash(tx, returnEncoded = false) {
     }
     // Add value
     hash += `${formatL2TxHashParam(tx.value, 32)}`;
+    let { data } = tx;
     // Compute data length
-    if (tx.data.startsWith('0x')) {
-        tx.data = tx.data.slice(2);
+    if (data.startsWith('0x')) {
+        data = data.slice(2);
     }
-    const dataLength = Math.ceil(tx.data.length / 2);
+    const dataLength = Math.ceil(data.length / 2);
     hash += `${formatL2TxHashParam(dataLength.toString(16), 3)}`;
     if (dataLength > 0) {
-        hash += `${formatL2TxHashParam(tx.data, dataLength)}`;
+        hash += `${formatL2TxHashParam(data, dataLength)}`;
     }
     // Add chainID
     if (typeof tx.chainID !== 'undefined') {

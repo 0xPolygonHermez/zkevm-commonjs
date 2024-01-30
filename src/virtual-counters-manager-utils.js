@@ -39,6 +39,7 @@ function expectedModExpCounters(lenB, lenE, lenM, B, E, M) {
         counters[key] = a[key] + nTimesEven * b[key] + nTimesOdd * c[key];
     }
 
+    return counters;
     // console.log(JSON.stringify(counters, null, 2));
     function computeLenThisBase(x) {
         if (x === 0n) return 1;

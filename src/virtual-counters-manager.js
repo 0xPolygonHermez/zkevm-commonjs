@@ -8,7 +8,9 @@
 /* eslint-disable prefer-destructuring */
 
 const totalSteps = 2 ** 23;
+// Maximum counters poseidon level when interacting with a small smt (blockInfoTree, touchedAccountsTree..), is constant
 const MCPL = 23;
+// Maximum counters poseidon level when interacting with a big smt (stateTree), is variable and can be updated
 let MCP = 128;
 const { Scalar, F1Field } = require('ffjavascript');
 const { expectedModExpCounters } = require('./virtual-counters-manager-utils');
@@ -96,6 +98,7 @@ module.exports = class VirtualCountersManager {
             return this.getSnapshotConsumption();
         } catch (e) {
             this._verbose(`Error computing counters for function ${this.calledFunc}`);
+            console.log(e);
             this._verbose(e);
             this._throwError(e);
         }
@@ -320,11 +323,13 @@ module.exports = class VirtualCountersManager {
         this._multiCall('_mStoreX', 2);
         this._multiCall('_preModExpLoop', Math.floor(input.calldataLength / 32));
         this._multiCall('_preModExpLoop', Math.floor(input.returnDataLength / 32));
-        this._modexp(input.bLen, input.mLen, input.eLen, input.base, input.exponent, input.modulus);
+        if (input.modulus > 0) {
+            this._modexp(input.bLen, input.mLen, input.eLen, input.base, input.exponent, input.modulus);
+        }
     }
 
     _modexp(bLen, mLen, eLen, base, exponent, modulus) {
-        const modexpCounters = expectedModExpCounters(bLen / 32, mLen / 32, eLen / 32, base, exponent, modulus);
+        const modexpCounters = expectedModExpCounters(Math.ceil(bLen / 32), Math.ceil(mLen / 32), Math.ceil(eLen / 32), base, exponent, modulus);
         this._reduceCounters(modexpCounters.steps, 'S');
         this._reduceCounters(modexpCounters.binaries, 'B');
         this._reduceCounters(modexpCounters.ariths, 'A');
@@ -507,7 +512,7 @@ module.exports = class VirtualCountersManager {
         this._checkInput(input, ['inputSize']);
         this._reduceCounters(100, 'S');
         this._reduceCounters(2, 'B');
-        this._saveMem({length: input.inputSize});
+        this._saveMem({ length: input.inputSize });
         this._offsetUtil();
         this._multiCall('_opCalldataCopyLoop', Math.floor(input.inputSize / 32));
         this._readFromCalldataOffset();
@@ -544,7 +549,7 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(2 * MCP + Math.ceil(input.bytecodeLen / 56), 'P');
         this._reduceCounters(Math.ceil(input.bytecodeLen / 56), 'D');
         this._multiCall('_divArith', 2);
-        this._saveMem({length: input.inputSize});
+        this._saveMem({ length: input.inputSize });
         this._mulArith();
         this._reduceCounters(input.inputSize, 'M');
         this._multiCall('_opCodeCopyLoop', input.inputSize);
@@ -559,7 +564,7 @@ module.exports = class VirtualCountersManager {
         } else {
             this._reduceCounters(40, 'S');
             this._reduceCounters(3, 'B');
-            this._saveMem({length: input.inputSize});
+            this._saveMem({ length: input.inputSize });
             this._divArith();
             this._mulArith();
             this._multiCall('_opCodeCopyLoop', input.inputSize);
@@ -584,7 +589,7 @@ module.exports = class VirtualCountersManager {
         this._checkInput(input, ['inputSize']);
         this._reduceCounters(50, 'S');
         this._reduceCounters(2, 'B');
-        this._saveMem({length: input.inputSize});
+        this._saveMem({ length: input.inputSize });
         this._divArith();
         this._mulArith();
         this._multiCall('_returnDataCopyLoop', Math.floor(input.inputSize / 32));
@@ -705,11 +710,11 @@ module.exports = class VirtualCountersManager {
 
     opCreate(input) {
         this._opcode(input);
-        this._checkInput(input, ['bytesNonceLength','inLength']);
+        this._checkInput(input, ['bytesNonceLength', 'inLength']);
         this._reduceCounters(70, 'S');
         this._reduceCounters(3, 'B');
         this._reduceCounters(3 * MCP, 'P');
-        this._saveMem({length: input.inLength});
+        this._saveMem({ length: input.inLength });
         this._getLenBytes({ lenBytesInput: input.bytesNonceLength });
         this._computeGasSendCall();
         this._saveCalldataPointer();
@@ -723,8 +728,8 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(80, 'S');
         this._reduceCounters(5, 'B');
         this._maskAddress();
-        this._saveMem({length: input.inLength});
-        this._saveMem({length: input.outLength});
+        this._saveMem({ length: input.inLength });
+        this._saveMem({ length: input.outLength });
         this._isColdAddress();
         this._isEmptyAccount();
         this._computeGasSendCall();
@@ -739,8 +744,8 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(80, 'S');
         this._reduceCounters(5, 'B');
         this._maskAddress();
-        this._saveMem({length: input.inLength});
-        this._saveMem({length: input.outLength});
+        this._saveMem({ length: input.inLength });
+        this._saveMem({ length: input.outLength });
         this._isColdAddress();
         this._computeGasSendCall();
         this._saveCalldataPointer();
@@ -753,8 +758,8 @@ module.exports = class VirtualCountersManager {
         this._checkInput(input, ['inLength', 'outLength']);
         this._reduceCounters(80, 'S');
         this._maskAddress();
-        this._saveMem({length: input.inLength});
-        this._saveMem({length: input.outLength});
+        this._saveMem({ length: input.inLength });
+        this._saveMem({ length: input.outLength });
         this._isColdAddress();
         this._computeGasSendCall();
         this._saveCalldataPointer();
@@ -767,8 +772,8 @@ module.exports = class VirtualCountersManager {
         this._checkInput(input, ['inLength', 'outLength']);
         this._reduceCounters(80, 'S');
         this._maskAddress();
-        this._saveMem({length: input.inLength});
-        this._saveMem({length: input.outLength});
+        this._saveMem({ length: input.inLength });
+        this._saveMem({ length: input.outLength });
         this._isColdAddress();
         this._computeGasSendCall();
         this._saveCalldataPointer();
@@ -778,11 +783,11 @@ module.exports = class VirtualCountersManager {
 
     opCreate2(input) {
         this._opcode(input);
-        this._checkInput(input, ['bytesNonceLength','inLength']);
+        this._checkInput(input, ['bytesNonceLength', 'inLength']);
         this._reduceCounters(80, 'S');
         this._reduceCounters(4, 'B');
         this._reduceCounters(2 * MCP, 'P');
-        this._saveMem({length: input.inLength});
+        this._saveMem({ length: input.inLength });
         this._divArith();
         this._getLenBytes({ lenBytesInput: input.bytesNonceLength });
         this._computeGasSendCall();
@@ -793,10 +798,10 @@ module.exports = class VirtualCountersManager {
 
     opReturn(input) {
         this._opcode(input);
-        this._checkInput(input, ['isCreate', 'isDeploy','returnLength']);
+        this._checkInput(input, ['isCreate', 'isDeploy', 'returnLength']);
         this._reduceCounters(30, 'S');
         this._reduceCounters(1, 'B');
-        this._saveMem({length: input.returnLength});
+        this._saveMem({ length: input.returnLength });
         if (input.isCreate || input.isDeploy) {
             if (input.isCreate) {
                 this._reduceCounters(25, 'S');
@@ -826,7 +831,7 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(1, 'B');
         this._revertTouched();
         this._revertBlockInfoTree();
-        this._saveMem({length: input.revertSize});
+        this._saveMem({ length: input.revertSize });
         this._multiCall('_opRevertLoop', Math.floor(input.revertSize / 32));
         this._mLoadX();
         this._mStoreX();
@@ -903,7 +908,7 @@ module.exports = class VirtualCountersManager {
         this._checkInput(input, ['inputSize']);
         this._reduceCounters(40, 'S');
         this._reduceCounters(Math.ceil((input.inputSize + 1) / 32), 'K');
-        this._saveMem({length: input.inputSize});
+        this._saveMem({ length: input.inputSize });
         this._multiCall('_divArith', 2);
         this._mulArith();
         this._multiCall('_opSha3Loop', Math.floor(input.inputSize / 32));
@@ -976,7 +981,7 @@ module.exports = class VirtualCountersManager {
         this._opcode(input);
         this._checkInput(input, ['inputSize']);
         this._reduceCounters(30 + 8 * 4, 'S'); // Count steps as if topics is 4
-        this._saveMem({length: input.inputSize});
+        this._saveMem({ length: input.inputSize });
         this._mulArith();
         this._divArith();
         this._reduceCounters(Math.ceil(input.inputSize / 56) + 4, 'P');
@@ -1295,7 +1300,7 @@ module.exports = class VirtualCountersManager {
     opMLoad(input) {
         this._opcode(input);
         this._reduceCounters(8, 'S');
-        this._saveMem({length: 32});
+        this._saveMem({ length: 32 });
         this._mLoad32();
     }
 
@@ -1303,7 +1308,7 @@ module.exports = class VirtualCountersManager {
         this._opcode(input);
         this._reduceCounters(22, 'S');
         this._reduceCounters(1, 'M');
-        this._saveMem({length: 32});
+        this._saveMem({ length: 32 });
         this._offsetUtil();
     }
 
@@ -1311,7 +1316,7 @@ module.exports = class VirtualCountersManager {
         this._opcode(input);
         this._reduceCounters(13, 'S');
         this._reduceCounters(1, 'M');
-        this._saveMem({length: 1});
+        this._saveMem({ length: 1 });
         this._offsetUtil();
     }
 
@@ -1527,9 +1532,10 @@ module.exports = class VirtualCountersManager {
 
     _saveMem(input) {
         this._checkInput(input, ['length']);
-        if(input.length === 0) {
+        if (input.length === 0) {
             this._reduceCounters(12, 'S');
             this._reduceCounters(1, 'B');
+
             return;
         }
         this._reduceCounters(50, 'S');
@@ -1632,7 +1638,7 @@ module.exports = class VirtualCountersManager {
             this._reduceCounters(Math.ceil((input.bytecodeLength + 1) / 56), 'P');
             this._reduceCounters(Math.ceil((input.bytecodeLength + 1) / 56), 'D');
             // This arith is used to compute the keccaks consumption so its bytecodeLength / 56, in case bytecodeLength < 56, no ariths are used
-            if(input.bytecodeLength >= 56) {
+            if (input.bytecodeLength >= 56) {
                 this._divArith();
             }
         }

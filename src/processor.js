@@ -360,7 +360,7 @@ module.exports = class Processor {
      * finally pay all the fees to the sequencer address
      */
     async _processTx() {
-        this.vcm.setSMTLevels((2 ** this.smt.maxLevel + 250000).toString(2).length);
+        this.vcm.setSMTLevels((2 ** this.smt.maxLevel + 50000).toString(2).length);
         // Compute init processing counters
         this.vcm.computeFunctionCounters('batchProcessing', { batchL2DataLength: (this.rawTxs.join('').length - this.rawTxs.length * 2) / 2 });
         // Compute rlp parsing counters
@@ -385,10 +385,10 @@ module.exports = class Processor {
         }
         for (let i = 0; i < this.decodedTxs.length; i++) {
             /**
-             * Set vcm poseidon levels. Maximum (theorical) levels that can be added in a tx is 250k.
-             * We count how much can the smt increase in a tx and compute the virtual poseidons with this worst case scenario.
+             * Set vcm poseidon levels. Maximum (theoretical) levels that can be added in a tx is 50k poseidons.
+             * We count how much can the smt increase in a tx and compute the virtual poseidons with this worst case scenario. This is a tx full of SSTORE (20000 gas), max gas in a tx is 30M so we can do 1.5k sstore in a tx. Assuming tree already has 0 leafs, increases to 2**11. 11*1.5k = 22.5k * 2 (go up and down in the tree) = 45k poseidon, we round up to 50k for safety reasons.
              */
-            const maxLevelPerTx = (2 ** this.smt.maxLevel + 250000).toString(2).length;
+            const maxLevelPerTx = (2 ** this.smt.maxLevel + 50000).toString(2).length;
             this.vcm.setSMTLevels(maxLevelPerTx);
             const currentDecodedTx = this.decodedTxs[i];
 
@@ -682,6 +682,7 @@ module.exports = class Processor {
              * We re run the batch with a new maxLevel value at the smt
              */
             if (this.smt.maxLevel > maxLevelPerTx) {
+                console.log('WARNING: smt levels increased more than expected, re running batch with new smt levels');
                 this._rollbackBatch();
                 i = 0;
             }
