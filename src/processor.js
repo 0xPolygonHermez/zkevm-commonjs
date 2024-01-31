@@ -85,8 +85,7 @@ module.exports = class Processor {
         this.F = poseidon.F;
         this.tmpSmtDB = new TmpSmtDB(db);
         this.smt = new SMT(this.tmpSmtDB, poseidon, poseidon.F);
-        this.smt.maxLevel = smtLevels;
-        this.initSmtLevels = smtLevels;
+        this.smt.setMaxLevel(smtLevels);
         this.rawTxs = [];
         this.decodedTxs = [];
         this.builded = false;

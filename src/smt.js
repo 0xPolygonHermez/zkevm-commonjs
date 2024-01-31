@@ -76,7 +76,6 @@ class SMT {
 
         const keys = self.splitKey(key);
         let level = 0;
-        let currentLevel = 0;
         let proofHashCounter = 0;
 
         const accKey = [];
@@ -112,7 +111,6 @@ class SMT {
 
         level -= 1;
         accKey.pop();
-        currentLevel = level;
         // calculate hash to validate oldRoot
         proofHashCounter = nodeIsZero(oldRoot, F) ? 0 : (siblings.slice(0, level + 1).length + (((foundVal ?? 0n) === 0n) ? 0 : 2));
 
@@ -282,8 +280,8 @@ class SMT {
         }
 
         // Update max level in case last insertion increased smt size
-        if (this.maxLevel < currentLevel) {
-            this.maxLevel = currentLevel;
+        if (this.maxLevel < siblings.length) {
+            this.maxLevel = siblings.length;
         }
 
         return {
