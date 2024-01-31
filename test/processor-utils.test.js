@@ -219,4 +219,27 @@ describe('Processor utils', () => {
             }
         }
     });
+
+    it('rawTxToCustomRawTx & customRawTxToRawTx', async () => {
+        // preEIP155 & Legacy Etheruem transactions
+        const testVector = [
+            {
+                customRawTx: '0xea80843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae98808464fbb77c8203e88080fb5252bea10b359c0c5998b4d8185bb02e3503112e930f578dfb94f8e929cf4b2501bfdc00a066681e3b5ee9427ca97dfb8de68d570d8c36d5e3f8e9d6acfe4b1b01',
+            },
+            {
+                customRawTx: '0xe580843b9aca00830186a0941275fbb540c8efc58b812ba83b0d0b8b9917ae98808464fbb77c6b39bdc5f8e458aba689f2a1ff8c543a94e4817bda40f3fe34080c4ab26c1e3c2fc2cda93bc32f0a79940501fd505dcf48d94abfde932ebf1417f502cb0d9de81b10',
+            },
+        ];
+
+        for (let i = 0; i < testVector.length; i++) {
+            const { customRawTx } = testVector[i];
+            const effectivePercentage = customRawTx.slice(-2);
+
+            // compute rawTx
+            const rawTx = await processorUtils.customRawTxToRawTx(customRawTx);
+            // recompute customRawTx
+            const computedCustomRawTx = processorUtils.rawTxToCustomRawTx(rawTx, effectivePercentage);
+            expect(computedCustomRawTx).to.be.equal(customRawTx);
+        }
+    });
 });
