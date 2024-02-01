@@ -110,6 +110,7 @@ module.exports = class Processor {
 
         this.vm = vm;
         this.oldVm = cloneDeep(vm);
+        this.oldVm.stateManager = vm.stateManager.copy();
         this.evmSteps = [];
         this.updatedAccounts = {};
         this.isLegacyTx = false;
@@ -385,9 +386,9 @@ module.exports = class Processor {
         for (let i = 0; i < this.decodedTxs.length; i++) {
             /**
              * Set vcm poseidon levels. Maximum (theoretical) levels that can be added in a tx is 50k poseidons.
-             * We count how much can the smt increase in a tx and compute the virtual poseidons with this worst case scenario. This is a tx full of SSTORE (20000 gas), max gas in a tx is 30M so we can do 1.5k sstore in a tx. Assuming tree already has 0 leafs, increases to 2**11. 11*1.5k = 22.5k * 2 (go up and down in the tree) = 45k poseidon, we round up to 50k for safety reasons.
+             * We count how much can the smt increase in a tx and compute the virtual poseidons with this worst case scenario. This is a tx full of SSTORE (20000 gas), max gas in a tx is 30M so we can do 1.5k sstore in a tx. Assuming tree already has 0 leafs, increases to 2**11. 11*1.5k = 22.5k * 2 (go up and down in the tree) = 45k poseidon, we round up to 50k for safety reasons. This happens in case the tree levels are greater than 32, in case are lower, we will put the levels to 32
              */
-            const maxLevelPerTx = (2 ** this.smt.maxLevel + 50000).toString(2).length;
+            const maxLevelPerTx = (2 ** this.smt.maxLevel + 50000).toString(2).length < 32 ? 32 : (2 ** this.smt.maxLevel + 50000).toString(2).length;
             this.vcm.setSMTLevels(maxLevelPerTx);
             const currentDecodedTx = this.decodedTxs[i];
 
@@ -683,7 +684,7 @@ module.exports = class Processor {
             if (this.smt.maxLevel > maxLevelPerTx) {
                 console.log('WARNING: smt levels increased more than expected, re running batch with new smt levels');
                 this._rollbackBatch();
-                i = 0;
+                i = -1;
             }
         }
         await this.consolidateBlock();
@@ -934,6 +935,7 @@ module.exports = class Processor {
     _rollbackBatch() {
         this.currentStateRoot = this.oldStateRoot;
         this.vm = cloneDeep(this.oldVm);
+        this.vm.stateManager = this.oldVm.stateManager.copy();
         this.updatedAccounts = {};
     }
 
