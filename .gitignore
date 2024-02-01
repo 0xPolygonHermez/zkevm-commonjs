@@ -115,3 +115,6 @@ package-lock.json
 
 # ignore genesis
 tools/fill-genesis/*.ignore.json
+
+# input examples
+tools/inputs-examples/

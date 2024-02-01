@@ -18,6 +18,16 @@ class SMT {
         this.hash = hash;
         this.F = F;
         this.empty = [F.zero, F.zero, F.zero, F.zero];
+        // set init smt level to 0
+        this.maxLevel = 0;
+    }
+
+    /**
+     * Set current smt level
+     * @param {Number} level max smt level
+     */
+    setMaxLevel(level) {
+        this.maxLevel = level;
     }
 
     /**
@@ -31,12 +41,12 @@ class SMT {
      *      {Array[Field]} key modified,
      *      {Array[Array[Field]]} siblings: array of siblings,
      *      {Array[Field]} insKey: inserted key,
-     *      {Scalar} insValue: insefted value,
+     *      {Scalar} insValue: inserted value,
      *      {Bool} isOld0: is new insert or delete,
      *      {Scalar} oldValue: old leaf value,
      *      {Scalar} newValue: new leaf value,
      *      {String} mode: action performed by the insertion,
-     *      {Number} proofHashCounter: counter of hashs must be done to proof this operation
+     *      {Number} proofHashCounter: counter of hash must be done to proof this operation
      */
     async set(oldRoot, key, value) {
         const self = this;
@@ -71,6 +81,8 @@ class SMT {
         const accKey = [];
         let foundKey;
         let siblings = [];
+        let siblingLeftChild = [F.zero, F.zero, F.zero, F.zero];
+        let siblingRightChild = [F.zero, F.zero, F.zero, F.zero];
 
         let insKey;
         let insValue;
@@ -99,7 +111,6 @@ class SMT {
 
         level -= 1;
         accKey.pop();
-
         // calculate hash to validate oldRoot
         proofHashCounter = nodeIsZero(oldRoot, F) ? 0 : (siblings.slice(0, level + 1).length + (((foundVal ?? 0n) === 0n) ? 0 : 2));
 
@@ -231,8 +242,18 @@ class SMT {
                 } else {
                     mode = 'deleteNotFound';
                 }
+
+                if (mode === 'deleteNotFound') {
+                    const siblingKey = keys[level] ? 0 : 1;
+                    const siblingRoot = siblings[level].slice(siblingKey * 4, siblingKey * 4 + 4);
+                    const res = await self.db.getSmtNode(siblingRoot);
+                    siblingLeftChild = res.slice(0, 4);
+                    siblingRightChild = res.slice(4, 8);
+                    proofHashCounter += 1;
+                }
             } else {
-                mode = 'deleteLast';
+                // previous was deleteLast mode, but it's a variant of deleteNotFound
+                mode = 'deleteNotFound';
                 newRoot = [F.zero, F.zero, F.zero, F.zero];
             }
         } else {
@@ -245,10 +266,11 @@ class SMT {
         }
 
         siblings = siblings.slice(0, level + 1);
+        const proofHashCounterIncrement = (mode === 'zeroToZero') ? 0 : 1;
 
         while (level >= 0) {
             newRoot = await hashSave(siblings[level].slice(0, 8), siblings[level].slice(8, 12));
-            proofHashCounter += 1;
+            proofHashCounter += proofHashCounterIncrement;
             level -= 1;
             if (level >= 0) {
                 for (let j = 0; j < 4; j++) {
@@ -257,11 +279,18 @@ class SMT {
             }
         }
 
+        // Update max level in case last insertion increased smt size
+        if (this.maxLevel < siblings.length) {
+            this.maxLevel = siblings.length;
+        }
+
         return {
             oldRoot,
             newRoot,
             key,
             siblings,
+            siblingLeftChild,
+            siblingRightChild,
             insKey,
             insValue,
             isOld0,
@@ -275,7 +304,7 @@ class SMT {
     /**
      * Get value merkle-tree
      * @param {Array[Field]} root - merkle-tree root
-     * @param {Array[Field]} key - path to retoreve the value
+     * @param {Array[Field]} key - path to retrieve the value
      * @returns {Object} Information about the value to retrieve
      *      {Array[Field]} root: merkle-tree root,
      *      {Array[Field]} key: key to look for,
@@ -284,7 +313,7 @@ class SMT {
      *      {Bool} isOld0: is new insert or delete,
      *      {Array[Field]} insKey: key found,
      *      {Scalar} insValue: value found,
-     *      {Number} proofHashCounter: counter of hashs must be done to proof this operation
+     *      {Number} proofHashCounter: counter of hash must be done to proof this operation
      */
     async get(root, key) {
         const self = this;

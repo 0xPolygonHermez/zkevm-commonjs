@@ -11,7 +11,6 @@ const fs = require('fs');
 const path = require('path');
 const { Scalar } = require('ffjavascript');
 const { argv } = require('yargs');
-
 const ethers = require('ethers');
 const { expect } = require('chai');
 const {
@@ -23,20 +22,24 @@ const lodash = require('lodash');
 const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
 const contractsPolygonHermez = require('@0xpolygonhermez/zkevm-contracts');
+const { initBlockHeader, fillReceiptTree, setBlockGasUsed } = require('../src/block-utils');
+const SMT = require('../src/smt');
 const {
     MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 
+const pathInputs = path.join(__dirname, '../tools/inputs-examples');
+
 describe('Block info tests', function () {
     this.timeout(50000);
     const pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info-batches.json');
+    const blockInfoTreeTests = path.join(pathTestVectors, 'block-info/block-info-tree.json');
     let update;
+    let geninput;
     let poseidon;
     let F;
     let testVectors;
-    const chainID = 1000;
-    const forkID = 1;
 
     before(async () => {
         poseidon = await getPoseidon();
@@ -44,6 +47,7 @@ describe('Block info tests', function () {
         testVectors = JSON.parse(fs.readFileSync(pathProcessorTests));
 
         update = argv.update === true;
+        geninput = argv.geninput === true;
     });
 
     it('Check test vectors', async () => {
@@ -56,6 +60,8 @@ describe('Block info tests', function () {
                 sequencerAddress,
                 bridgeDeployed,
                 oldAccInputHash,
+                forkID,
+                chainID,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -119,15 +125,37 @@ describe('Block info tests', function () {
              * rawTxs would be the calldata inserted in the contract
              */
             const txProcessed = [];
+            const extraData = { l1Info: {} };
 
             for (let k = 0; k < batches.length; k++) {
                 const {
-                    txs, expectedNewRoot, expectedNewLeafs, batchL2Data, globalExitRoot,
-                    inputHash, timestamp, batchHashData, newLocalExitRoot,
+                    txs, expectedNewRoot, expectedNewLeafs, batchL2Data, l1InfoRoot,
+                    inputHash, timestampLimit, batchHashData, newLocalExitRoot, forcedBlockHashL1,
+                    skipFirstChangeL2Block, skipWriteBlockInfoRoot,
                 } = batches[k];
                 const rawTxs = [];
                 for (let j = 0; j < txs.length; j++) {
                     const txData = txs[j];
+
+                    if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                        const rawChangeL2BlockTx = processorUtils.serializeChangeL2Block(txData);
+
+                        // Append l1Info to l1Info object
+                        extraData.l1Info[txData.indexL1InfoTree] = txData.l1Info;
+
+                        const customRawTx = `0x${rawChangeL2BlockTx}`;
+                        rawTxs.push(customRawTx);
+                        txProcessed.push(txData);
+
+                        if (!update) {
+                            expect(customRawTx).to.equal(txData.customRawTx);
+                        } else {
+                            txData.customRawTx = customRawTx;
+                        }
+
+                        // eslint-disable-next-line no-continue
+                        continue;
+                    }
 
                     const tx = {
                         to: txData.to,
@@ -219,7 +247,20 @@ describe('Block info tests', function () {
                     txProcessed.push(txData);
                 }
 
-                const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot));
+                const batch = await zkEVMDB.buildBatch(
+                    timestampLimit,
+                    sequencerAddress,
+                    smtUtils.stringToH4(l1InfoRoot),
+                    forcedBlockHashL1,
+                    Constants.DEFAULT_MAX_TX,
+                    {
+                        skipVerifyL1InfoRoot: false,
+                        skipFirstChangeL2Block,
+                        skipWriteBlockInfoRoot,
+                    },
+                    {},
+                );
+
                 for (let j = 0; j < rawTxs.length; j++) {
                     batch.addRawTx(rawTxs[j]);
                 }
@@ -302,8 +343,6 @@ describe('Block info tests', function () {
                 // Check global and local exit roots
                 const addressInstanceGlobalExitRoot = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
                 const localExitRootPosBuffer = toBuffer(ethers.utils.hexZeroPad(Constants.LOCAL_EXIT_ROOT_STORAGE_POS, 32));
-                const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-                const globalExitRootPosBuffer = toBuffer(globalExitRootPos);
 
                 // Check local exit root
                 const localExitRootVm = await zkEVMDB.vm.stateManager
@@ -323,20 +362,6 @@ describe('Block info tests', function () {
                     expect(localExitRootVm.toString('hex')).to.equal(newLocalExitRoot.slice(2));
                 }
 
-                // Check global exit root
-                const timestampVm = await zkEVMDB.vm.stateManager.getContractStorage(
-                    addressInstanceGlobalExitRoot,
-                    globalExitRootPosBuffer,
-                );
-                const timestampSmt = (await stateUtils.getContractStorage(
-                    Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
-                    zkEVMDB.smt,
-                    zkEVMDB.stateRoot,
-                    [globalExitRootPos],
-                ))[Scalar.e(globalExitRootPos)];
-
-                expect(Scalar.fromString(timestampVm.toString('hex'), 16)).to.equal(timestampSmt);
-
                 // Check through a call in the EVM
                 if (bridgeDeployed) {
                     const interfaceGlobal = new ethers.utils.Interface(['function globalExitRootMap(uint256)']);
@@ -346,7 +371,7 @@ describe('Block info tests', function () {
                         caller: Address.zero(),
                         data: Buffer.from(encodedData.slice(2), 'hex'),
                     });
-                    expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(globalExitRoot.slice(2));
+                    expect(globalExitRootResult.execResult.returnValue.toString('hex')).to.be.equal(l1InfoRoot.slice(2));
                 }
 
                 // Check the circuit input
@@ -365,11 +390,73 @@ describe('Block info tests', function () {
                     testVectors[i].batches[k].inputHash = circuitInput.inputHash;
                     testVectors[i].batches[k].newLocalExitRoot = circuitInput.newLocalExitRoot;
                 }
+
+                if (update && geninput) {
+                    const dstFile = path.join(pathInputs, `${path.basename(pathProcessorTests, '.json')}-${i}-${k}-input.json`);
+                    const folfer = path.dirname(dstFile);
+
+                    if (!fs.existsSync(folfer)) {
+                        fs.mkdirSync(folfer);
+                    }
+
+                    await fs.writeFileSync(dstFile, JSON.stringify(circuitInput, null, 2));
+                }
             }
             console.log(`Completed test ${i + 1}/${testVectors.length}`);
         }
         if (update) {
             await fs.writeFileSync(pathProcessorTests, JSON.stringify(testVectors, null, 2));
+        }
+    });
+
+    it('Compute blockInfoTree tests', async () => {
+        // Loop state transition tests
+        const blockInfoTree = JSON.parse(fs.readFileSync(blockInfoTreeTests));
+        const db = new MemDB(F);
+        const smt = new SMT(db, poseidon, poseidon.F);
+        for (let i = 0; i < blockInfoTree.length; i++) {
+            const {
+                oldStateRoot, newBlockNumber, sequencerAddress, blockGasLimit, finalTimestamp, finalGER, finalBlockHash, txs,
+            } = blockInfoTree[i];
+            // Init block info root
+            let blockInfoRoot = [F.zero, F.zero, F.zero, F.zero];
+            blockInfoRoot = await initBlockHeader(
+                smt,
+                blockInfoRoot,
+                oldStateRoot,
+                sequencerAddress,
+                newBlockNumber,
+                blockGasLimit,
+                finalTimestamp,
+                finalGER,
+                finalBlockHash,
+            );
+            // loop txs
+            let logIndex = 0;
+            let cumulativeGasUsed = 0;
+            for (let j = 0; j < txs.length; j++) {
+                const tx = txs[j];
+                const {
+                    status, logs, l2TxHash, gasUsed, effectivePercentage,
+                } = tx;
+                cumulativeGasUsed += gasUsed;
+                // Init block header at beginning of block
+                blockInfoRoot = await fillReceiptTree(
+                    smt,
+                    blockInfoRoot,
+                    j,
+                    logs,
+                    logIndex,
+                    status,
+                    l2TxHash,
+                    cumulativeGasUsed,
+                    effectivePercentage,
+                );
+                logIndex += logs.length;
+                // Consolidate block
+                blockInfoRoot = await setBlockGasUsed(smt, blockInfoRoot, cumulativeGasUsed);
+                expect(smtUtils.h4toString(blockInfoRoot)).to.be.equal(blockInfoTree[i].finalBlockInfoRoot);
+            }
         }
     });
 });
