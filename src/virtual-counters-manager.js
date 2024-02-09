@@ -1640,6 +1640,7 @@ module.exports = class VirtualCountersManager {
         // MCP + 100S + divArith + batchL2DataLength/136K + K
         this._reduceCounters(100, 'S');
         this._reduceCounters(MCP, 'P');
+        this._reduceCounters(2, 'B');
         this._divArith();
         this._reduceCounters(Math.ceil((batchL2DataLength + 1) / 136), 'K');
     }
@@ -1724,8 +1725,8 @@ module.exports = class VirtualCountersManager {
     }
 
     _divArith() {
-        this._reduceCounters(50, 'S');
-        this._reduceCounters(3, 'B');
+        this._reduceCounters(30, 'S');
+        this._reduceCounters(4, 'B');
         this._reduceCounters(1, 'A');
     }
 
