@@ -1513,21 +1513,13 @@ module.exports = class VirtualCountersManager {
     }
 
     _mStoreX() {
-        this._reduceCounters(100, 'S');
-        this._reduceCounters(1, 'B');
-        this._reduceCounters(1, 'M');
-        this._offsetUtil();
-        this._multiCall('_SHRarith', 2);
-        this._multiCall('_SHLarith', 2);
+        this._reduceCounters(40, 'S');
+        this._reduceCounters(3, 'M');
     }
 
     _mStore32() {
-        this._reduceCounters(100, 'S');
-        this._reduceCounters(1, 'B');
+        this._reduceCounters(30, 'S');
         this._reduceCounters(1, 'M');
-        this._offsetUtil();
-        this._multiCall('_SHRarith', 2);
-        this._multiCall('_SHLarith', 2);
     }
 
     _saveMem(input) {
