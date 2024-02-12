@@ -345,7 +345,8 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(100, 'S');
         this._reduceCounters(1, 'B');
         this._reduceCounters(Math.ceil((input.calldataLength + 1) / 64), 'SHA');
-        this._multiCall('_divArith', 2);
+        this._divArith();
+        this._offsetUtil();
         this._mStore32();
         this._mStoreX();
         this._multiCall('_preSHA256Loop', Math.floor(input.calldataLength / 32));
@@ -362,7 +363,7 @@ module.exports = class VirtualCountersManager {
         this._checkInput(input, ['calldataLength', 'returnDataLength']);
         this._reduceCounters(45, 'S');
         this._reduceCounters(2, 'B');
-        this._divArith();
+        this._offsetUtil();
         // identity loop
         this._multiCall('_identityLoop', Math.floor(input.calldataLength / 32));
         this._readFromCalldataOffset();
@@ -543,14 +544,14 @@ module.exports = class VirtualCountersManager {
     opExtCodeCopy(input) {
         this._opcode(input);
         this._checkInput(input, ['bytecodeLen', 'inputSize']);
-        this._reduceCounters(60, 'S');
+        this._reduceCounters(40, 'S');
         this._maskAddress();
         this._isColdAddress();
         this._reduceCounters(2 * MCP + Math.ceil(input.bytecodeLen / 56), 'P');
         this._reduceCounters(Math.ceil(input.bytecodeLen / 56), 'D');
-        this._multiCall('_divArith', 2);
+        this._offsetUtil();
+        this._divArith();
         this._saveMem({ length: input.inputSize });
-        this._mulArith();
         this._reduceCounters(input.inputSize, 'M');
         this._multiCall('_opCodeCopyLoop', input.inputSize);
         this._reduceCounters(1, 'B');
@@ -563,10 +564,9 @@ module.exports = class VirtualCountersManager {
             this.opCalldataCopy(input);
         } else {
             this._reduceCounters(40, 'S');
-            this._reduceCounters(3, 'B');
+            this._reduceCounters(1, 'B');
             this._saveMem({ length: input.inputSize });
-            this._divArith();
-            this._mulArith();
+            this._offsetUtil();
             this._multiCall('_opCodeCopyLoop', input.inputSize);
         }
     }
@@ -587,11 +587,10 @@ module.exports = class VirtualCountersManager {
     opReturnDataCopy(input) {
         this._opcode(input);
         this._checkInput(input, ['inputSize']);
-        this._reduceCounters(50, 'S');
+        this._reduceCounters(30, 'S');
         this._reduceCounters(2, 'B');
         this._saveMem({ length: input.inputSize });
-        this._divArith();
-        this._mulArith();
+        this._offsetUtil();
         this._multiCall('_returnDataCopyLoop', Math.floor(input.inputSize / 32));
         this._mLoadX();
         this._mStoreX();
@@ -906,11 +905,11 @@ module.exports = class VirtualCountersManager {
     opSha3(input) {
         this._opcode(input);
         this._checkInput(input, ['inputSize']);
-        this._reduceCounters(40, 'S');
+        this._reduceCounters(30, 'S');
         this._reduceCounters(Math.ceil((input.inputSize + 1) / 32), 'K');
         this._saveMem({ length: input.inputSize });
-        this._multiCall('_divArith', 2);
-        this._mulArith();
+        this._divArith();
+        this._offsetUtil();
         this._multiCall('_opSha3Loop', Math.floor(input.inputSize / 32));
         this._mLoadX();
         this._SHRarith();
@@ -980,7 +979,7 @@ module.exports = class VirtualCountersManager {
     _opLog(input) {
         this._opcode(input);
         this._checkInput(input, ['inputSize']);
-        this._reduceCounters(30 + 8 * 4, 'S'); // Count steps as if topics is 4
+        this._reduceCounters(34 + 7 * 4, 'S'); // Count steps as if topics is 4
         this._saveMem({ length: input.inputSize });
         this._mulArith();
         this._divArith();
@@ -1134,9 +1133,8 @@ module.exports = class VirtualCountersManager {
     _opPush(input) {
         this._opcode(input);
         this._checkInput(input, ['pushBytes', 'isCreate', 'isDeploy']);
-        this._reduceCounters(4, 'S');
+        this._reduceCounters(2, 'S');
         if (input.isCreate || input.isDeploy) {
-            this._reduceCounters(1, 'B');
             if (input.isCreate) {
                 this._reduceCounters(20, 'S');
                 this._mLoadX();
@@ -1145,7 +1143,6 @@ module.exports = class VirtualCountersManager {
                 this._reduceCounters(10, 'S');
                 for (let i = 0; i < input.pushBytes; i++) {
                     this._reduceCounters(10, 'S');
-                    this._SHLarith();
                 }
             }
         } else {
@@ -1356,12 +1353,12 @@ module.exports = class VirtualCountersManager {
 
     _expAd(input) {
         this._checkInput(input, ['lenBitsInput']);
-        this._reduceCounters(30, 'S');
+        this._reduceCounters(25, 'S');
         this._reduceCounters(2, 'B');
         this._getLenBits({ lenBitsInput: input.lenBitsInput });
         for (let i = 0; i < input.lenBitsInput; i++) {
-            this._reduceCounters(12, 'S');
-            this._reduceCounters(2, 'B');
+            this._reduceCounters(10, 'S');
+            this._reduceCounters(1, 'B');
             this._divArith();
             this._mulArith();
             this._mulArith();
@@ -1392,23 +1389,25 @@ module.exports = class VirtualCountersManager {
 
     _readPush(input) {
         this._checkInput(input, ['pushBytes']);
-        this._reduceCounters(15, 'S');
-        this._reduceCounters(1, 'B');
-
-        const numBlocks = Math.ceil(input.pushBytes / 4);
-        const leftBytes = input.pushBytes % 4;
-
-        for (let i = 0; i <= numBlocks; i++) {
-            this._reduceCounters(20, 'S');
-            this._reduceCounters(1, 'B');
-            for (let j = i - 1; j > 0; j--) {
-                this._reduceCounters(8, 'S');
-            }
-        }
-
-        for (let i = 0; i < leftBytes; i++) {
-            this._reduceCounters(40, 'S');
-            this._reduceCounters(4, 'B');
+        switch (input.pushBytes) {
+        case 1:
+            this._reduceCounters(2, 'S');
+            break;
+        case 2:
+            this._reduceCounters(4, 'S');
+            break;
+        case 3:
+            this._reduceCounters(5, 'S');
+            break;
+        case 4:
+            this._reduceCounters(6, 'S');
+            break;
+        case 32:
+            this._reduceCounters(45, 'S');
+            break;
+        default:
+            this._reduceCounters(6 + input.pushBytes * 2, 'S'); // approx value, is a bit less
+            break;
         }
     }
 
@@ -1444,9 +1443,9 @@ module.exports = class VirtualCountersManager {
     }
 
     _checkBytecodeStartsEF() {
-        this._reduceCounters(20, 'S');
+        this._reduceCounters(22, 'S');
+        this._reduceCounters(2, 'B');
         this._mLoadX();
-        this._SHRarith();
     }
 
     _isEmptyAccount() {
@@ -1707,7 +1706,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _SHRarith() {
-        this._reduceCounters(50, 'S');
+        this._reduceCounters(40, 'S');
         this._reduceCounters(2, 'B');
         this._reduceCounters(1, 'A');
         this._divArith();
@@ -1725,7 +1724,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _divArith() {
-        this._reduceCounters(30, 'S');
+        this._reduceCounters(25, 'S');
         this._reduceCounters(4, 'B');
         this._reduceCounters(1, 'A');
     }
