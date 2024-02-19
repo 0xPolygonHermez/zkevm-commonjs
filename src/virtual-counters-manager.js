@@ -18,6 +18,7 @@ const { expectedModExpCounters } = require('./virtual-counters-manager-utils');
 const FPEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
 const FNEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const FNEC_MINUS_ONE = Scalar.sub(FNEC, Scalar.e(1));
+const spentCountersByFunction = {};
 
 module.exports = class VirtualCountersManager {
     /**
@@ -130,6 +131,14 @@ module.exports = class VirtualCountersManager {
         });
         this._verbose(spentCounters);
         this.currentCountersSnapshot = spentCounters;
+        // Fill counters consumption by function
+        if (!spentCountersByFunction[this.calledFunc]) {
+            spentCountersByFunction[this.calledFunc] = spentCounters;
+        } else {
+            Object.keys(this.currentCountersSnapshot).forEach((counter) => {
+                spentCountersByFunction[this.calledFunc][counter] = spentCountersByFunction[this.calledFunc][counter] + spentCounters[counter];
+            });
+        }
 
         return spentCounters;
     }
@@ -938,9 +947,10 @@ module.exports = class VirtualCountersManager {
     _checkJumpDest(input) {
         this._checkInput(input, ['isCreate', 'isDeploy']);
         this._reduceCounters(10, 'S');
+        this._reduceCounters(1, 'B');
         if (input.isCreate) {
-            this._reduceCounters(1, 'B');
             if (input.isDeploy) {
+                this._reduceCounters(1, 'B');
                 this._mLoadX();
             }
         }
