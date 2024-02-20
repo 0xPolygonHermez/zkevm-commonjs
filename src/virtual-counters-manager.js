@@ -18,6 +18,7 @@ const { expectedModExpCounters } = require('./virtual-counters-manager-utils');
 const FPEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
 const FNEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const FNEC_MINUS_ONE = Scalar.sub(FNEC, Scalar.e(1));
+const spentCountersByFunction = {};
 
 module.exports = class VirtualCountersManager {
     /**
@@ -130,6 +131,14 @@ module.exports = class VirtualCountersManager {
         });
         this._verbose(spentCounters);
         this.currentCountersSnapshot = spentCounters;
+        // Fill counters consumption by function
+        if (!spentCountersByFunction[this.calledFunc]) {
+            spentCountersByFunction[this.calledFunc] = spentCounters;
+        } else {
+            Object.keys(this.currentCountersSnapshot).forEach((counter) => {
+                spentCountersByFunction[this.calledFunc][counter] = spentCountersByFunction[this.calledFunc][counter] + spentCounters[counter];
+            });
+        }
 
         return spentCounters;
     }
@@ -939,9 +948,10 @@ module.exports = class VirtualCountersManager {
     _checkJumpDest(input) {
         this._checkInput(input, ['isCreate', 'isDeploy']);
         this._reduceCounters(10, 'S');
+        this._reduceCounters(1, 'B');
         if (input.isCreate) {
-            this._reduceCounters(1, 'B');
             if (input.isDeploy) {
+                this._reduceCounters(1, 'B');
                 this._mLoadX();
             }
         }
@@ -980,7 +990,7 @@ module.exports = class VirtualCountersManager {
     _opLog(input) {
         this._opcode(input);
         this._checkInput(input, ['inputSize']);
-        this._reduceCounters(30 + 8 * 4, 'S'); // Count steps as if topics is 4
+        this._reduceCounters(34 + 7 * 4, 'S'); // Count steps as if topics is 4
         this._saveMem({ length: input.inputSize });
         this._mulArith();
         this._divArith();
@@ -1134,9 +1144,8 @@ module.exports = class VirtualCountersManager {
     _opPush(input) {
         this._opcode(input);
         this._checkInput(input, ['pushBytes', 'isCreate', 'isDeploy']);
-        this._reduceCounters(4, 'S');
+        this._reduceCounters(2, 'S');
         if (input.isCreate || input.isDeploy) {
-            this._reduceCounters(1, 'B');
             if (input.isCreate) {
                 this._reduceCounters(20, 'S');
                 this._mLoadX();
@@ -1145,7 +1154,6 @@ module.exports = class VirtualCountersManager {
                 this._reduceCounters(10, 'S');
                 for (let i = 0; i < input.pushBytes; i++) {
                     this._reduceCounters(10, 'S');
-                    this._SHLarith();
                 }
             }
         } else {
@@ -1392,23 +1400,25 @@ module.exports = class VirtualCountersManager {
 
     _readPush(input) {
         this._checkInput(input, ['pushBytes']);
-        this._reduceCounters(15, 'S');
-        this._reduceCounters(1, 'B');
-
-        const numBlocks = Math.ceil(input.pushBytes / 4);
-        const leftBytes = input.pushBytes % 4;
-
-        for (let i = 0; i <= numBlocks; i++) {
-            this._reduceCounters(20, 'S');
-            this._reduceCounters(1, 'B');
-            for (let j = i - 1; j > 0; j--) {
-                this._reduceCounters(8, 'S');
-            }
-        }
-
-        for (let i = 0; i < leftBytes; i++) {
-            this._reduceCounters(40, 'S');
-            this._reduceCounters(4, 'B');
+        switch (input.pushBytes) {
+        case 1:
+            this._reduceCounters(2, 'S');
+            break;
+        case 2:
+            this._reduceCounters(4, 'S');
+            break;
+        case 3:
+            this._reduceCounters(5, 'S');
+            break;
+        case 4:
+            this._reduceCounters(6, 'S');
+            break;
+        case 32:
+            this._reduceCounters(45, 'S');
+            break;
+        default:
+            this._reduceCounters(6 + input.pushBytes * 2, 'S'); // approx value, is a bit less
+            break;
         }
     }
 
@@ -1648,6 +1658,7 @@ module.exports = class VirtualCountersManager {
         // MCP + 100S + divArith + batchL2DataLength/136K + K
         this._reduceCounters(100, 'S');
         this._reduceCounters(MCP, 'P');
+        this._reduceCounters(2, 'B');
         this._divArith();
         this._reduceCounters(Math.ceil((batchL2DataLength + 1) / 136), 'K');
     }
