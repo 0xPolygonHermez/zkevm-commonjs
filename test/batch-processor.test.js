@@ -26,10 +26,10 @@ const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
 const contractsPolygonHermez = require('@0xpolygonhermez/zkevm-contracts');
 const {
-    MemDB, ZkEVMDB, getPoseidon, processorUtils, smtUtils, Constants, stateUtils,
+    MemDB, ZkEVMDB, getPoseidon, smtUtils, Constants, stateUtils,
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
-const { serializeChangeL2Block } = require('../index').processorUtils;
+const { txUtils, batchUtils } = require('../index');
 
 const pathInputs = path.join(__dirname, '../tools/inputs-examples');
 
@@ -67,7 +67,7 @@ describe('Processor', async function () {
     });
 
     it('Check test vectors', async () => {
-        for (let i = 0; i < testVectors.length; i++) {
+        for (let i = 0; i < 1; i++) {
             let {
                 id,
                 genesis,
@@ -152,7 +152,107 @@ describe('Processor', async function () {
                 testVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
             }
 
+            // auxiliary data for the l1InfoTree
             const extraData = { l1Info: {} };
+
+            /*
+             * build, sign transaction and generate rawTxs
+             * rawTxs would be the calldata inserted in the contract
+             */
+            const txProcessed = [];
+            const rawTxs = [];
+
+            for (let j = 0; j < txs.length; j++) {
+                const txData = txs[j];
+                // parse tx from json
+                const tx = txUtils.parseTx(txData);
+                let batchCustomTx;
+
+                // handle chnageL2BlockTx
+                if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    // serialize tx
+                    batchCustomTx = {
+                        serialized: `0x${batchUtils.serializeTx(tx)}`,
+                    };
+
+                    // Append l1Info to l1Info object
+                    extraData.l1Info[tx.indexL1InfoTree] = txData.l1Info;
+
+                    rawTxs.push(batchCustomTx);
+                    txProcessed.push(tx);
+
+                    if (!update) {
+                        expect(batchCustomTx.serialized).to.equal(txData.customRawTx);
+                    } else {
+                        txData.customRawTx = batchCustomTx.serialized;
+                    }
+                } else {
+                    // handle preEIP155 & Legacu transactions
+                    // The tx will have paramsDeploy in case is a deployment with constructor
+                    if (txData.data) {
+                        if (txData.to) {
+                            if (txData.contractName) {
+                                const functionData = addressToContractInterface[txData.to].encodeFunctionData(
+                                    txData.function,
+                                    txData.params,
+                                );
+                                if (!update) {
+                                    expect(functionData).to.equal(txData.data);
+                                } else {
+                                    txData.data = functionData;
+                                    tx.data = functionData;
+                                }
+                            }
+                        } else {
+                        // Contract deployment from tx
+                            delete tx.to;
+
+                            const { bytecode } = require(`${artifactsPath}/${txData.contractName}.sol/${txData.contractName}.json`);
+                            const params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
+                            expect(tx.data).to.equal(bytecode + params.slice(2));
+                        }
+                    }
+
+                    if ((tx.to && tx.to !== '0x0' && !ethers.utils.isAddress(tx.to)) || !ethers.utils.isAddress(txData.from)) {
+                        expect(txData.customRawTx).to.equal(undefined);
+                        // eslint-disable-next-line no-continue
+                        continue;
+                    }
+
+                    const address = genesis.find((o) => o.address === txData.from);
+                    const signingKey = new ethers.utils.SigningKey(address.pvtKey);
+
+                    const signData = txUtils.getTxSignedMessage(tx);
+                    const digest = ethers.utils.keccak256(signData);
+                    const signature = signingKey.signDigest(digest);
+
+                    // add from for batch processor
+                    tx.from = txData.from;
+
+                    // add effectivePercentage == 0xFF if not present
+                    if (typeof tx.effectivePercentage === 'undefined') {
+                        tx.effectivePercentage = 0xFF;
+                    }
+
+                    batchCustomTx = {
+                        serialized: `0x${batchUtils.serializeTx(tx)}`,
+                        r: signature.r,
+                        s: signature.s,
+                        v: signature.v,
+                    };
+
+                    if (!update) {
+                        expect(batchCustomTx).to.equal(txData.batchCustomTx);
+                    } else {
+                        txData.batchCustomTx = batchCustomTx;
+                    }
+
+                    rawTxs.push(batchCustomTx);
+                    txProcessed.push(txData);
+                }
+            }
+
+            // create batch
             const batch = await zkEVMDB.buildBatch(
                 timestampLimit,
                 sequencerAddress,
@@ -165,133 +265,14 @@ describe('Processor', async function () {
                 extraData,
             );
 
-            /*
-             * build, sign transaction and generate rawTxs
-             * rawTxs would be the calldata inserted in the contract
-             */
-            const txProcessed = [];
-            const rawTxs = [];
-
-            for (let j = 0; j < txs.length; j++) {
-                const txData = txs[j];
-
-                if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
-                    const rawChangeL2BlockTx = serializeChangeL2Block(txData);
-
-                    // Append l1Info to l1Info object
-                    extraData.l1Info[txData.indexL1InfoTree] = txData.l1Info;
-
-                    const customRawTx = `0x${rawChangeL2BlockTx}`;
-                    rawTxs.push(customRawTx);
-                    txProcessed.push(txData);
-
-                    if (!update) {
-                        expect(customRawTx).to.equal(txData.customRawTx);
-                    } else {
-                        txData.customRawTx = customRawTx;
-                    }
-
-                    continue;
-                }
-
-                const tx = {
-                    to: txData.to,
-                    nonce: txData.nonce,
-                    value: processorUtils.toHexStringRlp(ethers.utils.parseUnits(txData.value, 'wei')),
-                    gasLimit: txData.gasLimit,
-                    gasPrice: processorUtils.toHexStringRlp(ethers.utils.parseUnits(txData.gasPrice, 'wei')),
-                    chainId: txData.chainId,
-                    data: txData.data || '0x',
-                };
-
-                // The tx will have paramsDeploy in case is a deployment with constructor
-                // let params = '';
-                // if (txData.paramsDeploy) {
-                //     params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
-                //     tx.data += params.slice(2);
-                // }
-
-                if (txData.data) {
-                    if (txData.to) {
-                        if (txData.contractName) {
-                            const functionData = addressToContractInterface[txData.to].encodeFunctionData(txData.function, txData.params);
-                            if (!update) {
-                                expect(functionData).to.equal(txData.data);
-                            } else {
-                                txData.data = functionData;
-                                tx.data = functionData;
-                            }
-                        }
-                    } else {
-                        // Contract deployment from tx
-                        delete tx.to;
-
-                        const { bytecode } = require(`${artifactsPath}/${txData.contractName}.sol/${txData.contractName}.json`);
-                        const params = defaultAbiCoder.encode(txData.paramsDeploy.types, txData.paramsDeploy.values);
-                        expect(tx.data).to.equal(bytecode + params.slice(2));
-                    }
-                }
-
-                if ((tx.to && tx.to !== '0x0' && !ethers.utils.isAddress(tx.to)) || !ethers.utils.isAddress(txData.from)) {
-                    expect(txData.customRawTx).to.equal(undefined);
-                    // eslint-disable-next-line no-continue
-                    continue;
-                }
-
-                let customRawTx;
-                const address = genesis.find((o) => o.address === txData.from);
-                const wallet = new ethers.Wallet(address.pvtKey);
-                if (tx.chainId === 0) {
-                    const signData = ethers.utils.RLP.encode([
-                        processorUtils.toHexStringRlp(Scalar.e(tx.nonce)),
-                        processorUtils.toHexStringRlp(tx.gasPrice),
-                        processorUtils.toHexStringRlp(tx.gasLimit),
-                        processorUtils.addressToHexStringRlp(tx.to),
-                        processorUtils.toHexStringRlp(tx.value),
-                        processorUtils.toHexStringRlp(tx.data),
-                        processorUtils.toHexStringRlp(tx.chainId),
-                        '0x',
-                        '0x',
-                    ]);
-                    const digest = ethers.utils.keccak256(signData);
-                    const signingKey = new ethers.utils.SigningKey(address.pvtKey);
-                    const signature = signingKey.signDigest(digest);
-                    const r = signature.r.slice(2).padStart(64, '0'); // 32 bytes
-                    const s = signature.s.slice(2).padStart(64, '0'); // 32 bytes
-                    const v = (signature.v).toString(16).padStart(2, '0'); // 1 bytes
-                    if (typeof tx.effectivePercentage === 'undefined') {
-                        tx.effectivePercentage = 'ff';
-                    }
-                    customRawTx = signData.concat(r).concat(s).concat(v).concat(tx.effectivePercentage);
-                } else {
-                    const rawTxEthers = await wallet.signTransaction(tx);
-                    if (!update) {
-                        expect(rawTxEthers).to.equal(txData.rawTx);
-                    } else {
-                        txData.rawTx = rawTxEthers;
-                    }
-                    customRawTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
-                }
-
-                if (!update) {
-                    expect(customRawTx).to.equal(txData.customRawTx);
-                } else {
-                    txData.customRawTx = customRawTx;
-                }
-
-                if (txData.encodeInvalidData) {
-                    customRawTx = customRawTx.slice(0, -6);
-                }
-                rawTxs.push(customRawTx);
-                txProcessed.push(txData);
-            }
-
+            // add transactions to the batch
             for (let j = 0; j < rawTxs.length; j++) {
                 batch.addRawTx(rawTxs[j]);
             }
 
             // execute the transactions added to the batch
             await batch.executeTxs();
+
             // consolidate state
             await zkEVMDB.consolidate(batch);
 

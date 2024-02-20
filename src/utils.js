@@ -110,6 +110,58 @@ function sha256Snark(str) {
     return h;
 }
 
+/**
+ * Compare two arrays
+ * Returns true if both arrays has the same length and
+ * contains the same alements regardless the order
+ * @param {Array} array1 - first array
+ * @param {Array} array2 - second array
+ * @returns {Bool} true if conditions are met false otherwise
+ */
+function compareArrays(array1, array2) {
+    if (array1.length === array2.length) {
+        return array1.every((element) => {
+            if (array2.includes(element)) {
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    return false;
+}
+
+/**
+ * Check if an object has all properties
+ * @param {Object} _object - object with properties
+ * @param {Array} _arrayProperties - object properties
+ * @returns {Bool} true if conditions are met false otherwise
+ */
+function hasAllProperties(_object, _arrayProperties2) {
+    for (const prop in _arrayProperties2) {
+        // eslint-disable-next-line no-prototype-builtins
+        if (_object.hasOwnProperty(prop)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Mask and shift a Scalar
+ * @param {Scalar} num - Input number
+ * @param {Number} origin - Initial bit
+ * @param {Number} len - Bit lenght of the mask
+ * @returns {Scalar} Extracted Scalar
+ */
+function extract(num, origin, len) {
+    const mask = Scalar.sub(Scalar.shl(1, len), 1);
+
+    return Scalar.band(Scalar.shr(num, origin), mask);
+}
+
 module.exports = {
     log2,
     byteArray2HexString,
@@ -118,4 +170,7 @@ module.exports = {
     padZeros,
     valueToHexStr,
     getFuncName,
+    compareArrays,
+    hasAllProperties,
+    extract,
 };

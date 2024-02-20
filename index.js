@@ -1,6 +1,6 @@
 module.exports.Constants = require('./src/constants');
 module.exports.contractUtils = require('./src/contract-utils');
-module.exports.Processor = require('./src/processor');
+module.exports.BatchProcessor = require('./src/batch-processor');
 module.exports.processorUtils = require('./src/processor-utils');
 module.exports.MemDB = require('./src/mem-db');
 module.exports.smtUtils = require('./src/smt-utils');
@@ -16,3 +16,6 @@ module.exports.Database = require('./src/database');
 module.exports.l1InfoTreeUtils = require('./src/l1-info-tree-utils');
 module.exports.VirtualCountersManager = require('./src/virtual-counters-manager');
 module.exports.blockUtils = require('./src/block-utils');
+module.exports.txUtils = require('./src/tx-utils');
+module.exports.compressorUtils = require('./src/compression/compressor-utils');
+module.exports.batchUtils = require('./src/batch-utils');

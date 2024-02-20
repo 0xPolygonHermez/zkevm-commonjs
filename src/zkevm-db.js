@@ -12,7 +12,7 @@ const { Hardfork } = require('@polygon-hermez/common');
 const ethers = require('ethers');
 const clone = require('lodash/clone');
 const Constants = require('./constants');
-const Processor = require('./processor');
+const BatchProcessor = require('./batch-processor');
 const SMT = require('./smt');
 const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
@@ -38,7 +38,7 @@ class ZkEVMDB {
     }
 
     /**
-     * Return a new Processor with the current RollupDb state
+     * Return a new BatchProcessor with the current RollupDb state
      * @param {Number} timestampLimit - Timestamp limit of the batch
      * @param {String} sequencerAddress - ethereum address represented as hex
      * @param {Array[Field]} l1InfoRoot - global exit root
@@ -61,7 +61,7 @@ class ZkEVMDB {
         options = {},
         extraData,
     ) {
-        return new Processor(
+        return new BatchProcessor(
             this.db,
             this.lastBatch + 1,
             this.poseidon,

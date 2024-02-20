@@ -504,6 +504,40 @@ function serializeChangeL2Block(tx) {
     return valueToHexStr(data).padStart(offsetBits / 4, '0');
 }
 
+/**
+ * Returns typed evm transaction object
+ * @param {Object} zkevmTx - zkevm transaction object
+ * @returns {Object} evm transaction object
+ */
+function getEvmTx(zkevmTx) {
+    // fill in common transaction fields
+    const tx = {
+        nonce: valueToHexStr(zkevmTx.nonce, true),
+        gasPrice: valueToHexStr(zkevmTx.gasPrice, true),
+        gasLimit: valueToHexStr(zkevmTx.gasLimit, true),
+        to: zkevmTx.to,
+        value: valueToHexStr(zkevmTx.value, true),
+        data: zkevmTx.data,
+        v: zkevmTx.v,
+        r: zkevmTx.r,
+        s: zkevmTx.s,
+    };
+
+    if (zkevmTx.type === ENUM_TX_TYPES.LEGACY) {
+        tx.v = Number(zkevmTx.v) - 27 + zkevmTx.chainId * 2 + 35;
+    } else if (zkevmTx.type === ENUM_TX_TYPES.EIP_2930) {
+        tx.type = 1;
+        tx.accessList = zkevmTx.accessList;
+    } else if (zkevmTx.type === ENUM_TX_TYPES.EIP_1559) {
+        tx.type = 2;
+        tx.maxPriorityFeePerGas = zkevmTx.maxPriorityFeePerGas;
+        tx.maxFeePerGas = zkevmTx.maxFeePerGas;
+        delete tx.gasPrice;
+    }
+
+    return TransactionFactory.fromTxData(tx);
+}
+
 module.exports = {
     decodeCustomRawTxProverMethod,
     rawTxToCustomRawTx,
@@ -516,4 +550,5 @@ module.exports = {
     computeL2TxHash,
     decodeChangeL2BlockTx,
     serializeChangeL2Block,
+    getEvmTx,
 };
