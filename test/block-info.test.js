@@ -455,8 +455,8 @@ describe('Block info tests', function () {
                 logIndex += logs.length;
                 // Consolidate block
                 blockInfoRoot = await setBlockGasUsed(smt, blockInfoRoot, cumulativeGasUsed);
-                expect(smtUtils.h4toString(blockInfoRoot)).to.be.equal(blockInfoTree[i].finalBlockInfoRoot);
             }
+            expect(smtUtils.h4toString(blockInfoRoot)).to.be.equal(blockInfoTree[i].finalBlockInfoRoot);
         }
     });
 });

@@ -366,6 +366,12 @@ module.exports = class Processor {
         // Compute rlp parsing counters
         for (let i = 0; i < this.decodedTxs.length; i++) {
             if (this.decodedTxs[i].tx.type === Constants.TX_CHANGE_L2_BLOCK) {
+                // If is forced and it contains a changeL2Block, invalid batch
+                if (this.isForced) {
+                    this.isInvalid = true;
+
+                    return;
+                }
                 this.vcm.computeFunctionCounters('decodeChangeL2BlockTx');
             } else {
                 const txDataLen = this.decodedTxs[i].tx.data ? (this.decodedTxs[i].tx.data.length - 2) / 2 : 0;
@@ -402,6 +408,7 @@ module.exports = class Processor {
                     return;
                 }
             }
+            const currentTx = currentDecodedTx.tx;
 
             // If it is a forced batch, we create a changeL2Block at the beginning
             if (i === 0 && this.isForced) {
@@ -415,14 +422,7 @@ module.exports = class Processor {
             if (currentDecodedTx.isInvalid) {
                 continue;
             } else {
-                const currentTx = currentDecodedTx.tx;
                 if (currentTx.type === Constants.TX_CHANGE_L2_BLOCK) {
-                    // If it is forced batch, invalidate
-                    if (this.isForced) {
-                        this.isInvalid = true;
-
-                        return;
-                    }
                     // Final function call that saves internal DB storage keys
                     const err = await this._processChangeL2BlockTx(currentTx);
                     if (err) {
