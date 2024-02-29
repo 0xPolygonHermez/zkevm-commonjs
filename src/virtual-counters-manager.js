@@ -136,7 +136,7 @@ module.exports = class VirtualCountersManager {
             spentCountersByFunction[this.calledFunc] = spentCounters;
         } else {
             Object.keys(this.currentCountersSnapshot).forEach((counter) => {
-                spentCountersByFunction[this.calledFunc][counter] = spentCountersByFunction[this.calledFunc][counter] + spentCounters[counter];
+                spentCountersByFunction[this.calledFunc][counter] += spentCounters[counter];
             });
         }
 
