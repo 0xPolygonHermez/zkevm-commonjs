@@ -46,7 +46,7 @@ describe('ZkEVMDB', function () {
         const genesis = [];
         const db = new MemDB(F);
         const chainID = 1000;
-        const forkID = 1;
+        const forkID = 8;
 
         // create a zkEVMDB and build a batch
         const zkEVMDB = await ZkEVMDB.newZkEVM(
