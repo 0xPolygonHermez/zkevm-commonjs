@@ -1,6 +1,7 @@
 const { Scalar } = require('ffjavascript');
 
 const { ENUM_TX_TYPES } = require('./compression/compressor-constants');
+const { rawTxToCustomRawTx } = require('./processor-utils');
 const { getFuncName, valueToHexStr } = require('./utils');
 const Constants = require('./constants');
 const getPoseidon = require('./poseidon');
@@ -13,7 +14,7 @@ const { linearPoseidon, stringToH4, h4toString } = require('./smt-utils');
  * @param {Object} tx - transaction object
  * @returns {String} - Serialized tx in hexadecimal string
  */
-function serializeLegacy(tx) {
+function compression_serializeLegacy(tx) {
     let data = Scalar.e(0);
 
     let offsetBits = 0;
@@ -77,7 +78,7 @@ function serializeLegacy(tx) {
  * @param {Object} tx - transaction object
  * @returns {String} - Serialized tx in hexadecimal string
  */
-function serializePreEIP155(tx) {
+function compression_serializePreEIP155(tx) {
     let data = Scalar.e(0);
 
     let offsetBits = 0;
@@ -239,9 +240,9 @@ function deserializeChangeL2Block(_serializedTx) {
 function serializeTx(tx) {
     switch (tx.type) {
     case ENUM_TX_TYPES.PRE_EIP_155:
-        return serializePreEIP155(tx);
+        return rawTxToCustomRawTx(tx);
     case ENUM_TX_TYPES.LEGACY:
-        return serializeLegacy(tx);
+        return rawTxToCustomRawTx(tx);
     case ENUM_TX_TYPES.CHANGE_L2_BLOCK:
         return serializeChangeL2Block(tx);
     default:
@@ -271,42 +272,7 @@ function deserializeTx(_serializedTx) {
     }
 }
 
-/**
- * Computes newAccBatchHashData
- * @param {String} oldAccBatchHashData - oldAccBatchHashData
- * @param {String} batchData -batch data
- * @returns NewAccBatchHashData in hexadecimal string
- */
-async function computeNewAccBatchHashData(oldAccBatchHashData, batchData) {
-    const poseidon = await getPoseidon();
-    const { F } = poseidon;
-
-    // compute batchHashData
-    const batcHashData = await linearPoseidon(batchData);
-    const batcHashDataFields = stringToH4(batcHashData);
-
-    // get oldAccBatchHashData fields
-    const oldAccBatchHashDataFields = stringToH4(oldAccBatchHashData);
-
-    const input = [
-        oldAccBatchHashDataFields[0],
-        oldAccBatchHashDataFields[1],
-        oldAccBatchHashDataFields[2],
-        oldAccBatchHashDataFields[3],
-        batcHashDataFields[0],
-        batcHashDataFields[1],
-        batcHashDataFields[2],
-        batcHashDataFields[3],
-    ];
-    const capacity = [F.zero, F.zero, F.zero, F.zero];
-
-    const newAccBatchHashDataFields = poseidon(input, capacity);
-
-    return h4toString(newAccBatchHashDataFields);
-}
-
 module.exports = {
     serializeTx,
     deserializeTx,
-    computeNewAccBatchHashData,
 };

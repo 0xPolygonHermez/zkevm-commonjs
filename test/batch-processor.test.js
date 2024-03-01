@@ -26,7 +26,7 @@ const artifactsPath = path.join(__dirname, 'artifacts/contracts');
 
 const contractsPolygonHermez = require('@0xpolygonhermez/zkevm-contracts');
 const {
-    MemDB, ZkEVMDB, getPoseidon, smtUtils, Constants, stateUtils,
+    MemDB, ZkEVMDB, getPoseidon, smtUtils, Constants, stateUtils, processorUtils
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 const { txUtils, batchUtils } = require('../index');
@@ -171,9 +171,7 @@ describe('Processor', async function () {
                 // handle chnageL2BlockTx
                 if (txData.type === Constants.TX_CHANGE_L2_BLOCK) {
                     // serialize tx
-                    batchCustomTx = {
-                        serialized: `0x${batchUtils.serializeTx(tx)}`,
-                    };
+                    batchCustomTx = `0x${batchUtils.serializeTx(tx)}`;
 
                     // Append l1Info to l1Info object
                     extraData.l1Info[tx.indexL1InfoTree] = txData.l1Info;
@@ -187,7 +185,7 @@ describe('Processor', async function () {
                         txData.customRawTx = batchCustomTx.serialized;
                     }
                 } else {
-                    // handle preEIP155 & Legacu transactions
+                    // handle preEIP155 & Legacy transactions
                     // The tx will have paramsDeploy in case is a deployment with constructor
                     if (txData.data) {
                         if (txData.to) {
@@ -220,26 +218,19 @@ describe('Processor', async function () {
                     }
 
                     const address = genesis.find((o) => o.address === txData.from);
-                    const signingKey = new ethers.utils.SigningKey(address.pvtKey);
+                    // const signingKey = new ethers.utils.SigningKey(address.pvtKey);
+                    const wallet = new ethers.Wallet(address.pvtKey);
 
-                    const signData = txUtils.getTxSignedMessage(tx);
-                    const digest = ethers.utils.keccak256(signData);
-                    const signature = signingKey.signDigest(digest);
-
-                    // add from for batch processor
-                    tx.from = txData.from;
+                    // const signData = txUtils.getTxSignedMessage(tx);
+                    // const digest = ethers.utils.keccak256(signData);
+                    const rawTxEthers = await wallet.signTransaction(tx);
 
                     // add effectivePercentage == 0xFF if not present
                     if (typeof tx.effectivePercentage === 'undefined') {
                         tx.effectivePercentage = 0xFF;
                     }
 
-                    batchCustomTx = {
-                        serialized: `0x${batchUtils.serializeTx(tx)}`,
-                        r: signature.r,
-                        s: signature.s,
-                        v: signature.v,
-                    };
+                    batchCustomTx = processorUtils.rawTxToCustomRawTx(rawTxEthers);
 
                     if (!update) {
                         expect(batchCustomTx).to.equal(txData.batchCustomTx);

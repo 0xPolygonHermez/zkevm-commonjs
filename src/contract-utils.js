@@ -196,9 +196,26 @@ function generateSolidityInputs(
     return proof;
 }
 
+/**
+ * Batch hash data
+ * @param {String} transactions - All raw transaction data concatenated
+ * @returns {String} - Batch hash data
+ */
+function calculateBatchHashData(
+    transactions,
+) {
+    return ethers.utils.solidityKeccak256(
+        ['bytes'],
+        [
+            transactions,
+        ],
+    );
+}
+
 module.exports = {
     calculateAccBlobHash,
     calculateSnarkInput,
     calculateBlobHashData,
     generateSolidityInputs,
+    calculateBatchHashData,
 };

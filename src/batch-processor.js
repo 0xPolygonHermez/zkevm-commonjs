@@ -16,11 +16,10 @@ const TmpSmtDB = require('./tmp-smt-db');
 const Constants = require('./constants');
 const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
-const { deserializeTx, computeNewAccBatchHashData } = require('./batch-utils');
 const VirtualCountersManager = require('./virtual-counters-manager');
 
 const { getCurrentDB } = require('./smt-utils');
-const { calculateSnarkInput } = require('./contract-utils');
+const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
 const {
     decodeCustomRawTxProverMethod, computeEffectiveGasPrice, computeL2TxHash,
     decodeChangeL2BlockTx,
@@ -31,10 +30,8 @@ const {
 } = require('./block-utils');
 const { verifyMerkleProof } = require('./mt-bridge-utils');
 const { getL1InfoTreeValue } = require('./l1-info-tree-utils');
-const { getTxSignedMessage } = require('./compression/compressor-utils');
-const { ENUM_TX_TYPES } = require('./compression/compressor-constants');
 
-module.exports = class BatchProcessor {
+module.exports = class Processor {
     /**
      * constructor Processor class
      * @param {Object} db - database
@@ -129,7 +126,7 @@ module.exports = class BatchProcessor {
 
     /**
      * Add a raw transaction to the processor
-     * @param {String} rawTx - RLP encoded
+     * @param {String} rawTx - RLP encoded transaction with signature
      */
     addRawTx(rawTx) {
         this._isNotBuilded();
@@ -943,27 +940,6 @@ module.exports = class BatchProcessor {
     }
 
     /**
-     * Return all the transactions serialized data concatenated
-     */
-    getBatchL2Data() {
-        // build header
-        const l1InfoRootStr = smtUtils.h4toString(this.l1InfoRoot);
-        const timestampLimitStr = valueToHexStr(this.timestampLimit).padStart(8 * 2, '0');
-        const sequencerAddrStr = this.sequencerAddress.startsWith('0x') ? this.sequencerAddress.slice(2) : this.sequencerAddress;
-        const numBlobStr = valueToHexStr(this.numBlob).padStart(8 * 2, '0');
-
-        // concatenate serialize transactions
-        let txsConcat = '';
-
-        for (let i = 0; i < this.rawTxs.length; i++) {
-            const serializedStr = this.rawTxs[i].serialized;
-            txsConcat += serializedStr.startsWith('0x') ? serializedStr.slice(2) : serializedStr;
-        }
-
-        return `${l1InfoRootStr}${timestampLimitStr}${sequencerAddrStr}${numBlobStr}${txsConcat}`;
-    }
-
-    /**
      * Compute stark input
      */
     async _computeStarkInput() {
@@ -974,10 +950,20 @@ module.exports = class BatchProcessor {
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
         const l1InfoRoot = smtUtils.h4toString(this.l1InfoRoot);
 
-        this.newAccInputHash = await computeNewAccBatchHashData(
-            this.oldAccInputHash,
+        this.batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
         );
+
+        const newAccInputHash = calculateAccInputHash(
+            oldAccInputHash,
+            this.batchHashData,
+            l1InfoRoot,
+            this.timestampLimit,
+            this.sequencerAddress,
+            this.forcedBlockHashL1,
+        );
+
+        this.newAccInputHash = smtUtils.stringToH4(newAccInputHash);
 
         // add flag to skip l1InfoTree verification
         if (this.options.skipVerifyL1InfoRoot === true) {
@@ -985,27 +971,26 @@ module.exports = class BatchProcessor {
         }
 
         this.starkInput = {
-            // inputs
             oldStateRoot,
+            newStateRoot, // output
+            oldAccInputHash,
+            newAccInputHash, // output
+            newLocalExitRoot, // output
+            oldNumBatch: this.oldNumBatch,
+            newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
             forkID: this.forkID,
-            oldAccInputHash,
-            batchL2Data: this.getBatchL2Data(),
-            oldNumBatch: this.oldNumBatch,
-            // outputs
-            newStateRoot,
-            newAccInputHash: this.newAccInputHash,
-            newLocalExitRoot,
-            newNumBatch: this.newNumBatch,
             forcedBlockHashL1: this.forcedBlockHashL1,
+            batchL2Data: this.getBatchL2Data(),
             l1InfoRoot,
             timestampLimit: this.timestampLimit.toString(),
             sequencerAddr: this.sequencerAddress,
+            batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
             l1InfoTree: this.l1InfoTree,
         };
 
-        // add flags
+        //  add flags
         // skipFirstChangeL2Block
         if (this.options.skipFirstChangeL2Block === true) {
             this.starkInput.skipFirstChangeL2Block = true;
@@ -1045,6 +1030,13 @@ module.exports = class BatchProcessor {
             aggregatorAddress,
             this.forkID,
         );
+    }
+
+    /**
+     * Return all the transaction data concatenated
+     */
+    getBatchL2Data() {
+        return this.rawTxs.reduce((previousValue, currentValue) => previousValue + currentValue.slice(2), '0x');
     }
 
     /**
