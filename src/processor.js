@@ -45,7 +45,8 @@ module.exports = class Processor {
      * @param {Number} timestampLimit - timestampLimit of the batch
      * @param {Number} chainID - L2 chainID
      * @param {Number} forkID - L2 rom fork identifier
-     * @param {String} forcedBlockHashL1 - blockhash L1 in forced batches
+     * @param {Number} type - Defined blob & batch type (0: calldata, 1: blob, 2: forced calldata)
+     * @param {String} forcedHashData - Hash data forced in forced batches (keccak256(ger, blockGashL1, minTimestamp))
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
@@ -54,6 +55,7 @@ module.exports = class Processor {
      * @param {Bool} options.skipFirstChangeL2Block Skips verification that first transaction must be a ChangeL2BlockTx
      * @param {Bool} options.skipWriteBlockInfoRoot Skips writing blockL2Info root on L2
      * @param {Object} extraData - additional data embedded in the batch
+     * @param {Object} extraData.forcedData - object with the following properties: ger, blockHashL1 & minTimestamp
      * @param {Array[Object]} extraData.l1Info - L1Info - object with the following [key - value] ==> [indexL1InfoTree - L1InfoLeaf]
      * @param {String} extraData.l1Info[x].globalExitRoot - global exit root
      * @param {String} extraData.l1Info[x].blockHash - l1 block hash at blockNumber - 1
@@ -71,7 +73,8 @@ module.exports = class Processor {
         timestampLimit,
         chainID,
         forkID,
-        forcedBlockHashL1,
+        type,
+        forcedHashData,
         vm,
         options,
         extraData,
@@ -104,9 +107,12 @@ module.exports = class Processor {
         this.timestampLimit = timestampLimit;
         this.chainID = chainID;
         this.forkID = forkID;
-        this.forcedBlockHashL1 = (typeof forcedBlockHashL1 === 'undefined') ? Constants.ZERO_BYTES32 : forcedBlockHashL1;
-        this.isForced = Scalar.neq(0, this.forcedBlockHashL1);
+        // could set either BLOB_TYPE_CALLDATA or BLOB_TYPE_EIP4844
+        this.type = (typeof type === 'undefined') ? Constants.BLOB_TYPE_CALLDATA : type;
+        this.forcedHashData = (typeof forcedHashData === 'undefined') ? Constants.ZERO_BYTES32 : forcedHashData;
+        this.isForced = Scalar.eq(2, this.type);
         this.l1InfoTree = {};
+        this.forcedData = {};
 
         this.vm = vm;
         this.oldVm = cloneDeep(vm);
@@ -141,6 +147,9 @@ module.exports = class Processor {
      */
     async executeTxs() {
         this._isNotBuilded();
+
+        // Read current timestamp
+        this.newLastTimestamp = await this._getTimestamp();
 
         // Check the validity of rawTxs
         await this._decodeAndCheckRawTx();
@@ -769,6 +778,9 @@ module.exports = class Processor {
             toBuffer(`0x${Constants.TIMESTAMP_STORAGE_POS.toString(16).padStart(64, '0')}`),
             toBuffer(valueToHexStr(timestamp, true)),
         );
+
+        // Update newLastTimestamp
+        this.newLastTimestamp = timestamp;
     }
 
     async _processChangeL2BlockTx(tx) {
@@ -822,7 +834,7 @@ module.exports = class Processor {
         );
 
         // get last timestamp
-        const currentTimestamp = await this._getTimestamp();
+        const currentTimestamp = this.newLastTimestamp;
 
         // final timestamp, GER and blockHashL1 of the block
         let finalTimestamp = 0;
@@ -830,21 +842,40 @@ module.exports = class Processor {
         let finalBlockHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
         if (this.isForced) {
-            const timestampForced = this.timestampLimit;
-            const lastGERForced = smtUtils.h4toString(this.l1InfoRoot);
+            // load forcedData
+            this.forcedData = {
+                ger: this.extraData.forcedData.ger,
+                blockHashL1: this.extraData.forcedData.blockHashL1,
+                minTimestamp: this.extraData.forcedData.minTimestamp,
+            };
 
-            // Update timestamp only if limitTimestamp > currentTimestamp
-            if (Scalar.gt(this.timestampLimit, currentTimestamp)) {
+            // get and verify forcedHashData
+            const computedForcedHashData = getL1InfoTreeValue(
+                this.forcedData.ger,
+                this.forcedData.blockHashL1,
+                this.forcedData.minTimestamp,
+            );
+
+            // verify forced data provided is correct
+            if (computedForcedHashData !== this.forcedHashData) {
+                throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: forced data does not match its hash`);
+            }
+
+            // set forced data
+            const timestampForced = this.forcedData.minTimestamp;
+            // set forced global exit root and default blockHash
+            finalGER = this.forcedData.ger;
+            finalBlockHash = this.forcedData.blockHashL1;
+
+            // Update timestamp only if timestampForced > currentTimestamp
+            if (Scalar.gt(timestampForced, currentTimestamp)) {
                 // set new timestamp
                 finalTimestamp = timestampForced;
                 await this._setTimestamp(timestampForced);
             }
 
-            // set forced global exit root and default blockHash
-            finalGER = lastGERForced;
-            finalBlockHash = this.forcedBlockHashL1;
             // forced batch has no enforced blockhash
-            await this._setGlobalExitRoot(lastGERForced, finalBlockHash);
+            await this._setGlobalExitRoot(finalGER, finalBlockHash);
         } else {
             const newTimestamp = Scalar.add(currentTimestamp, Scalar.e(tx.deltaTimestamp));
 
@@ -949,6 +980,7 @@ module.exports = class Processor {
         const oldAccInputHash = smtUtils.h4toString(this.oldAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
         const l1InfoRoot = smtUtils.h4toString(this.l1InfoRoot);
+        const newLastTimestamp = this.newLastTimestamp.toString();
 
         this.batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
@@ -960,7 +992,7 @@ module.exports = class Processor {
             l1InfoRoot,
             this.timestampLimit,
             this.sequencerAddress,
-            this.forcedBlockHashL1,
+            this.forcedHashData,
         );
 
         this.newAccInputHash = smtUtils.stringToH4(newAccInputHash);
@@ -976,11 +1008,12 @@ module.exports = class Processor {
             oldAccInputHash,
             newAccInputHash, // output
             newLocalExitRoot, // output
+            newLastTimestamp, // output
             oldNumBatch: this.oldNumBatch,
             newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
             forkID: this.forkID,
-            forcedBlockHashL1: this.forcedBlockHashL1,
+            forcedHashData: this.forcedHashData,
             batchL2Data: this.getBatchL2Data(),
             l1InfoRoot,
             timestampLimit: this.timestampLimit.toString(),
@@ -988,6 +1021,7 @@ module.exports = class Processor {
             batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
             l1InfoTree: this.l1InfoTree,
+            forcedData: this.forcedData,
         };
 
         //  add flags
