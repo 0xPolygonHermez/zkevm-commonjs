@@ -46,6 +46,8 @@ describe('Processor', async function () {
         pathProcessorTests = path.join(pathTestVectors, 'selfdestruct/selfdestruct.json');
     } else if (argv.etrog) {
         pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition-etrog.json');
+    } else if (argv.feijoa) {
+        pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition-feijoa.json');
     } else {
         pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition.json');
     }
@@ -71,22 +73,23 @@ describe('Processor', async function () {
             let {
                 id,
                 genesis,
-                expectedOldRoot,
+                oldStateRoot,
                 txs,
-                expectedNewRoot,
-                expectedNewAccInputHash,
+                newStateRoot,
+                newBatchAccInputHash,
                 sequencerAddress,
                 expectedNewLeafs,
                 batchL2Data,
-                oldAccInputHash,
+                oldBatchAccInputHash,
                 newLocalExitRoot,
-                l1InfoRoot,
                 batchHashData,
-                inputHash,
-                timestampLimit,
                 chainID,
                 forkID,
-                forcedBlockHashL1,
+                type,
+                forcedHashData,
+                forcedData,
+                previousL1InfoTreeRoot,
+                previousL1InfoTreeIndex,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -95,7 +98,7 @@ describe('Processor', async function () {
                 db,
                 poseidon,
                 [F.zero, F.zero, F.zero, F.zero],
-                smtUtils.stringToH4(oldAccInputHash),
+                smtUtils.stringToH4(oldBatchAccInputHash),
                 genesis,
                 null,
                 null,
@@ -147,17 +150,18 @@ describe('Processor', async function () {
             }
 
             if (!update) {
-                expect(smtUtils.h4toString(zkEVMDB.stateRoot)).to.be.equal(expectedOldRoot);
+                expect(smtUtils.h4toString(zkEVMDB.stateRoot)).to.be.equal(oldStateRoot);
             } else {
-                testVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
+                testVectors[i].oldStateRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
             }
 
-            const extraData = { l1Info: {} };
+            const extraData = { forcedData, l1Info: {} };
             const batch = await zkEVMDB.buildBatch(
-                timestampLimit,
                 sequencerAddress,
-                smtUtils.stringToH4(l1InfoRoot),
-                forcedBlockHashL1,
+                type,
+                forcedHashData,
+                previousL1InfoTreeRoot,
+                previousL1InfoTreeIndex,
                 Constants.DEFAULT_MAX_TX,
                 {
                     skipVerifyL1InfoRoot: false,
@@ -297,11 +301,11 @@ describe('Processor', async function () {
 
             const newRoot = batch.currentStateRoot;
             if (!update) {
-                expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
-                expect(smtUtils.h4toString(batch.newAccInputHash)).to.be.equal(expectedNewAccInputHash);
+                expect(smtUtils.h4toString(newRoot)).to.be.equal(newStateRoot);
+                expect(smtUtils.h4toString(batch.newBatchAccInputHash)).to.be.equal(newBatchAccInputHash);
             } else {
-                testVectors[i].expectedNewRoot = smtUtils.h4toString(newRoot);
-                testVectors[i].expectedNewAccInputHash = smtUtils.h4toString(batch.newAccInputHash);
+                testVectors[i].newStateRoot = smtUtils.h4toString(newRoot);
+                testVectors[i].newBatchAccInputHash = smtUtils.h4toString(batch.newBatchAccInputHash);
             }
 
             // Check errors on decode transactions
@@ -398,21 +402,19 @@ describe('Processor', async function () {
                 expect(batchL2Data).to.be.equal(batch.getBatchL2Data());
                 // Check the batchHashData and the input hash
                 expect(batchHashData).to.be.equal(circuitInput.batchHashData);
-                expect(inputHash).to.be.equal(circuitInput.inputHash);
                 expect(newLocalExitRoot).to.be.equal(circuitInput.newLocalExitRoot);
             } else {
                 testVectors[i].batchL2Data = batch.getBatchL2Data();
                 testVectors[i].batchHashData = circuitInput.batchHashData;
-                testVectors[i].inputHash = circuitInput.inputHash;
                 testVectors[i].newLocalExitRoot = circuitInput.newLocalExitRoot;
             }
 
             if (update && geninput) {
                 const dstFile = path.join(pathInputs, `${path.basename(pathProcessorTests, '.json')}-${i}-input.json`);
-                const folfer = path.dirname(dstFile);
+                const folder = path.dirname(dstFile);
 
-                if (!fs.existsSync(folfer)) {
-                    fs.mkdirSync(folfer);
+                if (!fs.existsSync(folder)) {
+                    fs.mkdirSync(folder);
                 }
 
                 await fs.writeFileSync(dstFile, JSON.stringify(circuitInput, null, 2));

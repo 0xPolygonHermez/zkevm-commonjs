@@ -1,6 +1,7 @@
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
 const { sha256Snark, padZeros } = require('./utils');
+const { linearPoseidon } = require('./smt-utils');
 
 /**
  * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoRoot, timestampLimit, seqAddress)
@@ -31,6 +32,36 @@ function calculateAccInputHash(
             timestampLimit,
             sequencerAddress,
             forcedBlockHashL1,
+        ],
+    );
+
+    return hashKeccak;
+}
+
+/**
+ * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoRoot, timestampLimit, seqAddress)
+ * @param {String} oldBatchAccInputHash - old batchAccumulateInputHash
+ * @param {String} batchHashData - Batch hash data
+ * @param {String} sequencerAddress - Sequencer address
+ * @param {String} forcedHashData - Flag for forced transaction
+ * @param {String} type - Type of the batch 0: data-availability comes from calldata, 1: data-availability comes from blob transaction, 2: forced blob (data-availability comes from calldata)
+ * @returns {String} - batchAccumulateInputHash in hex encoding
+ */
+function calculateBatchAccInputHash(
+    oldBatchAccInputHash,
+    batchHashData,
+    sequencerAddress,
+    forcedHashData,
+    type,
+) {
+    const hashKeccak = ethers.utils.solidityKeccak256(
+        ['bytes32', 'bytes32', 'address', 'bytes32', 'uint8'],
+        [
+            oldBatchAccInputHash,
+            batchHashData,
+            sequencerAddress,
+            forcedHashData,
+            type,
         ],
     );
 
@@ -110,18 +141,13 @@ async function calculateSnarkInput(
 
 /**
  * Batch hash data
- * @param {String} transactions - All raw transaction data concatenated
+ * @param {String} batchL2Data - Batch L2 data input in hex string
  * @returns {String} - Batch hash data
  */
-function calculateBatchHashData(
-    transactions,
+async function calculateBatchHashData(
+    batchL2Data,
 ) {
-    return ethers.utils.solidityKeccak256(
-        ['bytes'],
-        [
-            transactions,
-        ],
-    );
+    return linearPoseidon(batchL2Data);
 }
 
 /**
@@ -165,6 +191,7 @@ function generateSolidityInputs(
 
 module.exports = {
     calculateAccInputHash,
+    calculateBatchAccInputHash,
     calculateSnarkInput,
     calculateBatchHashData,
     generateSolidityInputs,
