@@ -183,7 +183,7 @@ describe('Processor', async function () {
                     const rawChangeL2BlockTx = serializeChangeL2Block(txData);
 
                     // Append l1Info to l1Info object
-                    extraData.l1Info[txData.indexL1InfoTree] = txData.l1Info;
+                    extraData.l1Info[txData.indexL1InfoTree] = txData.l1InfoTree;
 
                     const customRawTx = `0x${rawChangeL2BlockTx}`;
                     rawTxs.push(customRawTx);

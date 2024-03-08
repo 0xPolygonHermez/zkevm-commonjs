@@ -39,6 +39,26 @@ function verifyMerkleProof(leaf, smtProof, index, root) {
 }
 
 /**
+ * Computes merkle proof
+ * @param {BigNumber} leaf - Leaf value
+ * @param {Array} smtProof - Array of sibilings
+ * @param {Number} index - Index of the leaf
+ * @returns {Boolean} - Whether the merkle proof is correct or not
+ */
+function computeMerkleRoot(leaf, smtProof, index) {
+    let value = leaf;
+    for (let i = 0; i < smtProof.length; i++) {
+        if (Math.floor(index / 2 ** i) % 2 !== 0) {
+            value = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [smtProof[i], value]);
+        } else {
+            value = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [value, smtProof[i]]);
+        }
+    }
+
+    return value;
+}
+
+/**
  * Calculate leaf value
  * @param {Number} leafType - Leaf Type
  * @param {Number} originNetwork - Original network
@@ -73,6 +93,7 @@ function computeGlobalIndex(indexLocal, indexRollup, isMainnet) {
 module.exports = {
     generateZeroHashes,
     verifyMerkleProof,
+    computeMerkleRoot,
     getLeafValue,
     computeGlobalIndex,
 };

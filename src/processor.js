@@ -28,7 +28,7 @@ const { valueToHexStr, getFuncName } = require('./utils');
 const {
     initBlockHeader, setBlockGasUsed, fillReceiptTree,
 } = require('./block-utils');
-const { verifyMerkleProof } = require('./mt-bridge-utils');
+const { verifyMerkleProof, computeMerkleRoot } = require('./mt-bridge-utils');
 const { getL1InfoTreeValue } = require('./l1-info-tree-utils');
 
 module.exports = class Processor {
@@ -107,6 +107,8 @@ module.exports = class Processor {
         this.isForced = Scalar.eq(2, this.type);
         this.previousL1InfoTreeRoot = previousL1InfoTreeRoot;
         this.previousL1InfoTreeIndex = previousL1InfoTreeIndex;
+        this.currentL1InfoTreeRoot = previousL1InfoTreeRoot;
+        this.currentL1InfoTreeIndex = previousL1InfoTreeIndex;
         this.l1InfoTree = {};
         this.forcedData = {};
 
@@ -304,7 +306,7 @@ module.exports = class Processor {
     /**
      * Checks if GER is != 0 and if it does not exist in the global exit root manager
      * @param {String} globalExitRoot - global exit root
-     * @returns {Bool} - flag indicating if l1Info needs to be writen
+     * @returns {Bool} - flag indicating if l1Info needs to be written
      */
     async _shouldWriteL1Info(globalExitRoot) {
         // return if globalExitRoot is 0
@@ -882,9 +884,13 @@ module.exports = class Processor {
             // Compute recursive l1InfoTree
             if (tx.indexL1InfoTree !== 0) {
                 const l1Info = this.extraData.l1Info[tx.indexL1InfoTree];
+                // Verify newTimestamp >= l1InfoRoot.timestamp
+                if (Scalar.lt(newTimestamp, l1Info.timestamp)) {
+                    return true;
+                }
 
                 // Verify l1Info & indexL1InfoTree belong to l1InfoRoot
-                const valueLeaf = getL1InfoTreeValue(
+                const infoTreeData = getL1InfoTreeValue(
                     l1Info.globalExitRoot,
                     l1Info.blockHash,
                     l1Info.timestamp,
@@ -897,18 +903,33 @@ module.exports = class Processor {
                 // fulfill l1InfoTree information
                 this.l1InfoTree[tx.indexL1InfoTree] = l1Info;
 
-                if (!verifyMerkleProof(valueLeaf, l1Info.smtProof, tx.indexL1InfoTree, smtUtils.h4toString(this.l1InfoRoot))) {
-                    return true;
+                // Check if previousL1InfoTree index is 0
+                if (this.currentL1InfoTreeIndex === 0) {
+                    this.currentL1InfoTreeRoot = ethers.utils.solidityKeccak256(
+                        ['bytes32', 'bytes32'],
+                        [
+                            l1Info.historicRoot,
+                            infoTreeData,
+                        ],
+                    );
+                    this.currentL1InfoTreeIndex = tx.indexL1InfoTree;
+                } else {
+                    // Is not zero
+                    // Compute merkle proof
+                    const historicRoot = computeMerkleRoot(this.currentL1InfoTreeRoot, l1Info.smtProof, this.currentL1InfoTreeIndex);
+                    // Do hash with infoTreeData
+                    this.currentL1InfoTreeRoot = ethers.utils.solidityKeccak256(
+                        ['bytes32', 'bytes32'],
+                        [
+                            historicRoot,
+                            infoTreeData,
+                        ],
+                    );
+                    this.currentL1InfoTreeIndex = tx.indexL1InfoTree;
                 }
-
-                // Verify newTimestamp >= l1InfoRoot.timestamp
-                if (Scalar.lt(newTimestamp, l1Info.timestamp)) {
-                    return true;
-                }
-
                 // write l1Info data depending if the global exit root already exist or is zero
                 finalGER = l1Info.globalExitRoot;
-                const writeL1Info = this._shouldWriteL1Info(l1Info.globalExitRoot);
+                const writeL1Info = await this._shouldWriteL1Info(l1Info.globalExitRoot);
 
                 if (writeL1Info) {
                     finalBlockHash = l1Info.blockHash;
@@ -968,8 +989,7 @@ module.exports = class Processor {
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
         const oldBatchAccInputHash = smtUtils.h4toString(this.oldBatchAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
-        const newLastTimestamp = this.newLastTimestamp.toString();
-
+        const newTimestamp = this.newLastTimestamp.toString();
         this.batchHashData = await calculateBatchHashData(
             this.getBatchL2Data(),
         );
@@ -990,7 +1010,7 @@ module.exports = class Processor {
             oldBatchAccInputHash,
             newBatchAccInputHash, // output
             newLocalExitRoot, // output
-            newLastTimestamp, // output
+            newTimestamp, // output
             chainID: this.chainID,
             forkID: this.forkID,
             forcedHashData: this.forcedHashData,
@@ -1002,8 +1022,12 @@ module.exports = class Processor {
             forcedData: this.forcedData,
             previousL1InfoTreeRoot: this.previousL1InfoTreeRoot,
             previousL1InfoTreeIndex: this.previousL1InfoTreeIndex,
+            newL1InfoTreeRoot: this.currentL1InfoTreeRoot,
+            newL1InfoTreeIndex: this.currentL1InfoTreeIndex,
         };
-
+        if (this.extraData.l1Info) {
+            this.starkInput.l1InfoTree = this.extraData.l1Info;
+        }
         //  add flags
         // skipFirstChangeL2Block
         if (this.options.skipFirstChangeL2Block === true) {
