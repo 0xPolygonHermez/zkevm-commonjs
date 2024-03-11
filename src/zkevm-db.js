@@ -233,13 +233,13 @@ class ZkEVMDB {
 
             if (i === initNumBatch) {
                 dataVerify.oldStateRoot = value.oldStateRoot;
-                dataVerify.oldAccInputHash = value.oldAccInputHash;
+                dataVerify.oldBatchAccInputHash = value.oldBatchAccInputHash;
                 dataVerify.oldNumBatch = value.oldNumBatch;
             }
 
             if (i === finalNumBatch) {
                 dataVerify.newStateRoot = value.newStateRoot;
-                dataVerify.newAccInputHash = value.newAccInputHash;
+                dataVerify.newBatchAccInputHash = value.newBatchAccInputHash;
                 dataVerify.newLocalExitRoot = value.newLocalExitRoot;
                 dataVerify.newNumBatch = value.newNumBatch;
             }
@@ -255,8 +255,8 @@ class ZkEVMDB {
             dataVerify.oldStateRoot,
             dataVerify.newStateRoot,
             dataVerify.newLocalExitRoot,
-            dataVerify.oldAccInputHash,
-            dataVerify.newAccInputHash,
+            dataVerify.oldBatchAccInputHash,
+            dataVerify.newBatchAccInputHash,
             dataVerify.oldNumBatch,
             dataVerify.newNumBatch,
             dataVerify.chainID,

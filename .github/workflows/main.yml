@@ -12,7 +12,7 @@ on:
     branches:
       - main
       - develop
-      - feature/fork-etrog
+      - develop-feijoa
 
 jobs:
   build:

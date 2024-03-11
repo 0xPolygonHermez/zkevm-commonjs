@@ -1,3 +1,4 @@
+/* eslint-disable default-param-last */
 /* eslint-disable no-console */
 /* eslint-disable multiline-comment-style */
 /* eslint-disable max-len */
@@ -9,7 +10,7 @@ const { Block } = require('@ethereumjs/block');
 const {
     Address, BN, toBuffer, bufferToInt,
 } = require('ethereumjs-util');
-const { cloneDeep } = require('lodash');
+const { cloneDeep, get: _get } = require('lodash');
 const { Scalar } = require('ffjavascript');
 const SMT = require('./smt');
 const TmpSmtDB = require('./tmp-smt-db');
@@ -74,7 +75,7 @@ module.exports = class Processor {
         previousL1InfoTreeIndex,
         vm,
         options,
-        extraData,
+        extraData = {},
         smtLevels,
     ) {
         this.db = db;
@@ -110,7 +111,7 @@ module.exports = class Processor {
         this.currentL1InfoTreeRoot = previousL1InfoTreeRoot;
         this.currentL1InfoTreeIndex = previousL1InfoTreeIndex;
         this.l1InfoTree = {};
-        this.forcedData = extraData.forcedData || {};
+        this.forcedData = _get(extraData, 'forcedData', {});
 
         this.vm = vm;
         this.oldVm = cloneDeep(vm);
@@ -1004,6 +1005,8 @@ module.exports = class Processor {
             newBatchAccInputHash, // output
             newLocalExitRoot, // output
             newTimestamp, // output
+            oldNumBatch: this.oldNumBatch,
+            newNumBatch: this.newNumBatch,
             chainID: this.chainID,
             forkID: this.forkID,
             forcedHashData: this.forcedHashData,

@@ -10,10 +10,9 @@ describe('contractUtils', function () {
     this.timeout(10000);
     let testVector;
 
-    const expectedBatchHashData = '0x5e7875ab198c4d93379c92990a5d0111af59a0e62b2c4a0e3898e5bd24a18e58';
-    // TODO: input taken from pil-stark
-    const expectedStarkHashExecutor = '0xcfae2cfa3b8f3f12abce1bccd90e9b203dfdbe56c0c412114f2d3e67c9a897db';
-    const expectedSnarkInputHash = '14261007919052674347941079765745619634521069459113175679360275962408703057507';
+    const expectedBatchHashData = '0x32b53865e6e076378b62b6c02beabba42ba63289796dda21df27bb766439ec2b';
+    const expectedStarkHashExecutor = '0x177e9c066cfeeebdc95f76a3a0f8338a8fd337cbb0e56ae75c5816e44d791508';
+    const expectedSnarkInputHash = '2fb8268c8d9d06cec48676c7cf3dbafde604d3202e25762ec5313b0f916f74dc';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
@@ -32,20 +31,18 @@ describe('contractUtils', function () {
 
     it('calculateStarkInput', async () => {
         const {
-            oldAccInputHash,
-            l1InfoRoot,
-            timestampLimit,
+            oldBatchAccInputHash,
             sequencerAddr,
-            forcedBlockHashL1,
+            forcedHashData,
+            type,
         } = testVector;
 
-        const computedGlobalHash = await contractUtils.calculateAccInputHash(
-            oldAccInputHash,
+        const computedGlobalHash = await contractUtils.calculateBatchAccInputHash(
+            oldBatchAccInputHash,
             expectedBatchHashData,
-            l1InfoRoot,
-            timestampLimit,
             sequencerAddr,
-            forcedBlockHashL1,
+            forcedHashData,
+            type,
         );
 
         expect(computedGlobalHash).to.be.equal(expectedStarkHashExecutor);
@@ -58,8 +55,8 @@ describe('contractUtils', function () {
             oldStateRoot,
             newStateRoot,
             newLocalExitRoot,
-            oldAccInputHash,
-            newAccInputHash,
+            oldBatchAccInputHash,
+            newBatchAccInputHash,
             oldNumBatch,
             newNumBatch,
             chainID,
@@ -70,8 +67,8 @@ describe('contractUtils', function () {
             oldStateRoot,
             newStateRoot,
             newLocalExitRoot,
-            oldAccInputHash,
-            newAccInputHash,
+            oldBatchAccInputHash,
+            newBatchAccInputHash,
             oldNumBatch,
             newNumBatch,
             chainID,
@@ -79,7 +76,7 @@ describe('contractUtils', function () {
             forkID,
         );
 
-        expect(computedSnark.toString()).to.be.equal(expectedSnarkInputHash.toString());
+        expect(computedSnark.toString(16)).to.be.equal(expectedSnarkInputHash);
     });
 
     it('generateSolidityInputs', async () => {

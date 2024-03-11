@@ -55,13 +55,17 @@ describe('Block info tests', function () {
             const {
                 id,
                 genesis,
-                expectedOldRoot,
+                oldStateRoot,
                 batches,
                 sequencerAddress,
                 bridgeDeployed,
-                oldAccInputHash,
+                oldBatchAccInputHash,
                 forkID,
                 chainID,
+                type,
+                forcedHashData,
+                previousL1InfoTreeRoot,
+                previousL1InfoTreeIndex,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -70,7 +74,7 @@ describe('Block info tests', function () {
                 db,
                 poseidon,
                 [F.zero, F.zero, F.zero, F.zero],
-                smtUtils.stringToH4(oldAccInputHash),
+                smtUtils.stringToH4(oldBatchAccInputHash),
                 genesis,
                 null,
                 null,
@@ -115,9 +119,9 @@ describe('Block info tests', function () {
             }
 
             if (!update) {
-                expect(smtUtils.h4toString(zkEVMDB.stateRoot)).to.be.equal(expectedOldRoot);
+                expect(smtUtils.h4toString(zkEVMDB.stateRoot)).to.be.equal(oldStateRoot);
             } else {
-                testVectors[i].expectedOldRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
+                testVectors[i].oldStateRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
             }
 
             /*
@@ -129,8 +133,8 @@ describe('Block info tests', function () {
 
             for (let k = 0; k < batches.length; k++) {
                 const {
-                    txs, expectedNewRoot, expectedNewLeafs, batchL2Data, l1InfoRoot,
-                    inputHash, timestampLimit, batchHashData, newLocalExitRoot, forcedBlockHashL1,
+                    txs, newStateRoot, expectedNewLeafs, batchL2Data, l1InfoRoot,
+                    inputHash, batchHashData, newLocalExitRoot,
                     skipFirstChangeL2Block, skipWriteBlockInfoRoot,
                 } = batches[k];
                 const rawTxs = [];
@@ -248,13 +252,13 @@ describe('Block info tests', function () {
                 }
 
                 const batch = await zkEVMDB.buildBatch(
-                    timestampLimit,
                     sequencerAddress,
-                    smtUtils.stringToH4(l1InfoRoot),
-                    forcedBlockHashL1,
+                    type,
+                    forcedHashData,
+                    previousL1InfoTreeRoot,
+                    previousL1InfoTreeIndex,
                     Constants.DEFAULT_MAX_TX,
                     {
-                        skipVerifyL1InfoRoot: false,
                         skipFirstChangeL2Block,
                         skipWriteBlockInfoRoot,
                     },
@@ -272,9 +276,9 @@ describe('Block info tests', function () {
 
                 const newRoot = batch.currentStateRoot;
                 if (!update) {
-                    expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
+                    expect(smtUtils.h4toString(newRoot)).to.be.equal(newStateRoot);
                 } else {
-                    testVectors[i].batches[k].expectedNewRoot = smtUtils.h4toString(newRoot);
+                    testVectors[i].batches[k].newStateRoot = smtUtils.h4toString(newRoot);
                 }
 
                 // Check errors on decode transactions

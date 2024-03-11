@@ -40,20 +40,21 @@ describe('ZkEVMDB', function () {
     it('Check zkEVMDB basic functions', async () => {
         const sequencerAddress = '0x0000000000000000000000000000000000000000';
         const genesisRoot = [F.zero, F.zero, F.zero, F.zero];
-        const accHashInput = [F.zero, F.zero, F.zero, F.zero];
-        const l1InfoRoot = [F.zero, F.zero, F.zero, F.zero];
-        const timestampLimit = 1;
+        const oldBatchAccInputHash = [F.zero, F.zero, F.zero, F.zero];
         const genesis = [];
         const db = new MemDB(F);
         const chainID = 1000;
-        const forkID = 8;
-
+        const forkID = 9;
+        const type = 0;
+        const forcedHashData = Constants.ZERO_BYTES32;
+        const previousL1InfoTreeRoot = Constants.ZERO_BYTES32;
+        const previousL1InfoTreeIndex = 0;
         // create a zkEVMDB and build a batch
         const zkEVMDB = await ZkEVMDB.newZkEVM(
             db,
             poseidon,
             genesisRoot,
-            accHashInput,
+            oldBatchAccInputHash,
             genesis,
             null,
             null,
@@ -62,7 +63,14 @@ describe('ZkEVMDB', function () {
         );
 
         // build an empty batch
-        const batch = await zkEVMDB.buildBatch(timestampLimit, sequencerAddress, l1InfoRoot);
+        const batch = await zkEVMDB.buildBatch(
+            sequencerAddress,
+            type,
+            forcedHashData,
+            previousL1InfoTreeRoot,
+            previousL1InfoTreeIndex,
+            null,
+        );
         await batch.executeTxs();
 
         // checks DB state previous consolidate zkEVMDB
@@ -106,19 +114,20 @@ describe('ZkEVMDB', function () {
     it('Check zkEVMDB when consolidate a batch', async () => {
         const {
             genesis,
-            expectedOldRoot,
+            oldStateRoot,
             txs,
-            expectedNewRoot,
+            newStateRoot,
             batchL2Data,
             sequencerAddress,
-            l1InfoRoot,
-            timestampLimit,
             newLocalExitRoot,
-            oldAccInputHash,
-            expectedNewAccInputHash,
+            oldBatchAccInputHash,
+            newBatchAccInputHash,
+            previousL1InfoTreeRoot,
+            previousL1InfoTreeIndex,
+            type,
             chainID,
             forkID,
-            forcedBlockHashL1,
+            forcedHashData,
         } = testVectors[0];
 
         const db = new MemDB(F);
@@ -156,9 +165,9 @@ describe('ZkEVMDB', function () {
         }
 
         if (update) {
-            testVectors[0].expectedOldRoot = smtUtils.h4toString(genesisRoot);
+            testVectors[0].oldStateRoot = smtUtils.h4toString(genesisRoot);
         } else {
-            expect(smtUtils.h4toString(genesisRoot)).to.be.equal(expectedOldRoot);
+            expect(smtUtils.h4toString(genesisRoot)).to.be.equal(oldStateRoot);
         }
 
         /*
@@ -251,7 +260,7 @@ describe('ZkEVMDB', function () {
             db,
             poseidon,
             genesisRoot,
-            smtUtils.stringToH4(oldAccInputHash),
+            smtUtils.stringToH4(oldBatchAccInputHash),
             genesis,
             null,
             null,
@@ -260,15 +269,12 @@ describe('ZkEVMDB', function () {
         );
 
         const batch = await zkEVMDB.buildBatch(
-            timestampLimit,
             sequencerAddress,
-            smtUtils.stringToH4(l1InfoRoot),
-            forcedBlockHashL1,
+            type,
+            forcedHashData,
+            previousL1InfoTreeRoot,
+            previousL1InfoTreeIndex,
             Constants.DEFAULT_MAX_TX,
-            {
-                skipVerifyL1InfoRoot: false,
-            },
-            extraData,
         );
 
         for (let j = 0; j < rawTxs.length; j++) {
@@ -278,17 +284,15 @@ describe('ZkEVMDB', function () {
         // execute the transactions added to the batch
         await batch.executeTxs();
 
-        const newRoot = batch.currentStateRoot;
-        const { newAccInputHash } = batch;
         const computedBatchL2Data = await batch.getBatchL2Data();
 
         if (update) {
-            testVectors[0].expectedNewRoot = smtUtils.h4toString(newRoot);
-            testVectors[0].expectedNewAccInputHash = smtUtils.h4toString(newAccInputHash);
+            testVectors[0].newStateRoot = smtUtils.h4toString(batch.currentStateRoot);
+            testVectors[0].newBatchAccInputHash = smtUtils.h4toString(batch.newBatchAccInputHash);
             testVectors[0].batchL2Data = computedBatchL2Data;
         } else {
-            expect(smtUtils.h4toString(newRoot)).to.be.equal(expectedNewRoot);
-            expect(smtUtils.h4toString(newAccInputHash)).to.be.equal(expectedNewAccInputHash);
+            expect(smtUtils.h4toString(batch.currentStateRoot)).to.be.equal(newStateRoot);
+            expect(smtUtils.h4toString(batch.newBatchAccInputHash)).to.be.equal(newBatchAccInputHash);
             expect(computedBatchL2Data).to.be.equal(batchL2Data);
         }
 
@@ -300,7 +304,7 @@ describe('ZkEVMDB', function () {
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(numBatch);
 
         if (!update) {
-            expect(smtUtils.h4toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(expectedOldRoot);
+            expect(smtUtils.h4toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(oldStateRoot);
         }
 
         // consoldate state
@@ -309,9 +313,9 @@ describe('ZkEVMDB', function () {
         // checks after consolidate zkEVMDB
         expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(numBatch + 1);
         if (!update) {
-            expect(smtUtils.h4toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(expectedNewRoot);
+            expect(smtUtils.h4toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(newStateRoot);
             expect(smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot())).to.be.equal(newLocalExitRoot);
-            expect(smtUtils.h4toString(zkEVMDB.getCurrentAccInpuHash())).to.be.equal(expectedNewAccInputHash);
+            expect(smtUtils.h4toString(zkEVMDB.getCurrentBatchAccInputHash())).to.be.equal(newBatchAccInputHash);
         }
 
         const lastBatchDB = await db.getValue(Constants.DB_LAST_BATCH);
@@ -324,7 +328,7 @@ describe('ZkEVMDB', function () {
         expect(localExitRootDB).to.be.deep.equal(smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot()));
 
         const accHashInputDB = await db.getValue(Scalar.add(Constants.DB_ACC_INPUT_HASH, lastBatchDB));
-        expect(accHashInputDB).to.be.deep.equal(smtUtils.h4toString(zkEVMDB.getCurrentAccInpuHash()));
+        expect(accHashInputDB).to.be.deep.equal(smtUtils.h4toString(zkEVMDB.getCurrentBatchAccInputHash()));
 
         if (update) {
             await fs.writeFileSync(pathZkevmDbTest, JSON.stringify(testVectors, null, 2));
@@ -334,18 +338,19 @@ describe('ZkEVMDB', function () {
     it('Check zkEVMDB recursive functions', async () => {
         const {
             genesis,
-            expectedOldRoot,
+            oldStateRoot,
             batches,
             sequencerAddress,
-            l1InfoRoot,
-            timestampLimit,
-            oldAccInputHash,
+            type,
+            previousL1InfoTreeRoot,
+            previousL1InfoTreeIndex,
+            oldBatchAccInputHash,
             chainID,
             forkID,
-            finalStateRoot,
-            finalLocalExitRoot,
-            finalAccInputHash,
-            finalNumBatch,
+            newStateRoot,
+            newLocalExitRoot,
+            newBatchAccInputHash,
+            newNumBatch,
             aggregatorAddress,
             inputSnark,
         } = testVectorsRecursive[0];
@@ -385,7 +390,7 @@ describe('ZkEVMDB', function () {
         if (update) {
             testVectorsRecursive[0].expectedOldRoot = smtUtils.h4toString(genesisRoot);
         } else {
-            expect(smtUtils.h4toString(genesisRoot)).to.be.equal(expectedOldRoot);
+            expect(smtUtils.h4toString(genesisRoot)).to.be.equal(oldStateRoot);
         }
 
         /*
@@ -484,7 +489,7 @@ describe('ZkEVMDB', function () {
             db,
             poseidon,
             genesisRoot,
-            smtUtils.stringToH4(oldAccInputHash),
+            smtUtils.stringToH4(oldBatchAccInputHash),
             genesis,
             null,
             null,
@@ -496,10 +501,11 @@ describe('ZkEVMDB', function () {
         for (let m = 0; m < rawBatches.length; m++) {
             const rawTxs = rawBatches[m];
             const batch = await zkEVMDB.buildBatch(
-                timestampLimit,
                 sequencerAddress,
-                smtUtils.stringToH4(l1InfoRoot),
-                Constants.ZERO_BYTES32, // forcedBlockHashL1 == 0
+                type,
+                Constants.ZERO_BYTES32, // forcedHashData
+                previousL1InfoTreeRoot,
+                previousL1InfoTreeIndex,
                 Constants.DEFAULT_MAX_TX,
                 {
                     skipVerifyL1InfoRoot: false,
@@ -514,22 +520,20 @@ describe('ZkEVMDB', function () {
             await batch.executeTxs();
             await zkEVMDB.consolidate(batch);
 
-            const newRoot = batch.currentStateRoot;
-            const { newAccInputHash, newNumBatch, newLocalExitRoot } = batch;
             const batchL2Data = await batch.getBatchL2Data();
 
             if (update) {
-                testVectorsRecursive[0].batches[m].expectedNewRoot = smtUtils.h4toString(newRoot);
-                testVectorsRecursive[0].batches[m].expectedNewAccInputHash = smtUtils.h4toString(newAccInputHash);
-                testVectorsRecursive[0].batches[m].expectedNewNumBatch = batch.newNumBatch;
-                testVectorsRecursive[0].batches[m].expectedNewLocalExitRoot = smtUtils.h4toString(newLocalExitRoot);
-                testVectorsRecursive[0].batches[m].expectedBatchL2Data = batchL2Data;
+                testVectorsRecursive[0].batches[m].newStateRoot = smtUtils.h4toString(batch.currentStateRoot);
+                testVectorsRecursive[0].batches[m].newBatchAccInputHash = smtUtils.h4toString(batch.newBatchAccInputHash);
+                testVectorsRecursive[0].batches[m].newNumBatch = batch.newNumBatch;
+                testVectorsRecursive[0].batches[m].newLocalExitRoot = smtUtils.h4toString(batch.newLocalExitRoot);
+                testVectorsRecursive[0].batches[m].batchL2Data = batchL2Data;
             } else {
-                expect(smtUtils.h4toString(newRoot)).to.be.equal(batches[m].expectedNewRoot);
-                expect(smtUtils.h4toString(newAccInputHash)).to.be.equal(batches[m].expectedNewAccInputHash);
-                expect(newNumBatch).to.be.equal(batches[m].expectedNewNumBatch);
-                expect(smtUtils.h4toString(newLocalExitRoot)).to.be.equal(batches[m].expectedNewLocalExitRoot);
-                expect(batchL2Data).to.be.equal(batches[m].expectedBatchL2Data);
+                expect(smtUtils.h4toString(batch.currentStateRoot)).to.be.equal(batches[m].newStateRoot);
+                expect(smtUtils.h4toString(batch.newBatchAccInputHash)).to.be.equal(batches[m].newBatchAccInputHash);
+                expect(batch.newNumBatch).to.be.equal(batches[m].newNumBatch);
+                expect(smtUtils.h4toString(batch.newLocalExitRoot)).to.be.equal(batches[m].newLocalExitRoot);
+                expect(batchL2Data).to.be.equal(batches[m].batchL2Data);
             }
 
             // Check balances and nonces
@@ -581,15 +585,15 @@ describe('ZkEVMDB', function () {
 
         // checks after consolidate zkEVMDB
         if (!update) {
-            expect(smtUtils.h4toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(finalStateRoot);
-            expect(smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot())).to.be.equal(finalLocalExitRoot);
-            expect(smtUtils.h4toString(zkEVMDB.getCurrentAccInpuHash())).to.be.equal(finalAccInputHash);
-            expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(finalNumBatch);
+            expect(smtUtils.h4toString(zkEVMDB.getCurrentStateRoot())).to.be.equal(newStateRoot);
+            expect(smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot())).to.be.equal(newLocalExitRoot);
+            expect(smtUtils.h4toString(zkEVMDB.getCurrentBatchAccInputHash())).to.be.equal(newBatchAccInputHash);
+            expect(zkEVMDB.getCurrentNumBatch()).to.be.equal(newNumBatch);
         } else {
-            testVectorsRecursive[0].finalStateRoot = smtUtils.h4toString(zkEVMDB.getCurrentStateRoot());
-            testVectorsRecursive[0].finalLocalExitRoot = smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot());
-            testVectorsRecursive[0].finalAccInputHash = smtUtils.h4toString(zkEVMDB.getCurrentAccInpuHash());
-            testVectorsRecursive[0].finalNumBatch = zkEVMDB.getCurrentNumBatch();
+            testVectorsRecursive[0].newStateRoot = smtUtils.h4toString(zkEVMDB.getCurrentStateRoot());
+            testVectorsRecursive[0].newLocalExitRoot = smtUtils.h4toString(zkEVMDB.getCurrentLocalExitRoot());
+            testVectorsRecursive[0].newBatchAccInputHash = smtUtils.h4toString(zkEVMDB.getCurrentBatchAccInputHash());
+            testVectorsRecursive[0].newNumBatch = zkEVMDB.getCurrentNumBatch();
         }
 
         // checks sequence multiple batches
@@ -598,9 +602,7 @@ describe('ZkEVMDB', function () {
         const seqBatches = await zkEVMDB.sequenceMultipleBatches(initBatch, finalBatch);
 
         for (let i = 0; i < (finalBatch - initBatch); i++) {
-            expect(seqBatches[i].timestampLimit).to.equal(String(timestampLimit));
-            expect(seqBatches[i].l1InfoRoot).to.equal(l1InfoRoot);
-            expect(seqBatches[i].transactions).to.equal(batches[i].expectedBatchL2Data);
+            expect(seqBatches[i].transactions).to.equal(batches[i].batchL2Data);
         }
 
         // checks snark input for multiple batches

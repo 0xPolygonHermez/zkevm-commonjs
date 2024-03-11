@@ -45,8 +45,6 @@ describe('Processor', async function () {
         pathProcessorTests = path.join(pathTestVectors, 'block-info/block-info.json');
     } else if (argv.selfdestruct) {
         pathProcessorTests = path.join(pathTestVectors, 'selfdestruct/selfdestruct.json');
-    } else if (argv.etrog) {
-        pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition-etrog.json');
     } else if (argv.feijoa) {
         pathProcessorTests = path.join(pathTestVectors, 'processor/state-transition-feijoa.json');
     } else {
@@ -170,9 +168,7 @@ describe('Processor', async function () {
                 previousL1InfoTreeRoot,
                 previousL1InfoTreeIndex,
                 Constants.DEFAULT_MAX_TX,
-                {
-                    skipVerifyL1InfoRoot: false,
-                },
+                {},
                 extraData,
             );
 
