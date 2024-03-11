@@ -28,7 +28,7 @@ const { valueToHexStr, getFuncName } = require('./utils');
 const {
     initBlockHeader, setBlockGasUsed, fillReceiptTree,
 } = require('./block-utils');
-const { verifyMerkleProof, computeMerkleRoot } = require('./mt-bridge-utils');
+const { computeMerkleRoot } = require('./mt-bridge-utils');
 const { getL1InfoTreeValue } = require('./l1-info-tree-utils');
 
 module.exports = class Processor {
@@ -110,7 +110,7 @@ module.exports = class Processor {
         this.currentL1InfoTreeRoot = previousL1InfoTreeRoot;
         this.currentL1InfoTreeIndex = previousL1InfoTreeIndex;
         this.l1InfoTree = {};
-        this.forcedData = {};
+        this.forcedData = extraData.forcedData || {};
 
         this.vm = vm;
         this.oldVm = cloneDeep(vm);
@@ -840,16 +840,9 @@ module.exports = class Processor {
         let finalBlockHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
         if (this.isForced) {
-            // load forcedData
-            this.forcedData = {
-                ger: this.extraData.forcedData.GER,
-                blockHashL1: this.extraData.forcedData.blockHashL1,
-                minTimestamp: this.extraData.forcedData.timestamp,
-            };
-
             // get and verify forcedHashData
             const computedForcedHashData = getL1InfoTreeValue(
-                this.forcedData.ger,
+                this.forcedData.GER,
                 this.forcedData.blockHashL1,
                 this.forcedData.minTimestamp,
             );
@@ -862,7 +855,7 @@ module.exports = class Processor {
             // set forced data
             const timestampForced = Scalar.e(this.forcedData.minTimestamp);
             // set forced global exit root and default blockHash
-            finalGER = this.forcedData.ger;
+            finalGER = this.forcedData.GER;
             finalBlockHash = this.forcedData.blockHashL1;
 
             // Update timestamp only if timestampForced > currentTimestamp

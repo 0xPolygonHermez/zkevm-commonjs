@@ -386,7 +386,7 @@
     "forcedData": {
       "GER": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
       "blockHashL1": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
-      "timestamp": "1944498031"
+      "minTimestamp": "1944498031"
     },
     "forcedHashData": "0x12f51e0ff1959834606004bfb2a833bf991274f363303da5825f822a7aedd83d",
     "previousL1InfoTreeRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -453,7 +453,7 @@
     "newBatchAccInputHash": "0x04e85beb667d1a262a047faa431ab4ff5a745486a83e4eb6190a8840d7700b58"
   },
   {
-    "id": 4,
+    "id": 3,
     "description": "Forced batch: starts with changeL2Block --> invalid batch",
     "chainID": 1000,
     "forkID": 9,
@@ -475,7 +475,12 @@
     ],
     "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
     "type": 2,
-    "forcedHashData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "forcedData": {
+      "GER": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
+      "blockHashL1": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
+      "minTimestamp": "1944498031"
+    },
+    "forcedHashData": "0x12f51e0ff1959834606004bfb2a833bf991274f363303da5825f822a7aedd83d",
     "previousL1InfoTreeRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "previousL1InfoTreeIndex": 0,
     "txs": [
@@ -604,6 +609,6 @@
     "batchHashData": "0x32b53865e6e076378b62b6c02beabba42ba63289796dda21df27bb766439ec2b",
     "oldLocalExitRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "oldBatchAccInputHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "newBatchAccInputHash": "0x214ec52ec721b7585ec1998b90ff715cc49bee8dafbfd6c85c59247acbd55c67"
+    "newBatchAccInputHash": "0xa13555345dab532202ec57527930007a89be3e132a17ad004bd52d50bb471061"
   }
 ]
