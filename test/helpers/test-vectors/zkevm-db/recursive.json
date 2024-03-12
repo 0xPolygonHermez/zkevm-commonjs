@@ -83,7 +83,9 @@
             "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "bytecodeLength": 0
           }
-        }
+        },
+        "newL1InfoTreeRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
+        "newL1InfoTreeIndex": 1
       },
       {
         "txs": [
@@ -146,7 +148,9 @@
             "hashBytecode": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "bytecodeLength": 0
           }
-        }
+        },
+        "newL1InfoTreeRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
+        "newL1InfoTreeIndex": 1
       }
     ],
     "type": 0,

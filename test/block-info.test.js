@@ -135,7 +135,7 @@ describe('Block info tests', function () {
                 const {
                     txs, newStateRoot, expectedNewLeafs, batchL2Data, l1InfoRoot,
                     inputHash, batchHashData, newLocalExitRoot,
-                    skipFirstChangeL2Block, skipWriteBlockInfoRoot,
+                    skipFirstChangeL2Block, skipWriteBlockInfoRoot, newL1InfoTreeRoot, newL1InfoTreeIndex,
                 } = batches[k];
                 const rawTxs = [];
                 for (let j = 0; j < txs.length; j++) {
@@ -388,11 +388,16 @@ describe('Block info tests', function () {
                     expect(batchHashData).to.be.equal(circuitInput.batchHashData);
                     expect(inputHash).to.be.equal(circuitInput.inputHash);
                     expect(newLocalExitRoot).to.be.equal(circuitInput.newLocalExitRoot);
+                    expect(newL1InfoTreeRoot).to.be.equal(batch.currentL1InfoTreeRoot);
+                    expect(newL1InfoTreeIndex).to.be.equal(batch.currentL1InfoTreeIndex);
                 } else {
                     testVectors[i].batches[k].batchL2Data = batch.getBatchL2Data();
                     testVectors[i].batches[k].batchHashData = circuitInput.batchHashData;
                     testVectors[i].batches[k].inputHash = circuitInput.inputHash;
                     testVectors[i].batches[k].newLocalExitRoot = circuitInput.newLocalExitRoot;
+                    testVectors[i].batches[k].batchL2Data = batchL2Data;
+                    testVectors[i].batches[k].newL1InfoTreeRoot = batch.currentL1InfoTreeRoot;
+                    testVectors[i].batches[k].newL1InfoTreeIndex = batch.currentL1InfoTreeIndex;
                 }
 
                 if (update && geninput) {
