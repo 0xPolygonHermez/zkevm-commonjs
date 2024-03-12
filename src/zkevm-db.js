@@ -22,15 +22,17 @@ const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
 const { calculateSnarkInput } = require('./contract-utils');
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, accInputHash, localExitRoot, poseidon, vm, smt, chainID, forkID) {
+    constructor(db, lastBatch, stateRoot, batchAccInputHash, localExitRoot, poseidon, vm, smt, chainID, forkID, type, forcedHashData) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
         this.F = poseidon.F;
 
         this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
-        this.accInputHash = accInputHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.batchAccInputHash = batchAccInputHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.type = type;
+        this.forcedHashData = forcedHashData;
         this.chainID = chainID;
         this.forkID = forkID;
         this.smt = smt;
@@ -53,10 +55,11 @@ class ZkEVMDB {
      * @param {BigInt} extraData.l1Info[x].timestamp - l1 block timestamp
      */
     async buildBatch(
-        timestampLimit,
         sequencerAddress,
-        l1InfoRoot,
-        forcedBlockHashL1,
+        type,
+        forcedHashData,
+        previousL1InfoTreeRoot,
+        previousL1InfoTreeIndex,
         maxNTx = Constants.DEFAULT_MAX_TX,
         options = {},
         extraData,
@@ -68,12 +71,13 @@ class ZkEVMDB {
             maxNTx,
             this.stateRoot,
             sequencerAddress,
-            this.accInputHash,
-            l1InfoRoot,
-            timestampLimit,
+            this.batchAccInputHash,
             this.chainID,
             this.forkID,
-            forcedBlockHashL1,
+            type,
+            forcedHashData,
+            previousL1InfoTreeRoot,
+            previousL1InfoTreeIndex,
             clone(this.vm),
             options,
             extraData,
@@ -106,7 +110,7 @@ class ZkEVMDB {
         // Set accumulate hash input
         await this.db.setValue(
             Scalar.add(Constants.DB_ACC_INPUT_HASH, processor.newNumBatch),
-            h4toString(processor.newAccInputHash),
+            h4toString(processor.newBatchAccInputHash),
         );
 
         // Set local exit root
@@ -136,7 +140,7 @@ class ZkEVMDB {
         // Update ZKEVMDB variables
         this.lastBatch = processor.newNumBatch;
         this.stateRoot = processor.currentStateRoot;
-        this.accInputHash = processor.newAccInputHash;
+        this.batchAccInputHash = processor.newBatchAccInputHash;
         this.localExitRoot = processor.newLocalExitRoot;
         this.vm = processor.vm;
     }
@@ -178,8 +182,8 @@ class ZkEVMDB {
      * Get the current local exit root
      * @returns {String} local exit root
      */
-    getCurrentAccInpuHash() {
-        return this.accInputHash;
+    getCurrentBatchAccInputHash() {
+        return this.batchAccInputHash;
     }
 
     /**
@@ -229,13 +233,13 @@ class ZkEVMDB {
 
             if (i === initNumBatch) {
                 dataVerify.oldStateRoot = value.oldStateRoot;
-                dataVerify.oldAccInputHash = value.oldAccInputHash;
+                dataVerify.oldBatchAccInputHash = value.oldBatchAccInputHash;
                 dataVerify.oldNumBatch = value.oldNumBatch;
             }
 
             if (i === finalNumBatch) {
                 dataVerify.newStateRoot = value.newStateRoot;
-                dataVerify.newAccInputHash = value.newAccInputHash;
+                dataVerify.newBatchAccInputHash = value.newBatchAccInputHash;
                 dataVerify.newLocalExitRoot = value.newLocalExitRoot;
                 dataVerify.newNumBatch = value.newNumBatch;
             }
@@ -251,8 +255,8 @@ class ZkEVMDB {
             dataVerify.oldStateRoot,
             dataVerify.newStateRoot,
             dataVerify.newLocalExitRoot,
-            dataVerify.oldAccInputHash,
-            dataVerify.newAccInputHash,
+            dataVerify.oldBatchAccInputHash,
+            dataVerify.newBatchAccInputHash,
             dataVerify.oldNumBatch,
             dataVerify.newNumBatch,
             dataVerify.chainID,
@@ -317,7 +321,7 @@ class ZkEVMDB {
      * @param {Object} db - Mem db object
      * @param {Object} poseidon - Poseidon object
      * @param {Array[Fields]} stateRoot - state merkle root
-     * @param {Array[Fields]} accHashInput - accumulate hash input
+     * @param {Array[Fields]} batchAccInputHash - accumulate hash input
      * @param {Object} genesis - genesis block accounts (address, nonce, balance, bytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
@@ -325,7 +329,7 @@ class ZkEVMDB {
      * @param {Number} forkID - L2 rom fork identifier
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, accHashInput, genesis, vm, smt, chainID, forkID) {
+    static async newZkEVM(db, poseidon, stateRoot, batchAccInputHash, genesis, vm, smt, chainID, forkID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
         common.setEIPs([3607, 3541, 3855]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
@@ -333,7 +337,7 @@ class ZkEVMDB {
         if (lastBatch === null) {
             const newVm = new VM({ common });
             const newSmt = new SMT(db, poseidon, poseidon.F);
-            let newStateRoot = stateRoot;
+            let genesisStateRoot = stateRoot;
 
             // Add genesis to the vm
             // Add contracts to genesis
@@ -350,13 +354,13 @@ class ZkEVMDB {
                 };
                 const evmAcc = Account.fromAccountData(evmAccData);
                 await newVm.stateManager.putAccount(addressInstance, evmAcc);
-                newStateRoot = await setAccountState(address, newSmt, newStateRoot, evmAcc.balance, evmAcc.nonce);
+                genesisStateRoot = await setAccountState(address, newSmt, genesisStateRoot, evmAcc.balance, evmAcc.nonce);
 
                 // Add bytecode and storage to EVM and SMT
                 if (bytecode) {
                     await newVm.stateManager.putContractCode(addressInstance, toBuffer(bytecode));
                     const evmBytecode = await newVm.stateManager.getContractCode(addressInstance);
-                    newStateRoot = await setContractBytecode(address, newSmt, newStateRoot, evmBytecode.toString('hex'));
+                    genesisStateRoot = await setContractBytecode(address, newSmt, genesisStateRoot, evmBytecode.toString('hex'));
                     const hashByteCode = await hashContractBytecode(bytecode);
                     db.setValue(hashByteCode, evmBytecode.toString('hex'));
                 }
@@ -377,7 +381,7 @@ class ZkEVMDB {
                     for (let k = 0; k < keys.length; k++) {
                         smtSto[keys[k]] = ethers.utils.RLP.decode(values[k]);
                     }
-                    newStateRoot = await setContractStorage(address, newSmt, newStateRoot, smtSto);
+                    genesisStateRoot = await setContractStorage(address, newSmt, genesisStateRoot, smtSto);
 
                     const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(address, 16));
                     await db.setValue(keyDumpStorage, smtSto);
@@ -391,9 +395,9 @@ class ZkEVMDB {
             return new ZkEVMDB(
                 db,
                 0,
-                newStateRoot,
-                accHashInput,
-                null,
+                genesisStateRoot,
+                batchAccInputHash,
+                null, // localExitRoot
                 poseidon,
                 newVm,
                 newSmt,
