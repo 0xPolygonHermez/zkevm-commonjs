@@ -1,72 +1,6 @@
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
 const { sha256Snark, padZeros } = require('./utils');
-const { linearPoseidon } = require('./smt-utils');
-
-/**
- * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoRoot, timestampLimit, seqAddress)
- * @param {String} oldAccInputHash - old accumulateInputHash
- * @param {String} batchHashData - Batch hash data
- * @param {String} l1InfoRoot - Global Exit Root
- * @param {Number} timestampLimit - Block timestampLimit
- * @param {String} sequencerAddress - Sequencer address
- * @param {String} forcedBlockHashL1 - Flag for forced transaction
- * @returns {String} - accumulateInputHash in hex encoding
- */
-function calculateAccInputHash(
-    oldAccInputHash,
-    batchHashData,
-    l1InfoRoot,
-    timestampLimit,
-    sequencerAddress,
-    forcedBlockHashL1,
-) {
-    const oldAccInputHashHex = `0x${Scalar.e(oldAccInputHash).toString(16).padStart(64, '0')}`;
-
-    const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
-        [
-            oldAccInputHashHex,
-            batchHashData,
-            l1InfoRoot,
-            timestampLimit,
-            sequencerAddress,
-            forcedBlockHashL1,
-        ],
-    );
-
-    return hashKeccak;
-}
-
-/**
- * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoRoot, timestampLimit, seqAddress)
- * @param {String} oldBatchAccInputHash - old batchAccumulateInputHash
- * @param {String} batchHashData - Batch hash data
- * @param {String} sequencerAddress - Sequencer address
- * @param {String} forcedHashData - Flag for forced transaction
- * @param {String} type - Type of the batch 0: data-availability comes from calldata, 1: data-availability comes from blob transaction, 2: forced blob (data-availability comes from calldata)
- * @returns {String} - batchAccumulateInputHash in hex encoding
- */
-function calculateBatchAccInputHash(
-    oldBatchAccInputHash,
-    batchHashData,
-    sequencerAddress,
-    forcedHashData,
-    type,
-) {
-    const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'address', 'bytes32', 'uint8'],
-        [
-            oldBatchAccInputHash,
-            batchHashData,
-            sequencerAddress,
-            forcedHashData,
-            type,
-        ],
-    );
-
-    return hashKeccak;
-}
 
 /**
  * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, forkID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
@@ -140,17 +74,6 @@ async function calculateSnarkInput(
 }
 
 /**
- * Batch hash data
- * @param {String} batchL2Data - Batch L2 data input in hex string
- * @returns {String} - Batch hash data
- */
-async function calculateBatchHashData(
-    batchL2Data,
-) {
-    return linearPoseidon(batchL2Data);
-}
-
-/**
  * Prepare zkSnark inputs for smart contract
  * @param {Object} proofJson - Contain the proof data related from snarkJs
  * @returns {Object} - Proof structure ready to be sent to smart contract
@@ -190,9 +113,6 @@ function generateSolidityInputs(
 }
 
 module.exports = {
-    calculateAccInputHash,
-    calculateBatchAccInputHash,
     calculateSnarkInput,
-    calculateBatchHashData,
     generateSolidityInputs,
 };

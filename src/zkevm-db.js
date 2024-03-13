@@ -13,6 +13,7 @@ const ethers = require('ethers');
 const clone = require('lodash/clone');
 const Constants = require('./constants');
 const Processor = require('./processor');
+const BlobProcessor = require('./blob-inner/blob-processor');
 const SMT = require('./smt');
 const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
@@ -37,6 +38,11 @@ class ZkEVMDB {
         this.forkID = forkID;
         this.smt = smt;
         this.vm = vm;
+
+        // blob
+        this.blobRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.accBlobInputHash = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.lastBlob = 0;
     }
 
     /**
@@ -82,6 +88,51 @@ class ZkEVMDB {
             options,
             extraData,
             this.smt.maxLevel,
+        );
+    }
+
+    /**
+     * Return a new BlobProcessor with the current RollupDb state
+     * @param {Number} _lastL1InfoTreeIndex - Last L1 info tree index
+     * @param {String} _lastL1InfoTreeRoot - Last L1 info tree root
+     * @param {Scalar} _timestampLimit - Timestamp limit
+     * @param {Scalar} _zkGasLimit - zk gas limit
+     * @param {Number} _type - type of blob
+     * @param {String} _forcedHashData - forced hash data
+     * @returns
+     */
+    async buildBlob(
+        _lastL1InfoTreeIndex,
+        _lastL1InfoTreeRoot,
+        _timestampLimit,
+        _zkGasLimit,
+        _type,
+        _forcedHashData,
+    ) {
+        // build globalInputs
+        const globalInputs = {
+            oldBlobStateRoot: this.blobRoot,
+            oldBlobAccInputHash: this.accBlobInputHash,
+            oldNumBlob: this.lastBlob,
+            oldStateRoot: this.stateRoot,
+            forkId: this.forkID,
+        };
+
+        // build privateInputs
+        const privateInputs = {
+            lastL1InfoTreeIndex: _lastL1InfoTreeIndex,
+            lastL1InfoTreeRoot: _lastL1InfoTreeRoot,
+            timestampLimit: _timestampLimit,
+            zkGasLimit: _zkGasLimit,
+            type: _type,
+            forcedHashData: _forcedHashData,
+        };
+
+        return new BlobProcessor(
+            this.db,
+            this.poseidon,
+            globalInputs,
+            privateInputs,
         );
     }
 

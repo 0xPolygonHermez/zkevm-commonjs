@@ -1,3 +1,4 @@
+/* eslint-disable global-require */
 module.exports.Constants = require('./src/constants');
 module.exports.contractUtils = require('./src/contract-utils');
 module.exports.Processor = require('./src/processor');
@@ -16,3 +17,11 @@ module.exports.Database = require('./src/database');
 module.exports.l1InfoTreeUtils = require('./src/l1-info-tree-utils');
 module.exports.VirtualCountersManager = require('./src/virtual-counters-manager');
 module.exports.blockUtils = require('./src/block-utils');
+
+// Blob inner
+module.exports.blobInner = {
+    Processor: require('./src/blob-inner/blob-processor'),
+    utils: require('./src/blob-inner/blob-utils'),
+    Constants: require('./src/blob-inner/blob-constants'),
+    frBLS12381: require('./src/blob-inner/fr-bls-12-381'),
+};
