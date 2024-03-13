@@ -71,7 +71,7 @@ function computeBlobAccInputHash(
 }
 
 /**
- * //TODO: use the batch one
+ * Compute accBatchAccInputHash
  * @param {String} oldBlobAccInputHash - old blob accBlobInputHash (32 bytes)
  * @param {String} batchL2HashData - blob hash data (32 bytes)
  * @param {String} sequencerAddress - Sequencer address (20 bytes)
@@ -122,15 +122,14 @@ function computeBlobL2HashData(blobData) {
 }
 
 /**
- * //TODO: use teh batch one
- * @param {String} batchData - Blob data
- * @returns {String} - Blob hash data
+ * Batch hash data
+ * @param {String} batchL2Data - Batch L2 data input in hex string
+ * @returns {String} - Batch hash data
  */
-function computeBatchL2HashData(batchData) {
-    return ethers.utils.solidityKeccak256(
-        ['bytes'],
-        [batchData],
-    );
+async function computeBatchL2HashData(
+    batchL2Data,
+) {
+    return linearPoseidon(batchL2Data);
 }
 
 /**
