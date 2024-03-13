@@ -25,6 +25,6 @@ module.exports.BLOB_COMPRESSION_TYPE = {
 // Blob encoding
 module.exports.BLOB_ENCODING = {
     BYTES_COMPRESSION_TYPE: 1,
-    BYTES_BODY_LENGTH: 1,
+    BYTES_BODY_LENGTH: 4,
     BYTES_BATCH_LENGTH: 4,
 };

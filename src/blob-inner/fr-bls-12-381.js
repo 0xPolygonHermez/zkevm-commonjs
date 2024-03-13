@@ -2,7 +2,7 @@ const { F1Field } = require('ffjavascript');
 
 const frBLS12381 = new F1Field(52435875175126190479447740508185965837690552500527637822603658699938581184513n);
 
-module.exports = frBLS12381;
+module.exports.frBLS12381 = frBLS12381;
 module.exports.inv4096Fr = 0x73e66878b46ae3705eb6a46a89213de7d3686828bfce5c19400fffff00100001n;
 module.exports.rootsUnity = [
     1n,

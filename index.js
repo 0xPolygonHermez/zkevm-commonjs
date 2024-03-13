@@ -23,5 +23,6 @@ module.exports.blobInner = {
     Processor: require('./src/blob-inner/blob-processor'),
     utils: require('./src/blob-inner/blob-utils'),
     Constants: require('./src/blob-inner/blob-constants'),
+    parsers: require('./src/blob-inner/blob-parsers'),
     frBLS12381: require('./src/blob-inner/fr-bls-12-381'),
 };

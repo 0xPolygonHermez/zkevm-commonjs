@@ -137,7 +137,7 @@ async function computeBatchL2HashData(
  * @param {String} blobData - Blob data
  * @returns pointZ
  */
-function computePointZ(blobData) {
+async function computePointZ(blobData) {
     return linearPoseidon(blobData);
 }
 
@@ -147,7 +147,7 @@ function computePointZ(blobData) {
  * @param {Scalar} _pointZ - pointZ
  * @returns {Object} - pointY
  */
-function computePointY(_blobData, _pointZ) {
+async function computePointY(_blobData, _pointZ) {
     // remove 0x from blobData
     const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
     const pointZ = Scalar.e(_pointZ);
@@ -165,7 +165,7 @@ function computePointY(_blobData, _pointZ) {
         accum = frBLS12381.add(accum, frBLS12381.mul(elemi, termi));
     }
 
-    return frBLS12381.mul(a, accum);
+    return `0x${frBLS12381.mul(a, accum).toString(16).padStart(64, '0')}`;
 }
 
 module.exports = {
