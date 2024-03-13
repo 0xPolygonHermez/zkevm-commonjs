@@ -20,7 +20,8 @@ const smtUtils = require('./smt-utils');
 const VirtualCountersManager = require('./virtual-counters-manager');
 
 const { getCurrentDB } = require('./smt-utils');
-const { calculateBatchAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
+const { calculateSnarkInput } = require('./contract-utils');
+const { computeBatchL2HashData, computeBatchAccInputHash } = require('./blob-inner/blob-utils');
 const {
     decodeCustomRawTxProverMethod, computeEffectiveGasPrice, computeL2TxHash,
     decodeChangeL2BlockTx,
@@ -984,11 +985,11 @@ module.exports = class Processor {
         const oldBatchAccInputHash = smtUtils.h4toString(this.oldBatchAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
         const newTimestamp = this.newLastTimestamp.toString();
-        this.batchHashData = await calculateBatchHashData(
+        this.batchHashData = await computeBatchL2HashData(
             this.getBatchL2Data(),
         );
 
-        const newBatchAccInputHash = calculateBatchAccInputHash(
+        const newBatchAccInputHash = await computeBatchAccInputHash(
             oldBatchAccInputHash,
             this.batchHashData,
             this.sequencerAddress,

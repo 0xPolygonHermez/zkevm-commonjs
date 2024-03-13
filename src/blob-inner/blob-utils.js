@@ -79,7 +79,7 @@ function computeBlobAccInputHash(
  * @param {Number} type - blob type (1 byte)
  * @returns {String} - accumulateInputHash in hex encoding
  */
-function computeBatchAccInputHash(
+async function computeBatchAccInputHash(
     _oldBlobAccInputHash,
     _batchL2HashData,
     _sequencerAddress,
@@ -105,7 +105,7 @@ function computeBatchAccInputHash(
     // type
     const type = _type.toString(16).padStart(2, '0');
 
-    // compute linearPoseifon
+    // compute linearPoseidon
     return linearPoseidon(`0x${oldBlobAccInputHash}${batchL2HashData}${sequencerAddress}${forcedHashData}${type}`);
 }
 
@@ -148,7 +148,7 @@ function computePointZ(blobData) {
  * @returns {Object} - pointY
  */
 function computePointY(_blobData, _pointZ) {
-    // remove 0x from blobdata
+    // remove 0x from blobData
     const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
     const pointZ = Scalar.e(_pointZ);
 

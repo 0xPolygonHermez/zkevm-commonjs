@@ -528,12 +528,16 @@ describe('ZkEVMDB', function () {
                 testVectorsRecursive[0].batches[m].newNumBatch = batch.newNumBatch;
                 testVectorsRecursive[0].batches[m].newLocalExitRoot = smtUtils.h4toString(batch.newLocalExitRoot);
                 testVectorsRecursive[0].batches[m].batchL2Data = batchL2Data;
+                testVectorsRecursive[0].batches[m].newL1InfoTreeRoot = batch.currentL1InfoTreeRoot;
+                testVectorsRecursive[0].batches[m].newL1InfoTreeIndex = batch.currentL1InfoTreeIndex;
             } else {
                 expect(smtUtils.h4toString(batch.currentStateRoot)).to.be.equal(batches[m].newStateRoot);
                 expect(smtUtils.h4toString(batch.newBatchAccInputHash)).to.be.equal(batches[m].newBatchAccInputHash);
                 expect(batch.newNumBatch).to.be.equal(batches[m].newNumBatch);
                 expect(smtUtils.h4toString(batch.newLocalExitRoot)).to.be.equal(batches[m].newLocalExitRoot);
                 expect(batchL2Data).to.be.equal(batches[m].batchL2Data);
+                expect(batches[m].newL1InfoTreeRoot).to.be.equal(batch.currentL1InfoTreeRoot);
+                expect(batches[m].newL1InfoTreeIndex).to.be.equal(batch.currentL1InfoTreeIndex);
             }
 
             // Check balances and nonces

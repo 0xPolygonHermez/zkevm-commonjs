@@ -6,8 +6,8 @@ const { sha256Snark, padZeros } = require('./utils');
  * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, forkID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
  * @param {String} oldStateRoot - Current state Root
  * @param {String} newStateRoot - New State root once the batch is processed
- * @param {String} oldAccInputHash - initial accumulateInputHash
- * @param {String} newAccInputHash - final accumulateInputHash
+ * @param {String} oldBatchAccInputHash - initial accumulateInputHash
+ * @param {String} newBatchAccInputHash - final accumulateInputHash
  * @param {String} newLocalExitRoot - New local exit root once the all batches is processed
  * @param {Number} oldNumBatch - initial batch number
  * @param {Number} newNumBatch - final batch number
@@ -20,22 +20,22 @@ async function calculateSnarkInput(
     oldStateRoot,
     newStateRoot,
     newLocalExitRoot,
-    oldAccInputHash,
-    newAccInputHash,
+    oldBatchAccInputHash,
+    newBatchAccInputHash,
     oldNumBatch,
     newNumBatch,
     chainID,
     aggregatorAddress,
     forkID,
 ) {
-    // 20 bytes agggregator address
+    // 20 bytes aggregator address
     const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
 
     // 32 bytes each field element for oldStateRoot
     const strOldStateRoot = padZeros((Scalar.fromString(oldStateRoot, 16)).toString(16), 64);
 
     // 32 bytes each field element for oldStateRoot
-    const strOldAccInputHash = padZeros((Scalar.fromString(oldAccInputHash, 16)).toString(16), 64);
+    const strOldBatchAccInputHash = padZeros((Scalar.fromString(oldBatchAccInputHash, 16)).toString(16), 64);
 
     // 8 bytes for oldNumBatch
     const strOldNumBatch = padZeros(Scalar.e(oldNumBatch).toString(16), 16);
@@ -50,7 +50,7 @@ async function calculateSnarkInput(
     const strNewStateRoot = padZeros((Scalar.fromString(newStateRoot, 16)).toString(16), 64);
 
     // 32 bytes each field element for oldStateRoot
-    const strNewAccInputHash = padZeros((Scalar.fromString(newAccInputHash, 16)).toString(16), 64);
+    const strNewBatchAccInputHash = padZeros((Scalar.fromString(newBatchAccInputHash, 16)).toString(16), 64);
 
     // 32 bytes each field element for oldStateRoot
     const strNewLocalExitRoot = padZeros((Scalar.fromString(newLocalExitRoot, 16)).toString(16), 64);
@@ -61,12 +61,12 @@ async function calculateSnarkInput(
     // build final bytes sha256
     const finalStr = strAggregatorAddress
         .concat(strOldStateRoot)
-        .concat(strOldAccInputHash)
+        .concat(strOldBatchAccInputHash)
         .concat(strOldNumBatch)
         .concat(strChainID)
         .concat(strForkID)
         .concat(strNewStateRoot)
-        .concat(strNewAccInputHash)
+        .concat(strNewBatchAccInputHash)
         .concat(strNewLocalExitRoot)
         .concat(strNewNumBatch);
 

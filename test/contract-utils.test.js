@@ -10,42 +10,10 @@ describe('contractUtils', function () {
     this.timeout(10000);
     let testVector;
 
-    const expectedBatchHashData = '0x32b53865e6e076378b62b6c02beabba42ba63289796dda21df27bb766439ec2b';
-    const expectedStarkHashExecutor = '0x177e9c066cfeeebdc95f76a3a0f8338a8fd337cbb0e56ae75c5816e44d791508';
     const expectedSnarkInputHash = '2fb8268c8d9d06cec48676c7cf3dbafde604d3202e25762ec5313b0f916f74dc';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
-    });
-
-    it('calculateBatchHashData', async () => {
-        const {
-            batchL2Data,
-        } = testVector;
-        const computedBatchHashData = await contractUtils.calculateBatchHashData(
-            batchL2Data,
-        );
-
-        expect(computedBatchHashData).to.be.equal(expectedBatchHashData);
-    });
-
-    it('calculateStarkInput', async () => {
-        const {
-            oldBatchAccInputHash,
-            sequencerAddr,
-            forcedHashData,
-            type,
-        } = testVector;
-
-        const computedGlobalHash = await contractUtils.calculateBatchAccInputHash(
-            oldBatchAccInputHash,
-            expectedBatchHashData,
-            sequencerAddr,
-            forcedHashData,
-            type,
-        );
-
-        expect(computedGlobalHash).to.be.equal(expectedStarkHashExecutor);
     });
 
     it('calculateSnarkInput', async () => {
