@@ -71,7 +71,7 @@ function computeBlobAccInputHash(
 }
 
 /**
- * Compute accBatchAccInputHash
+ * Compute batchAccInputHash
  * @param {String} oldBlobAccInputHash - old blob accBlobInputHash (32 bytes)
  * @param {String} batchL2HashData - blob hash data (32 bytes)
  * @param {String} sequencerAddress - Sequencer address (20 bytes)

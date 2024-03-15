@@ -31,7 +31,7 @@ const {
     initBlockHeader, setBlockGasUsed, fillReceiptTree,
 } = require('./block-utils');
 const { computeMerkleRoot } = require('./mt-bridge-utils');
-const { getL1InfoTreeValue } = require('./l1-info-tree-utils');
+const { getL1InfoTreeValue, getL1InfoTreeRoot } = require('./l1-info-tree-utils');
 
 module.exports = class Processor {
     /**
@@ -878,6 +878,10 @@ module.exports = class Processor {
 
             // Compute recursive l1InfoTree
             if (tx.indexL1InfoTree !== 0) {
+                // Verify indexL1InfoTree is greater than
+                if (tx.indexL1InfoTree <= this.currentL1InfoTreeIndex) {
+                    return true;
+                }
                 const l1Info = this.extraData.l1Info[tx.indexL1InfoTree];
                 // Verify newTimestamp >= l1InfoRoot.timestamp
                 if (Scalar.lt(newTimestamp, l1Info.timestamp)) {
@@ -892,7 +896,7 @@ module.exports = class Processor {
                 );
 
                 if (typeof this.extraData.l1Info[tx.indexL1InfoTree] === 'undefined') {
-                    throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing smtProof`);
+                    throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing smtProofPreviousIndex`);
                 }
 
                 // fulfill l1InfoTree information
@@ -900,26 +904,14 @@ module.exports = class Processor {
 
                 // Check if previousL1InfoTree index is 0
                 if (this.currentL1InfoTreeIndex === 0) {
-                    this.currentL1InfoTreeRoot = ethers.utils.solidityKeccak256(
-                        ['bytes32', 'bytes32'],
-                        [
-                            l1Info.historicRoot,
-                            infoTreeData,
-                        ],
-                    );
+                    this.currentL1InfoTreeRoot = getL1InfoTreeRoot(l1Info.historicRoot, infoTreeData);
                     this.currentL1InfoTreeIndex = tx.indexL1InfoTree;
                 } else {
                     // Is not zero
                     // Compute merkle proof
-                    const historicRoot = computeMerkleRoot(this.currentL1InfoTreeRoot, l1Info.smtProof, this.currentL1InfoTreeIndex);
+                    const historicRoot = computeMerkleRoot(this.currentL1InfoTreeRoot, l1Info.smtProofPreviousIndex, this.currentL1InfoTreeIndex);
                     // Do hash with infoTreeData
-                    this.currentL1InfoTreeRoot = ethers.utils.solidityKeccak256(
-                        ['bytes32', 'bytes32'],
-                        [
-                            historicRoot,
-                            infoTreeData,
-                        ],
-                    );
+                    this.currentL1InfoTreeRoot = getL1InfoTreeRoot(historicRoot, infoTreeData);
                     this.currentL1InfoTreeIndex = tx.indexL1InfoTree;
                 }
                 // write l1Info data depending if the global exit root already exist or is zero
