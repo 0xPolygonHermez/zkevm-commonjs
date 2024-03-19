@@ -5,7 +5,7 @@ const ethers = require('ethers');
 
 const { Scalar } = require('ffjavascript');
 const SMT = require('../smt');
-const TmpDB = require('../tmp-smt-db'); // TODO: add more methods to the TmpDB class to getValue and setValue
+const TmpDB = require('../tmp-smt-db');
 const Constants = require('../constants');
 const smtUtils = require('../smt-utils');
 const stateUtils = require('../state-utils');
@@ -23,19 +23,19 @@ module.exports = class BlobProcessor {
      * @param {Object} db - database
      * @param {Object} poseidon - hash function
      * @param {Object} globalInputs - high level inputs. Set at snark level
-     * @param {Array[Field]} globalInputs.oldBlobStateRoot - old blob root in hexadecimal string representation
-     * @param {Array[Field]} globalInputs.oldBlobAccInputHash - old blob accumlate input hash in hexadecimal string representation
+     * @param {Array[Field]} globalInputs.oldBlobStateRoot - old blob root in 4 field element array
+     * @param {String} globalInputs.oldBlobAccInputHash - old blob accumlate input hash in hexadecimal string representation
      * @param {Number} globalInputs.oldNumBlob - old num blob in hexadecimal string representation
-     * @param {Number} globalInputs.oldStateRoot - old state root in hexadecimal string representation
-     * @param {Number} globalInputs.forkId - old blob root in hexadecimal string representation
+     * @param {Array[Field]} globalInputs.oldStateRoot - old state root in 4 field element array
+     * @param {Number} globalInputs.forkID - old blob root in hexadecimal string representation
      * @param {Object} privateInputs - necessary data to build accumulate blob input hash
      * @param {String} privateInputs.lastL1InfoTreeIndex
-     * @param {BigInt} privateInputs.lastL1InfoTreeRoot
-     * @param {String} privateInputs.timestampLimit
+     * @param {String} privateInputs.lastL1InfoTreeRoot
+     * @param {BigInt} privateInputs.timestampLimit
      * @param {String} privateInputs.sequencerAddress
-     * @param {Object} privateInputs.zkGasLimit
-     * @param {Bool} privateInputs.type
-     * @param {Scalar} privateInputs.forcedHashData
+     * @param {BigInt} privateInputs.zkGasLimit
+     * @param {Number} privateInputs.type
+     * @param {String} privateInputs.forcedHashData
      */
     constructor(
         db,
@@ -53,9 +53,9 @@ module.exports = class BlobProcessor {
         this.oldBlobAccInputHash = globalInputs.oldBlobAccInputHash;
         this.oldNumBlob = globalInputs.oldNumBlob;
         this.oldStateRoot = globalInputs.oldStateRoot;
-        this.forkId = globalInputs.forkId;
+        this.forkID = globalInputs.forkID;
 
-        // privateInuts
+        // privateInputs
         this.lastL1InfoTreeIndex = privateInputs.lastL1InfoTreeIndex; // exposed as an output
         this.lastL1InfoTreeRoot = privateInputs.lastL1InfoTreeRoot; // exposed as an output
         this.timestampLimit = privateInputs.timestampLimit; // exposed as an output
@@ -76,10 +76,11 @@ module.exports = class BlobProcessor {
         this.tmpDB = new TmpDB(db);
         this.smt = new SMT(this.tmpDB, poseidon, poseidon.F);
 
+        this.blobLength = 0;
         this.builded = false;
         this.isInvalid = false;
 
-        this.batches = null;
+        this.batches = [];
         this.starkInput = {};
     }
 
@@ -96,13 +97,13 @@ module.exports = class BlobProcessor {
 
         this.addingBatchData = true;
 
-        // check hexadecimal string
-        if (!isHex(_batchL2Data)) {
-            throw new Error('BlobProcessor:addBatchL2Data: invalid hexadecimal string');
-        }
-
         // remove '0x' if necessary
         const batchL2Data = _batchL2Data.startsWith('0x') ? _batchL2Data.slice(2) : _batchL2Data;
+
+        // check hexadecimal string
+        if (!isHex(batchL2Data)) {
+            throw new Error('BlobProcessor:addBatchL2Data: invalid hexadecimal string');
+        }
 
         this.batches.push(batchL2Data);
         this.blobLength += batchL2Data.length / 2;
@@ -116,11 +117,15 @@ module.exports = class BlobProcessor {
      * add directly all the blob data
      * @param {String} _blobData - blob data in hexadecimal string representation
      */
-    addBlobdata(_blobData) {
+    addBlobData(_blobData) {
         this._isNotBuilded();
 
         if (this.addingBatchData === true) {
             throw new Error('BlobProcessor:addBlobData: cannot add blob data after batch data');
+        }
+
+        if (this.addingBlobData === true) {
+            throw new Error('BlobProcessor:addBlobData: cannot add blob data twice');
         }
 
         this.addingBlobData = true;
@@ -141,7 +146,7 @@ module.exports = class BlobProcessor {
     /**
      * Execute Blob
      */
-    async executeBlob() {
+    async execute() {
         // build blobData
         await this._buildBlobData();
 
@@ -155,6 +160,8 @@ module.exports = class BlobProcessor {
 
         // compute stark input
         await this._computeStarkInput();
+
+        this.builded = true;
     }
 
     _buildBlobData() {
@@ -174,24 +181,24 @@ module.exports = class BlobProcessor {
                 // add batch
                 batchesData += batch;
             }
-
             // add body length
             resBlobdata += Scalar.e(batchesData.length / 2).toString(16)
                 .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH, '0');
             // add batches data
             resBlobdata += batchesData;
 
-            if (this.type === Constants.BLOB_TYPE_CALLDATA || this.type === Constants.BLOB_TYPE_FORCED) {
+            if (this.type === blobConstants.BLOB_TYPE.CALLDATA || this.type === blobConstants.BLOB_TYPE.FORCED) {
                 this.blobData = resBlobdata;
-            } else if (this.type === Constants.BLOB_TYPE_4844) {
+            } else if (this.type === blobConstants.BLOB_TYPE.EIP4844) {
             // build blob data with no spaces and then add 0x00 each 32 bytes
-                const blobDataNoSpaces = resBlobdata;
+                this.blobData = '';
+                const blobDataNoSpaces = resBlobdata.slice(2);
                 // add 0x00 each 31 bytes
                 for (let i = 0; i < blobDataNoSpaces.length; i += 62) {
                     this.blobData += `00${blobDataNoSpaces.slice(i, i + 62)}`;
                 }
                 // pad until blob space is reached
-                this.blobData = this.blobData.padEnd(blobConstants.BLOB_BYTES * 2, '0');
+                this.blobData = `0x${this.blobData.padEnd(blobConstants.BLOB_BYTES * 2, '0')}`;
             } else {
                 throw new Error('BlobProcessor:executeBlob: invalid blob type');
             }
@@ -199,9 +206,9 @@ module.exports = class BlobProcessor {
             let tmpBlobdata = '';
 
             // if blobData is calldata or forced, no need to check and remove MSB each 32 bytes
-            if (this.type === Constants.BLOB_TYPE_CALLDATA || this.type === Constants.BLOB_TYPE_FORCED) {
+            if (this.type === blobConstants.BLOB_TYPE.CALLDATA || this.type === blobConstants.BLOB_TYPE.FORCED) {
                 tmpBlobdata = this.blobData;
-            } else if (this.type === Constants.BLOB_TYPE_4844) {
+            } else if (this.type === blobConstants.BLOB_TYPE.EIP4844) {
                 // assure the most significant byte is '00' each slot of 32 bytes
                 for (let i = 0; i < this.blobData.length; i += 64) {
                     const slot32 = this.blobData.slice(i, i + 64);
@@ -276,6 +283,7 @@ module.exports = class BlobProcessor {
                 this.isInvalid = true;
             }
         } else {
+            // TODO: Build empty blobInner with no batches. Almost same result
             throw new Error('BlobProcessor:executeBlob: no data added');
         }
     }
@@ -320,10 +328,8 @@ module.exports = class BlobProcessor {
             // blobL2HashData not used
             this.blobL2HashData = Constants.ZERO_BYTES32;
             // compute points
-            this.pointZ = computePointZ(this.blobData);
-            const points = computePointY(this.blobData, this.pointZ);
-            this.pointZ = points.z;
-            this.pointY = points.y;
+            this.pointZ = await computePointZ(this.blobData);
+            this.pointY = await computePointY(this.blobData, this.pointZ);
         } else {
             throw new Error('BlobProcessor:executeBlob: invalid blob type');
         }
@@ -347,7 +353,7 @@ module.exports = class BlobProcessor {
             const batchData = this.batches[i];
             this.finalAccBatchHashData = await computeBatchAccInputHash(
                 this.finalAccBatchHashData,
-                computeBatchL2HashData(batchData),
+                await computeBatchL2HashData(batchData),
                 this.sequencerAddress,
                 this.forcedHashData,
                 this.type,
@@ -356,11 +362,19 @@ module.exports = class BlobProcessor {
 
         this.starkInput = {
             // inputs
-            oldBlobStateRoot: smtUtils.h4toString(this.oldBlobRoot),
+            oldBlobStateRoot: smtUtils.h4toString(this.oldBlobStateRoot),
             oldBlobAccInputHash: this.oldBlobAccInputHash,
             oldNumBlob: this.oldNumBlob,
-            oldStateRoot: this.oldStateRoot,
-            forkId: this.forkId,
+            oldStateRoot: smtUtils.h4toString(this.oldStateRoot),
+            forkID: this.forkID,
+            // compute accInputHash
+            y: this.pointY,
+            z: this.pointZ,
+            type: this.type,
+            sequencerAddr: this.sequencerAddress,
+            zkGasLimit: this.zkGasLimit.toString(),
+            forcedHashData: this.forcedHashData,
+            blobL2HashData: this.blobL2HashData,
             // outputs
             newBlobStateRoot: smtUtils.h4toString(this.newBlobStateRoot),
             newBlobAccInputHash: this.newBlobAccInputHash,
@@ -369,12 +383,14 @@ module.exports = class BlobProcessor {
             localExitRootFromBlob: this.localExitRootFromBlob,
             isInvalid: this.isInvalid,
             // outputs from blobAccInputHash
-            timestampLimit: this.timestampLimit,
+            timestampLimit: this.timestampLimit.toString(),
             lastL1InfoTreeIndex: this.lastL1InfoTreeIndex,
             lastL1InfoTreeRoot: this.lastL1InfoTreeRoot,
         };
 
         // add extra data
+        // add DB
+        this.starkInput.blobData = this.blobData;
         // add DB
         this.starkInput.db = await getCurrentDB(this.oldStateRoot, this.db, this.F);
     }

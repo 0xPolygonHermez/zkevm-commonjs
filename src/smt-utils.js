@@ -388,7 +388,7 @@ async function fillDBArray(node, db, dbObject, Fr) {
 async function getCurrentDB(root, db, Fr) {
     const dbObject = {};
     if (nodeIsZero(root, Fr)) {
-        return null;
+        return dbObject;
     }
     await fillDBArray(root, db, dbObject, Fr);
 
