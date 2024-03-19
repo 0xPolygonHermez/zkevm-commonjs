@@ -10,7 +10,7 @@ describe('contractUtils', function () {
     this.timeout(10000);
     let testVector;
 
-    const expectedSnarkInputHash = '2fb8268c8d9d06cec48676c7cf3dbafde604d3202e25762ec5313b0f916f74dc';
+    const expectedSnarkInputHash = '1945042d70b86b81b1d301119ea2bffa6b131f651ebf66858796980298fb76f8';
 
     before(async () => {
         testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
@@ -25,8 +25,7 @@ describe('contractUtils', function () {
             newLocalExitRoot,
             oldBatchAccInputHash,
             newBatchAccInputHash,
-            oldNumBatch,
-            newNumBatch,
+
             chainID,
             forkID,
         } = testVector;
@@ -37,8 +36,6 @@ describe('contractUtils', function () {
             newLocalExitRoot,
             oldBatchAccInputHash,
             newBatchAccInputHash,
-            oldNumBatch,
-            newNumBatch,
             chainID,
             aggregatorAddress,
             forkID,

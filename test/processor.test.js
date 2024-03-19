@@ -150,7 +150,7 @@ describe('Processor', async function () {
                 }
             }
             const computedForcedHashData = type === 2 ? getL1InfoTreeValue(
-                forcedData.GER,
+                forcedData.globalExitRoot,
                 forcedData.blockHashL1,
                 forcedData.minTimestamp,
             ) : Constants.ZERO_BYTES32;

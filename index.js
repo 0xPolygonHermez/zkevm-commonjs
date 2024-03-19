@@ -17,6 +17,7 @@ module.exports.Database = require('./src/database');
 module.exports.l1InfoTreeUtils = require('./src/l1-info-tree-utils');
 module.exports.VirtualCountersManager = require('./src/virtual-counters-manager');
 module.exports.blockUtils = require('./src/block-utils');
+module.exports.blobUtils = require('./src/blob-inner/blob-utils');
 
 // Blob inner
 module.exports.blobInner = {

@@ -3,14 +3,14 @@
 const { expect } = require('chai');
 const fs = require('fs');
 const { argv } = require('yargs');
-
+const path = require('path');
 const MerkleTreeBridge = require('../../index').MTBridge;
 const { verifyMerkleProof } = require('../../index').mtBridgeUtils;
 const { getL1InfoTreeValue } = require('../../index').l1InfoTreeUtils;
 
 async function main() {
     // read gen file
-    const genFile = JSON.parse(fs.readFileSync('generator.json'));
+    const genFile = JSON.parse(fs.readFileSync(path.join(__dirname, 'generator.json')));
 
     // Compute leafs value and add it to the tree
     const height = 32;
@@ -26,7 +26,6 @@ async function main() {
         leafs.push(leafValue);
         merkleTree.add(leafValue);
     }
-
     // compute root and proofs
     const root = merkleTree.getRoot();
 
@@ -44,7 +43,7 @@ async function main() {
         expect(verifyMerkleProof(valueLeaf, proof, index, root)).to.be.equal(true);
     }
 
-    // create output json file with gen infoi plus value leafs and proofs
+    // create output json file with gen info plus value leafs and proofs
     const output = [];
     for (let i = 0; i < genFile.length; i++) {
         const smtProof = proofs[i];
@@ -58,7 +57,7 @@ async function main() {
         });
     }
 
-    // save outout file depending on flag by argv --output and the timestamp
+    // save output file depending on flag by argv --output and the timestamp
     const timestamp = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
 
     if (argv.output !== undefined) {

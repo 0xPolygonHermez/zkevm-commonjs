@@ -54,7 +54,7 @@
             "l1InfoTree": {
               "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
               "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-              "timestamp": "42"
+              "minTimestamp": "42"
             },
             "indexL1InfoTree": 0,
             "reason": "",
@@ -232,7 +232,7 @@
             "l1InfoTree": {
               "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
               "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-              "timestamp": "42"
+              "minTimestamp": "42"
             },
             "indexL1InfoTree": 0,
             "reason": "",
@@ -409,7 +409,7 @@
             "l1InfoTree": {
               "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
               "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-              "timestamp": "42"
+              "minTimestamp": "42"
             },
             "indexL1InfoTree": 0,
             "reason": "",
@@ -475,7 +475,7 @@
             "l1InfoTree": {
               "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
               "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-              "timestamp": "42"
+              "minTimestamp": "42"
             },
             "indexL1InfoTree": 0,
             "reason": "",
@@ -591,7 +591,7 @@
             "l1InfoTree": {
               "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
               "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-              "timestamp": "42"
+              "minTimestamp": "42"
             },
             "indexL1InfoTree": 0,
             "reason": "",
@@ -887,7 +887,7 @@
             "l1InfoTree": {
               "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
               "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-              "timestamp": "42"
+              "minTimestamp": "42"
             },
             "indexL1InfoTree": 0,
             "reason": "",
