@@ -31,7 +31,7 @@
         "l1InfoTree": {
           "globalExitRoot": "0x887c22bd8750d34016ac3c66b5ff102dacdd73f6b014e710b51e8022af9a1968",
           "blockHash": "0xc1df82d9c4b87413eae2ef048f94b4d3554cea73d92b0f7af96e0271c691e2bb",
-          "timestamp": "42",
+          "minTimestamp": "42",
           "smtProofPreviousIndex": [
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0xf20741cd2005f97f7438e62c7d6a5e4140ce47c240a3f32469ddabfd265ac118",
@@ -90,7 +90,7 @@
         "l1InfoTree": {
           "globalExitRoot": "0x662ee4dd2dd7b2bc707961b1e646c4047669dcb6584f0d8d770daf5d7e7deb2e",
           "blockHash": "0xb8cd74046ff337f0a7bf2c8e03e10f642c1886798d71806ab1e888d9e5ee87d0",
-          "timestamp": "42",
+          "minTimestamp": "42",
           "smtProofPreviousIndex": [
             "0xd32085410db8c1abc5817e1e4a514fcc8d6345263aa02c5d8132182ce64dc243",
             "0x5208554db01ad89751c5bfea8c72835636748e07c8214f8d7ea97a14953eac39",
@@ -212,7 +212,7 @@
         "l1InfoTree": {
           "globalExitRoot": "0x887c22bd8750d34016ac3c66b5ff102dacdd73f6b014e710b51e8022af9a1968",
           "blockHash": "0xc1df82d9c4b87413eae2ef048f94b4d3554cea73d92b0f7af96e0271c691e2bb",
-          "timestamp": "42",
+          "minTimestamp": "42",
           "historicRoot": "0x4c9ea822b94a2367aeba9ce15cc881edfda28e1763e377b54a141068b08002f4",
           "smtProofPreviousIndex": [
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -272,7 +272,7 @@
         "l1InfoTree": {
           "globalExitRoot": "0x662ee4dd2dd7b2bc707961b1e646c4047669dcb6584f0d8d770daf5d7e7deb2e",
           "blockHash": "0xb8cd74046ff337f0a7bf2c8e03e10f642c1886798d71806ab1e888d9e5ee87d0",
-          "timestamp": "42",
+          "minTimestamp": "42",
           "smtProofPreviousIndex": [
             "0xd32085410db8c1abc5817e1e4a514fcc8d6345263aa02c5d8132182ce64dc243",
             "0x5208554db01ad89751c5bfea8c72835636748e07c8214f8d7ea97a14953eac39",
@@ -385,7 +385,7 @@
     "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
     "type": 2,
     "forcedData": {
-      "GER": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
+      "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
       "blockHashL1": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
       "minTimestamp": "1944498031"
     },
@@ -477,7 +477,7 @@
     "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
     "type": 2,
     "forcedData": {
-      "GER": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
+      "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
       "blockHashL1": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
       "minTimestamp": "1944498031"
     },
@@ -491,7 +491,7 @@
         "l1InfoTree": {
           "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
           "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-          "timestamp": "42",
+          "minTimestamp": "42",
           "smtProofPreviousIndex": [
             "0xcc4105312818e9b7f692c9c807ea09699f4f290e5e31671a8e0c2c937f1c43f0",
             "0xece5fbe7739fd48f4931ce884ee9cf5f373d0a6c63b80ce836bc0ae674e78540",
@@ -550,7 +550,7 @@
         "l1InfoTree": {
           "globalExitRoot": "0x887c22bd8750d34016ac3c66b5ff102dacdd73f6b014e710b51e8022af9a1968",
           "blockHash": "0xc1df82d9c4b87413eae2ef048f94b4d3554cea73d92b0f7af96e0271c691e2bb",
-          "timestamp": "4242",
+          "minTimestamp": "4242",
           "smtProofPreviousIndex": [
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0xf20741cd2005f97f7438e62c7d6a5e4140ce47c240a3f32469ddabfd265ac118",

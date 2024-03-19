@@ -22,8 +22,6 @@ async function calculateSnarkInput(
     newLocalExitRoot,
     oldBatchAccInputHash,
     newBatchAccInputHash,
-    oldNumBatch,
-    newNumBatch,
     chainID,
     aggregatorAddress,
     forkID,
@@ -36,9 +34,6 @@ async function calculateSnarkInput(
 
     // 32 bytes each field element for oldStateRoot
     const strOldBatchAccInputHash = padZeros((Scalar.fromString(oldBatchAccInputHash, 16)).toString(16), 64);
-
-    // 8 bytes for oldNumBatch
-    const strOldNumBatch = padZeros(Scalar.e(oldNumBatch).toString(16), 16);
 
     // 8 bytes for chainID
     const strChainID = padZeros(Scalar.e(chainID).toString(16), 16);
@@ -55,20 +50,15 @@ async function calculateSnarkInput(
     // 32 bytes each field element for oldStateRoot
     const strNewLocalExitRoot = padZeros((Scalar.fromString(newLocalExitRoot, 16)).toString(16), 64);
 
-    // 8 bytes for newNumBatch
-    const strNewNumBatch = padZeros(Scalar.e(newNumBatch).toString(16), 16);
-
     // build final bytes sha256
     const finalStr = strAggregatorAddress
         .concat(strOldStateRoot)
         .concat(strOldBatchAccInputHash)
-        .concat(strOldNumBatch)
         .concat(strChainID)
         .concat(strForkID)
         .concat(strNewStateRoot)
         .concat(strNewBatchAccInputHash)
-        .concat(strNewLocalExitRoot)
-        .concat(strNewNumBatch);
+        .concat(strNewLocalExitRoot);
 
     return sha256Snark(finalStr);
 }

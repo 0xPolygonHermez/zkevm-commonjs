@@ -308,8 +308,6 @@ class ZkEVMDB {
             dataVerify.newLocalExitRoot,
             dataVerify.oldBatchAccInputHash,
             dataVerify.newBatchAccInputHash,
-            dataVerify.oldNumBatch,
-            dataVerify.newNumBatch,
             dataVerify.chainID,
             dataVerify.aggregatorAddress,
             dataVerify.forkID,

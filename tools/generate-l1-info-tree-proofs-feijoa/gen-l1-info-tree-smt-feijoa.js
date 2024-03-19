@@ -78,9 +78,6 @@ async function main() {
         fullOutput.push(fullL1Info);
     }
 
-    // save output file depending on flag by argv --output and the timestamp
-    const timestamp = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
-
     if (argv.output !== undefined) {
         fs.writeFileSync(path.join(__dirname, 'smt-output.json'), JSON.stringify(output, null, 2));
         fs.writeFileSync(path.join(__dirname, 'smt-full-output.json'), JSON.stringify(fullOutput, null, 2));

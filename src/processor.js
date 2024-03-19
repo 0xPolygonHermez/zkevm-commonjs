@@ -20,7 +20,6 @@ const smtUtils = require('./smt-utils');
 const VirtualCountersManager = require('./virtual-counters-manager');
 
 const { getCurrentDB } = require('./smt-utils');
-const { calculateSnarkInput } = require('./contract-utils');
 const { computeBatchL2HashData, computeBatchAccInputHash } = require('./blob-inner/blob-utils');
 const {
     decodeCustomRawTxProverMethod, computeEffectiveGasPrice, computeL2TxHash,
@@ -844,7 +843,7 @@ module.exports = class Processor {
         if (this.isForced) {
             // get and verify forcedHashData
             const computedForcedHashData = getL1InfoTreeValue(
-                this.forcedData.GER,
+                this.forcedData.globalExitRoot,
                 this.forcedData.blockHashL1,
                 this.forcedData.minTimestamp,
             );
@@ -857,7 +856,7 @@ module.exports = class Processor {
             // set forced data
             const timestampForced = Scalar.e(this.forcedData.minTimestamp);
             // set forced global exit root and default blockHash
-            finalGER = this.forcedData.GER;
+            finalGER = this.forcedData.globalExitRoot;
             finalBlockHash = this.forcedData.blockHashL1;
 
             // Update timestamp only if timestampForced > currentTimestamp
@@ -887,8 +886,8 @@ module.exports = class Processor {
                     throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing l1Info`);
                 }
 
-                // Verify newTimestamp >= l1InfoRoot.timestamp
-                if (Scalar.lt(newTimestamp, l1Info.timestamp)) {
+                // Verify newTimestamp >= l1InfoRoot.minTimestamp
+                if (Scalar.lt(newTimestamp, l1Info.minTimestamp)) {
                     return true;
                 }
 
@@ -896,7 +895,7 @@ module.exports = class Processor {
                 const infoTreeData = getL1InfoTreeValue(
                     l1Info.globalExitRoot,
                     l1Info.blockHash,
-                    l1Info.timestamp,
+                    l1Info.minTimestamp,
                 );
 
                 // fulfill l1InfoTree information
@@ -1004,8 +1003,6 @@ module.exports = class Processor {
             newBatchAccInputHash, // output
             newLocalExitRoot, // output
             newTimestamp, // output
-            oldNumBatch: this.oldNumBatch,
-            newNumBatch: this.newNumBatch,
             chainID: this.chainID,
             forkID: this.forkID,
             forcedHashData: this.forcedHashData,

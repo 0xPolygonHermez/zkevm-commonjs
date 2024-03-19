@@ -31,7 +31,7 @@
             "l1InfoTree": {
               "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
               "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-              "timestamp": "42"
+              "minTimestamp": "42"
             },
             "indexL1InfoTree": 0,
             "reason": "",
@@ -95,7 +95,7 @@
             "l1InfoTree": {
               "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
               "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
-              "timestamp": "42"
+              "minTimestamp": "42"
             },
             "indexL1InfoTree": 0,
             "reason": "",
@@ -161,7 +161,7 @@
     "newLocalExitRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "newBatchAccInputHash": "0x2fc8173e6ee892814ac9b8f4eba51bf0378e06b75136041a3e932038ad0f09be",
     "newNumBatch": 2,
-    "inputSnark": "0x2013a71d559dcc6bd5aee3e1cde7fb03a075fe5c3ad96c267368e79f1a9d6c5a",
+    "inputSnark": "0x2469468e919ccdafb49b2805eabcf953b8bdbd570e3c1c9cd75b044463047870",
     "expectedOldRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d"
   }
 ]
