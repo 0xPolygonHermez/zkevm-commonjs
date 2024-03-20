@@ -44,8 +44,7 @@ module.exports = class Processor {
      * @param {Array[Field]} l1InfoRoot - l1 info root
      * @param {Number} chainID - L2 chainID
      * @param {Number} forkID - L2 rom fork identifier
-     * @param {Number} type - Defined blob & batch type (0: calldata, 1: blob, 2: forced calldata)
-     * @param {String} forcedHashData - Hash data forced in forced batches (keccak256(ger, blockGashL1, minTimestamp))
+     * @param {String} forcedHashData - Hash data forced in forced batches (keccak256(ger, blockGashL1, minTimestamp)), if zero, means not forced
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
@@ -69,7 +68,6 @@ module.exports = class Processor {
         oldBatchAccInputHash,
         chainID,
         forkID,
-        type,
         forcedHashData,
         previousL1InfoTreeRoot,
         previousL1InfoTreeIndex,
@@ -103,9 +101,8 @@ module.exports = class Processor {
         this.chainID = chainID;
         this.forkID = forkID;
         // could set either BLOB_TYPE_CALLDATA or BLOB_TYPE_EIP4844
-        this.type = (typeof type === 'undefined' || type === null) ? Constants.BLOB_TYPE_CALLDATA : type;
         this.forcedHashData = (typeof forcedHashData === 'undefined' || forcedHashData === null) ? Constants.ZERO_BYTES32 : forcedHashData;
-        this.isForced = Scalar.eq(2, this.type);
+        this.isForced = Scalar.neq(0, Scalar.e(this.forcedHashData));
         this.previousL1InfoTreeRoot = previousL1InfoTreeRoot;
         this.previousL1InfoTreeIndex = previousL1InfoTreeIndex;
         this.currentL1InfoTreeRoot = previousL1InfoTreeRoot;
@@ -877,20 +874,10 @@ module.exports = class Processor {
 
             // Compute recursive l1InfoTree
             if (tx.indexL1InfoTree !== 0) {
-                // Verify indexL1InfoTree is greater than
-                if (tx.indexL1InfoTree <= this.currentL1InfoTreeIndex) {
-                    return true;
-                }
                 const l1Info = this.extraData.l1Info[tx.indexL1InfoTree];
                 if (typeof l1Info === 'undefined') {
                     throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing l1Info`);
                 }
-
-                // Verify newTimestamp >= l1InfoRoot.minTimestamp
-                if (Scalar.lt(newTimestamp, l1Info.minTimestamp)) {
-                    return true;
-                }
-
                 // Compute l1InfoTree
                 const infoTreeData = getL1InfoTreeValue(
                     l1Info.globalExitRoot,
@@ -900,6 +887,15 @@ module.exports = class Processor {
 
                 // fulfill l1InfoTree information
                 this.l1InfoTree[tx.indexL1InfoTree] = { ...l1Info };
+                // Verify indexL1InfoTree is greater than
+                if (tx.indexL1InfoTree <= this.currentL1InfoTreeIndex) {
+                    return true;
+                }
+
+                // Verify newTimestamp >= l1InfoRoot.minTimestamp
+                if (Scalar.lt(newTimestamp, l1Info.minTimestamp)) {
+                    return true;
+                }
 
                 // Check if previousL1InfoTree index is 0
                 if (this.currentL1InfoTreeIndex === 0) {
@@ -991,7 +987,6 @@ module.exports = class Processor {
             this.batchHashData,
             this.sequencerAddress,
             this.forcedHashData,
-            this.type,
         );
 
         this.newBatchAccInputHash = smtUtils.stringToH4(newBatchAccInputHash);

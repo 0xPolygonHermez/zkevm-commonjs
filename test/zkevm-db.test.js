@@ -45,7 +45,6 @@ describe('ZkEVMDB', function () {
         const db = new MemDB(F);
         const chainID = 1000;
         const forkID = 9;
-        const type = 0;
         const forcedHashData = Constants.ZERO_BYTES32;
         const previousL1InfoTreeRoot = Constants.ZERO_BYTES32;
         const previousL1InfoTreeIndex = 0;
@@ -65,7 +64,6 @@ describe('ZkEVMDB', function () {
         // build an empty batch
         const batch = await zkEVMDB.buildBatch(
             sequencerAddress,
-            type,
             forcedHashData,
             previousL1InfoTreeRoot,
             previousL1InfoTreeIndex,
@@ -124,7 +122,6 @@ describe('ZkEVMDB', function () {
             newBatchAccInputHash,
             previousL1InfoTreeRoot,
             previousL1InfoTreeIndex,
-            type,
             chainID,
             forkID,
             forcedHashData,
@@ -270,7 +267,6 @@ describe('ZkEVMDB', function () {
 
         const batch = await zkEVMDB.buildBatch(
             sequencerAddress,
-            type,
             forcedHashData,
             previousL1InfoTreeRoot,
             previousL1InfoTreeIndex,
@@ -341,7 +337,6 @@ describe('ZkEVMDB', function () {
             oldStateRoot,
             batches,
             sequencerAddress,
-            type,
             previousL1InfoTreeRoot,
             previousL1InfoTreeIndex,
             oldBatchAccInputHash,
@@ -502,7 +497,6 @@ describe('ZkEVMDB', function () {
             const rawTxs = rawBatches[m];
             const batch = await zkEVMDB.buildBatch(
                 sequencerAddress,
-                type,
                 Constants.ZERO_BYTES32, // forcedHashData
                 previousL1InfoTreeRoot,
                 previousL1InfoTreeIndex,

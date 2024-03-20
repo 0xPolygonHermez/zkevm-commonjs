@@ -43,7 +43,11 @@ function valueToHexStr(_value, prefix = false) {
  * @returns {String} function name
  */
 function getFuncName() {
-    return getFuncName.caller.name;
+    if (getFuncName.caller) {
+        return getFuncName.caller.name;
+    }
+
+    return '';
 }
 
 /**
