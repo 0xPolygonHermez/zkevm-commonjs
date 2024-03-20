@@ -356,7 +356,7 @@ module.exports = class Processor {
     /**
      * Process the decoded transactions decodedTxs
      * Also this function will perform several checks and can mark a transactions as invalid
-     * This funcion will check:
+     * This function will check:
      * A: VALID NONCE
      * B: ENOUGH UPFRONT TX COST
      * Process transaction will perform the following operations
