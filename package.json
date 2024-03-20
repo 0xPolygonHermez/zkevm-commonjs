@@ -1,18 +1,20 @@
 {
   "name": "@0xpolygonhermez/zkevm-commonjs",
   "description": "Javascript library implementing common utilities for zkevm",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
-    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js && npm run test:e2e && npm run test:blockinfo && npm run test:selfdestruct",
+    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js && npm run test:e2e && npm run test:blockinfo && npm run test:selfdestruct && npm run test:etrog",
+    "test:etrog": "npx mocha ./test/processor.test.js --etrog",
     "test:e2e": "npx mocha ./test/processor.test.js --e2e",
     "test:blockinfo": "npx mocha ./test/processor.test.js --blockinfo",
     "test:selfdestruct": "npx mocha ./test/processor.test.js --selfdestruct",
     "eslint": "npx eslint src/** test/*.test.js && npx eslint tools",
     "eslint:fix": "npx eslint src/** test/*.test.js --fix  && npx eslint tools --fix",
     "test:update": "./tools/update-tests/update-tests.sh",
-    "test:database": "npx mocha ./test/database.test.js"
+    "test:database": "npx mocha ./test/database.test.js",
+    "build:inputs": "npx mocha ./test/processor.test.js --update --geninputs && npx mocha ./test/processor.test.js --etrog --update --geninputs"
   },
   "repository": {
     "type": "git",
@@ -35,7 +37,7 @@
   },
   "homepage": "https://github.com/0xPolygonHermez/zkevm-commonjs#readme",
   "devDependencies": {
-    "@0xpolygonhermez/zkevm-contracts": "github:0xPolygonHermez/zkevm-contracts#v1.0.0-fork.3",
+    "@0xpolygonhermez/zkevm-contracts": "github:0xPolygonHermez/zkevm-contracts#feature/l1-info-tree",
     "@ethersproject/abi": "^5.6.4",
     "@nomiclabs/hardhat-ethers": "^2.1.0",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
@@ -51,7 +53,7 @@
     "@ethereumjs/block": "^3.6.2",
     "@ethereumjs/tx": "^3.4.0",
     "@polygon-hermez/common": "2.6.4",
-    "@polygon-hermez/vm": "5.7.30",
+    "@polygon-hermez/vm": "6.0.12",
     "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.55",

@@ -1,6 +1,10 @@
+/* eslint-disable no-use-before-define */
+/* eslint-disable max-len */
 const { ethers } = require('ethers');
 const { Scalar } = require('ffjavascript');
 const Constants = require('./constants');
+const smtUtils = require('./smt-utils');
+const { valueToHexStr } = require('./utils');
 
 /**
  * Extract an integer from a byte array
@@ -19,24 +23,34 @@ function unarrayifyInteger(data, offset, length) {
 }
 
 /**
- * Convert a custom rawTx  [rlp(nonce, gasprice, gaslimit, to, value, data, chainId, 0, 0)|r|s|v]
- * to a standard raw tx [rlp(nonce, gasprice, gaslimit, to, value, data, r, s, v)]
+ * Convert a custom rawTx:
+ *   - preEIP155: [rlp(nonce, gasprice, gaslimit, to, value, data)|r|s|v|effectivePercentage]
+ *   - Legacy: [rlp(nonce, gasprice, gaslimit, to, value, data, chainId, 0, 0)|r|s|v|effectivePercentage]
+ * to a standard raw ethereum tx: [rlp(nonce, gasprice, gaslimit, to, value, data, r, s, v)]
  * @param {String} customRawTx -  Custom raw transaction
  * @returns {String} - Standard raw transaction
  */
 function customRawTxToRawTx(customRawTx) {
     const signatureCharacters = Constants.SIGNATURE_BYTES * 2;
-    const rlpSignData = customRawTx.slice(0, -signatureCharacters);
-    const signature = `0x${customRawTx.slice(-signatureCharacters)}`;
+    const effectivePercentageCharacters = Constants.EFFECTIVE_PERCENTAGE_BYTES * 2;
+    const rlpSignData = customRawTx.slice(0, -(signatureCharacters + effectivePercentageCharacters));
+    const signature = `0x${customRawTx.slice(-(signatureCharacters + effectivePercentageCharacters), -effectivePercentageCharacters)}`;
 
     const txFields = ethers.utils.RLP.decode(rlpSignData);
 
     const signatureParams = ethers.utils.splitSignature(signature);
-
-    const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
-    const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
-    const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
-    const rlpFields = [...txFields.slice(0, -3), v, r, s];
+    let rlpFields;
+    if (txFields[6] === undefined) {
+        const v = ethers.utils.hexlify(signatureParams.v);
+        const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+        const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+        rlpFields = [...txFields, v, r, s];
+    } else {
+        const v = ethers.utils.hexlify(signatureParams.v - 27 + txFields[6] * 2 + 35);
+        const r = ethers.BigNumber.from(signatureParams.r).toHexString(); // does not have necessary 32 bytes
+        const s = ethers.BigNumber.from(signatureParams.s).toHexString(); // does not have necessary 32 bytes
+        rlpFields = [...txFields.slice(0, -3), v, r, s];
+    }
 
     return ethers.utils.RLP.encode(rlpFields);
 }
@@ -93,28 +107,57 @@ function addressToHexStringRlp(address) {
 
 /**
  * Convert a standard rawTx of ethereum [rlp(nonce,gasprice,gaslimit,to,value,data,r,s,v)]
- * to our custom raw tx [rlp(nonce,gasprice,gaslimit,to,value,data,0,0)|r|s|v]
+ * to our custom raw tx:
+ *   - preEIP155: [rlp(nonce,gasprice,gaslimit,to,value,data)|r|s|v|effectivePercentage]
+ *   - Legacy: [rlp(nonce,gasprice,gaslimit,to,value,data,chainId,0,0)|r|s|v|effectivePercentage]
  * @param {String} rawTx - Standard raw transaction
  * @returns {String} - Custom raw transaction
  */
-function rawTxToCustomRawTx(rawTx) {
+function rawTxToCustomRawTx(rawTx, effectivePercentage) {
     const tx = ethers.utils.parseTransaction(rawTx);
-    const signData = ethers.utils.RLP.encode([
-        toHexStringRlp(tx.nonce),
-        toHexStringRlp(tx.gasPrice),
-        toHexStringRlp(tx.gasLimit),
-        addressToHexStringRlp(tx.to || '0x'),
-        toHexStringRlp(tx.value),
-        toHexStringRlp(tx.data),
-        toHexStringRlp(tx.chainId),
-        '0x',
-        '0x',
-    ]);
-    const r = tx.r.slice(2);
-    const s = tx.s.slice(2);
-    const v = (tx.v - tx.chainId * 2 - 35 + 27).toString(16).padStart(2, '0'); // 1 byte
 
-    return signData.concat(r).concat(s).concat(v);
+    let signData;
+    let r;
+    let s;
+    let v;
+
+    // check preEIP155
+    if (tx.chainId === 0 && (tx.v === 27 || tx.v === 28)) {
+        signData = ethers.utils.RLP.encode([
+            toHexStringRlp(tx.nonce),
+            toHexStringRlp(tx.gasPrice),
+            toHexStringRlp(tx.gasLimit),
+            addressToHexStringRlp(tx.to || '0x'),
+            toHexStringRlp(tx.value),
+            toHexStringRlp(tx.data),
+        ]);
+
+        r = tx.r.slice(2);
+        s = tx.s.slice(2);
+        v = tx.v.toString(16).padStart(2, '0'); // 1 byte
+    } else {
+        signData = ethers.utils.RLP.encode([
+            toHexStringRlp(tx.nonce),
+            toHexStringRlp(tx.gasPrice),
+            toHexStringRlp(tx.gasLimit),
+            addressToHexStringRlp(tx.to || '0x'),
+            toHexStringRlp(tx.value),
+            toHexStringRlp(tx.data),
+            toHexStringRlp(tx.chainId),
+            '0x',
+            '0x',
+        ]);
+
+        r = tx.r.slice(2);
+        s = tx.s.slice(2);
+        v = (tx.v - tx.chainId * 2 - 35 + 27).toString(16).padStart(2, '0'); // 1 byte
+    }
+
+    if (typeof effectivePercentage === 'undefined') {
+        effectivePercentage = 'ff';
+    }
+
+    return signData.concat(r).concat(s).concat(v).concat(effectivePercentage);
 }
 
 /**
@@ -129,7 +172,12 @@ function encodedStringToArray(encodedTransactions) {
     let offset = 0;
 
     while (offset < encodedTxBytes.length) {
-        if (encodedTxBytes[offset] >= 0xf8) {
+        if (encodedTxBytes[offset] === Constants.TX_CHANGE_L2_BLOCK) {
+            const bytesToRead = 1 + Constants.DELTA_TIMESTAMP_BYTES + Constants.INDEX_L1INFOTREE_BYTES;
+            const tx = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + bytesToRead));
+            decodedRawTx.push(tx);
+            offset += bytesToRead;
+        } else if (encodedTxBytes[offset] >= 0xf8) {
             const lengthLength = encodedTxBytes[offset] - 0xf7;
             if (offset + 1 + lengthLength > encodedTxBytes.length) {
                 throw new Error('encodedTxBytes short segment too short');
@@ -140,20 +188,20 @@ function encodedStringToArray(encodedTransactions) {
                 throw new Error('encodedTxBytes long segment too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(
-                encodedTxBytes.slice(offset, offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES),
-            ));
-            offset = offset + 1 + lengthLength + length + Constants.SIGNATURE_BYTES;
+            const bytesToRead = 1 + lengthLength + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + bytesToRead)));
+            offset += bytesToRead;
         } else if (encodedTxBytes[offset] >= 0xc0) {
             const length = encodedTxBytes[offset] - 0xc0;
             if (offset + 1 + length > encodedTxBytes.length) {
                 throw new Error('encodedTxBytes array too short');
             }
 
-            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + 1 + length + Constants.SIGNATURE_BYTES)));
-            offset = offset + 1 + length + Constants.SIGNATURE_BYTES;
+            const bytesToRead = 1 + length + Constants.SIGNATURE_BYTES + Constants.EFFECTIVE_PERCENTAGE_BYTES;
+            decodedRawTx.push(ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + bytesToRead)));
+            offset += bytesToRead;
         } else {
-            throw new Error('Error');
+            throw new Error('Error encodedStringToArray');
         }
     }
 
@@ -283,15 +331,177 @@ function decodeCustomRawTxProverMethod(encodedTransactions) {
     const lenR = 32;
     const lenS = 32;
     const lenV = 1;
+    const lenEffectivePercentage = 1;
 
     txDecoded.r = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenR));
     offset += lenR;
+    // r: assert to read 32 bytes
+    if (txDecoded.r.length !== (2 + 2 * lenR)) {
+        throw new Error('Invalid signature length: R');
+    }
+
     txDecoded.s = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenS));
     offset += lenS;
+    // s: assert to read 32 bytes
+    if (txDecoded.s.length !== (2 + 2 * lenS)) {
+        throw new Error('Invalid signature length: S');
+    }
+
     txDecoded.v = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenV));
     offset += lenV;
+    // v: assert to read 32 bytes
+    if (txDecoded.v.length !== (2 + 2 * lenV)) {
+        throw new Error('Invalid signature length: V');
+    }
+
+    txDecoded.effectivePercentage = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + lenEffectivePercentage));
+    offset += lenEffectivePercentage;
+    if (txDecoded.effectivePercentage === '0x') {
+        txDecoded.effectivePercentage = '0xff';
+    }
 
     return { txDecoded, rlpSignData };
+}
+
+/**
+ * Computes the effective gas price for a transaction
+ * @param {String | BigInt} gasPrice in hex string or BigInt
+ * @param {String | BigInt} effectivePercentage in hex string or BigInt
+ * @returns effectiveGasPrice as BigInt
+ */
+function computeEffectiveGasPrice(gasPrice, effectivePercentage) {
+    const effectivegasPrice = Scalar.div(
+        Scalar.mul(Scalar.e(gasPrice), (Scalar.e(Number(effectivePercentage) + 1))),
+        256,
+    );
+
+    return effectivegasPrice;
+}
+
+/**
+ * Computes the L2 transaction hash from a transaction
+ * @param {Object} tx tx to compute l2 hash, must have nonce, gasPrice, chainID, gasLimit, to, value, data, from in hex string
+ * @returns computed l2 tx hash or object with txHash and dataEncoded uf returnEncoded is true
+ */
+async function computeL2TxHash(tx, returnEncoded = false) {
+    // txType 00 for pre-EIP155 (no chainID) and 01 for legacy transactions
+    let txType = '01';
+    if (typeof tx.chainID === 'undefined' || tx.chainID === '00' || tx.chainID === '0x') {
+        txType = '00';
+    }
+    // Add txType, nonce, gasPrice and gasLimit
+    let hash = `${txType}`
+                + `${formatL2TxHashParam(tx.nonce, 8)}`
+                + `${formatL2TxHashParam(tx.gasPrice, 32)}`
+                + `${formatL2TxHashParam(tx.gasLimit, 8)}`;
+    // Check is deploy
+    if (typeof tx.to === 'undefined' || tx.to === '' || tx.to === '0x') {
+        hash += '01';
+    } else {
+        hash += `00${formatL2TxHashParam(tx.to, 20)}`;
+    }
+    // Add value
+    hash += `${formatL2TxHashParam(tx.value, 32)}`;
+    let { data } = tx;
+    // Compute data length
+    if (data.startsWith('0x')) {
+        data = data.slice(2);
+    }
+    const dataLength = Math.ceil(data.length / 2);
+    hash += `${formatL2TxHashParam(dataLength.toString(16), 3)}`;
+    if (dataLength > 0) {
+        hash += `${formatL2TxHashParam(data, dataLength)}`;
+    }
+    // Add chainID
+    if (typeof tx.chainID !== 'undefined') {
+        hash += `${formatL2TxHashParam(tx.chainID, 8)}`;
+    }
+    // Add from
+    hash += `${formatL2TxHashParam(tx.from, 20)}`;
+    const txHash = await smtUtils.linearPoseidon(hash);
+    if (returnEncoded) {
+        return { txHash, dataEncoded: hash };
+    }
+
+    return txHash;
+}
+
+/**
+ * Formats a tx param to compute the linear poseidon hash of l2TxHash
+ * @param {String} param in hex string
+ * @param {Number} paramLength Length of the string param, used for left zero padding
+ * @returns formatted param
+ */
+function formatL2TxHashParam(param, paramLength) {
+    // Convert to hex string if param is a number
+    if (typeof param === 'number') {
+        param = param.toString(16);
+    }
+
+    if (param.startsWith('0x')) {
+        param = param.slice(2);
+    }
+    // format to bytes
+    if (param.length % 2 === 1) {
+        param = `0${param}`;
+    }
+    // Checks hex correctness
+    if (/^[0-9a-fA-F]+$/.test(param) === false) {
+        throw new Error('Invalid hex string');
+    }
+    param = param.padStart(paramLength * 2, '0');
+
+    return param;
+}
+
+/**
+ * Decode string into a changeL2Transaction transaction type
+ * @param {String} _rawTx
+ * @returns {Object} transaction object
+ */
+async function decodeChangeL2BlockTx(_rawTx) {
+    const tx = {};
+
+    let offsetChars = 0;
+    const serializedTx = _rawTx.startsWith('0x') ? _rawTx.slice(2) : _rawTx;
+
+    let charsToRead = Constants.TYPE_BYTES * 2;
+
+    tx.type = parseInt(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
+    offsetChars += charsToRead;
+
+    charsToRead = Constants.DELTA_TIMESTAMP_BYTES * 2;
+    tx.deltaTimestamp = Scalar.fromString(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
+    offsetChars += charsToRead;
+
+    charsToRead = Constants.INDEX_L1INFOTREE_BYTES * 2;
+    tx.indexL1InfoTree = parseInt(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
+
+    return tx;
+}
+
+/**
+ * Serialize transaction for the batch
+ * fields: [type | deltaTimestamp | indexL1InfoTree ]
+ * bytes:  [  1  |       4        |         4       ]
+ * @param {Object} tx - transaction object
+ * @returns {String} - Serialized tx in hexadecimal string
+ */
+function serializeChangeL2Block(tx) {
+    let data = Scalar.e(0);
+
+    let offsetBits = 0;
+
+    data = Scalar.add(data, Scalar.shl(tx.indexL1InfoTree, offsetBits));
+    offsetBits += Constants.INDEX_L1INFOTREE_BYTES * 8;
+
+    data = Scalar.add(data, Scalar.shl(tx.deltaTimestamp, offsetBits));
+    offsetBits += Constants.DELTA_TIMESTAMP_BYTES * 8;
+
+    data = Scalar.add(data, Scalar.shl(tx.type, offsetBits));
+    offsetBits += Constants.TYPE_BYTES * 8;
+
+    return valueToHexStr(data).padStart(offsetBits / 4, '0');
 }
 
 module.exports = {
@@ -302,4 +512,8 @@ module.exports = {
     arrayToEncodedString,
     encodedStringToArray,
     addressToHexStringRlp,
+    computeEffectiveGasPrice,
+    computeL2TxHash,
+    decodeChangeL2BlockTx,
+    serializeChangeL2Block,
 };

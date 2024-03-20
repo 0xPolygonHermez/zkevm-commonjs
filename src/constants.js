@@ -14,6 +14,7 @@ module.exports.DB_STARK_INPUT = ethers.utils.id(('ZKEVM_DB_STARK_INPUT'));
 // Default values and global constants
 module.exports.DEFAULT_MAX_TX = 1000;
 module.exports.SIGNATURE_BYTES = 32 + 32 + 1;
+module.exports.EFFECTIVE_PERCENTAGE_BYTES = 1;
 module.exports.FrSNARK = Scalar.e('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 module.exports.FrSTARK = Scalar.e('18446744069414584321');
 
@@ -28,6 +29,24 @@ module.exports.SMT_KEY_SC_LENGTH = 4;
 module.exports.SMT_KEY_TOUCHED_ADDR = 5;
 module.exports.SMT_KEY_TOUCHED_SLOTS = 6;
 
+// SMT block header constant keys
+module.exports.SMT_KEY_BLOCK_HEADER_PARAM = 7;
+module.exports.SMT_KEY_BLOCK_HEADER_TRANSACTION_HASH = 8;
+module.exports.SMT_KEY_BLOCK_HEADER_STATUS = 9;
+module.exports.SMT_KEY_BLOCK_HEADER_CUMULATIVE_GAS_USED = 10;
+module.exports.SMT_KEY_BLOCK_HEADER_LOGS = 11;
+module.exports.SMT_KEY_BLOCK_HEADER_EFFECTIVE_PERCENTAGE = 12;
+
+// SMT block header data leaf keys
+module.exports.INDEX_BLOCK_HEADER_PARAM_BLOCK_HASH = 0;
+module.exports.INDEX_BLOCK_HEADER_PARAM_COINBASE = 1;
+module.exports.INDEX_BLOCK_HEADER_PARAM_NUMBER = 2;
+module.exports.INDEX_BLOCK_HEADER_PARAM_GAS_LIMIT = 3;
+module.exports.INDEX_BLOCK_HEADER_PARAM_TIMESTAMP = 4;
+module.exports.INDEX_BLOCK_HEADER_PARAM_GER = 5;
+module.exports.INDEX_BLOCK_HEADER_PARAM_BLOCK_HASH_L1 = 6;
+module.exports.INDEX_BLOCK_HEADER_PARAM_GAS_USED = 7;
+
 // SMT constant
 module.exports.BYTECODE_ELEMENTS_HASH = 8;
 module.exports.BYTECODE_BYTES_ELEMENT = 7;
@@ -39,12 +58,31 @@ module.exports.ADDRESS_BRIDGE = '0x9D98DeAbC42dd696Deb9e40b4f1CAB7dDBF55988';
 module.exports.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2 = '0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA';
 module.exports.GLOBAL_EXIT_ROOT_STORAGE_POS = 0;
 module.exports.LOCAL_EXIT_ROOT_STORAGE_POS = 1;
-module.exports.BATCH_GAS_LIMIT = 30000000;
+module.exports.BLOCK_GAS_LIMIT = 1125899906842624;
+module.exports.TX_GAS_LIMIT = 30000000;
 module.exports.BATCH_DIFFICULTY = 0;
 module.exports.ADDRESS_SYSTEM = '0x000000000000000000000000000000005ca1ab1e';
+
+// Adress system storage slots
+module.exports.LAST_BLOCK_STORAGE_POS = 0;
 module.exports.STATE_ROOT_STORAGE_POS = 1;
-module.exports.LAST_TX_STORAGE_POS = 0;
+module.exports.TIMESTAMP_STORAGE_POS = 2;
+module.exports.BLOCK_INFO_ROOT_STORAGE_POS = 3;
 
 // Bridge Leaf Types
 module.exports.BRIDGE_LEAF_TYPE_ASSET = 0;
 module.exports.BRIDGE_LEAF_TYPE_MESSAGE = 1;
+
+// Tx Types
+module.exports.TX_CHANGE_L2_BLOCK = 11;
+
+// Tx Type 11: Change L2 Block constants
+module.exports.DELTA_TIMESTAMP_BYTES = 4;
+module.exports.INDEX_L1INFOTREE_BYTES = 4;
+module.exports.TYPE_BYTES = 1;
+
+// Bridge
+module.exports.GLOBAL_INDEX_MAINNET_FLAG = Scalar.pow(2, 64);
+
+// Common
+module.exports.ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';

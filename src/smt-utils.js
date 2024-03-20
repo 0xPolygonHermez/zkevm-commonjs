@@ -467,6 +467,7 @@ module.exports = {
     keyContractLength,
     getCurrentDB,
     hashContractBytecode,
+    linearPoseidon: hashContractBytecode,
     h4toScalar,
     h4toString,
     stringToH4,

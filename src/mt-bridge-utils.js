@@ -1,4 +1,6 @@
 const ethers = require('ethers');
+const { Scalar } = require('ffjavascript');
+const Constants = require('./constants');
 
 /**
  * Calculate an array zero hashes of
@@ -45,14 +47,32 @@ function verifyMerkleProof(leaf, smtProof, index, root) {
  * @param {String} destinationAddress - Destination address
  * @param {BigNumber} amount - Amount of tokens
  * @param {BigNumber} metadataHash - Hash of the metadata
- * @returns {Boolean} - Leaf value
+ * @returns {String} - Leaf value
  */
 function getLeafValue(leafType, originNetwork, originAddress, destinationNetwork, destinationAddress, amount, metadataHash) {
     return ethers.utils.solidityKeccak256(['uint8', 'uint32', 'address', 'uint32', 'address', 'uint256', 'bytes32'], [leafType, originNetwork, originAddress, destinationNetwork, destinationAddress, amount, metadataHash]);
+}
+
+/**
+ * Compute globalIndex
+ * | 191 bits |    1 bit     |   32 bits   |  32 bits   |
+ * |    0     |  mainnetFlag | indexRollup | indexLocal |
+ * @param {Number | BigInt} indexLocal - leaf index on the mainnet exit tree
+ * @param {Number | BigInt} indexRollup - leaf index on the rollup tree
+ * @param {Bool} isMainnet flag that indicates if it is mainnet
+ * @returns {BigInt} global index
+ */
+function computeGlobalIndex(indexLocal, indexRollup, isMainnet) {
+    if (isMainnet === true) {
+        return Scalar.add(indexLocal, Constants.GLOBAL_INDEX_MAINNET_FLAG);
+    }
+
+    return Scalar.add(indexLocal, Scalar.mul(indexRollup, Scalar.pow(2, 32)));
 }
 
 module.exports = {
     generateZeroHashes,
     verifyMerkleProof,
     getLeafValue,
+    computeGlobalIndex,
 };

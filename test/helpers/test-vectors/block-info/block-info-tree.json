@@ -1,0 +1,93 @@
+[
+    {
+        "oldStateRoot": "0x1fe466d9df83e1d2a4c32e21c6078b8f5f590e7db30b006965faa2f27a9b4fea",
+        "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "newBlockNumber": 1,
+        "blockGasLimit": "0xffffffff",
+        "finalTimestamp": 1944498031,
+        "finalGER": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "finalBlockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "txs": [
+            {
+                "logs": [
+                    [
+                        "0x",
+                        ["0000000000000000000000000000000000000000000000000000000000000001"],
+                        "0000000000000000000000000000000000000000000000000000000000000000"
+                    ],
+                    [
+                        "0x",
+                        [["0000000000000000000000000000000000000000000000000000000000000004"],["0000000000000000000000000000000000000000000000000000000000000005"],["0000000000000000000000000000000000000000000000000000000000000006"]],                   "0000000000000000000000000000000000000000000000000000000000000000"
+                    ],
+                    [
+                        "0x",
+                        [["0000000000000000000000000000000000000000000000000000000000000001"],["0000000000000000000000000000000000000000000000000000000000000002"]],
+                        "0000000000000000000000000000000000000000000000000000000000000000"
+                    ]
+                ],
+                "status": 1,
+                "l2TxHash": "0xd2a69c7d3c99953bae9d273f2375b2653bd4ec47a05eefc5fc7c041d07fba8a0",
+                "gasUsed": 26336,
+                "effectivePercentage": "0xff"
+            }
+        ],
+        "finalBlockInfoRoot": "0xc613144bc2893293e4ec4db6a225ccaf58ab9ebe820035e74f44013f85db1067"
+    },
+    {
+        "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
+        "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "newBlockNumber": 1,
+        "blockGasLimit": "0xffffffff",
+        "finalTimestamp": 1944498031,
+        "finalGER": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "finalBlockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "txs": [
+            {
+                "logs": [],
+                "status": 0,
+                "l2TxHash": "0xac65e2fd657a4ee6318cc66cf98b05ae74ce3f0f3982370af951176e7b599c2c",
+                "gasUsed": 21000,
+                "effectivePercentage": "0x00"
+            }
+        ],
+        "finalBlockInfoRoot": "0x01f06eb68cadab49affb988b9f03dcb1789f852e1046c6f74c3b0d758af1cc8b"
+    },
+    {
+        "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
+        "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "newBlockNumber": 1,
+        "blockGasLimit": "0xffffffff",
+        "finalTimestamp": 1944498031,
+        "finalGER": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "finalBlockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "txs": [
+            {
+                "logs": [],
+                "status": 1,
+                "l2TxHash": "0xac65e2fd657a4ee6318cc66cf98b05ae74ce3f0f3982370af951176e7b599c2c",
+                "gasUsed": 21000,
+                "effectivePercentage": "0xff"
+            }
+        ],
+        "finalBlockInfoRoot": "0x34805cbe4a3afd8f8d2d091f284a2bb52a60827af14cce94063bc54728466703"
+    },
+    {
+        "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
+        "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
+        "newBlockNumber": 5,
+        "blockGasLimit": "0xffffffff",
+        "finalTimestamp": 1944498031,
+        "finalGER": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "finalBlockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "txs": [
+            {
+                "logs": [],
+                "status": 1,
+                "l2TxHash": "0x8f9b0375a6b0f1bd9d54ff499921766828ae8e5314fc44a494736b5c4cc3bb56",
+                "gasUsed": 10000,
+                "effectivePercentage": "0xff"
+            }
+        ],
+        "finalBlockInfoRoot": "0x774e651f18ea6fb4ecfb698ec769bc519b59474474dae344c360301792d0a9f1"
+    }
+]

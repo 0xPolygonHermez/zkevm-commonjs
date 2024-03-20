@@ -1,6 +1,6 @@
 /* eslint-disable prefer-arrow-callback */
-const { expect } = require('chai');
 const { performance } = require('perf_hooks');
+const { expect } = require('chai');
 
 const {
     getPoseidon,

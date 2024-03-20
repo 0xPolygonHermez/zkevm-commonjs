@@ -1,22 +1,35 @@
+/* eslint-disable no-console */
+/* eslint-disable multiline-comment-style */
+/* eslint-disable max-len */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-continue */
 const ethers = require('ethers');
 const { Transaction } = require('@ethereumjs/tx');
 const { Block } = require('@ethereumjs/block');
 const {
-    Address, BN, toBuffer,
+    Address, BN, toBuffer, bufferToInt,
 } = require('ethereumjs-util');
-
+const { cloneDeep } = require('lodash');
 const { Scalar } = require('ffjavascript');
 const SMT = require('./smt');
 const TmpSmtDB = require('./tmp-smt-db');
 const Constants = require('./constants');
 const stateUtils = require('./state-utils');
 const smtUtils = require('./smt-utils');
+const VirtualCountersManager = require('./virtual-counters-manager');
 
 const { getCurrentDB } = require('./smt-utils');
 const { calculateAccInputHash, calculateSnarkInput, calculateBatchHashData } = require('./contract-utils');
-const { decodeCustomRawTxProverMethod } = require('./processor-utils');
+const {
+    decodeCustomRawTxProverMethod, computeEffectiveGasPrice, computeL2TxHash,
+    decodeChangeL2BlockTx,
+} = require('./processor-utils');
+const { valueToHexStr, getFuncName } = require('./utils');
+const {
+    initBlockHeader, setBlockGasUsed, fillReceiptTree,
+} = require('./block-utils');
+const { verifyMerkleProof } = require('./mt-bridge-utils');
+const { getL1InfoTreeValue } = require('./l1-info-tree-utils');
 
 module.exports = class Processor {
     /**
@@ -28,14 +41,23 @@ module.exports = class Processor {
      * @param {Array[Field]} root - state root
      * @param {String} sequencerAddress . sequencer address
      * @param {Array[Field]} accInputHash - accumulate input hash
-     * @param {Array[Field]} globalExitRoot - global exit root
-     * @param {Number} timestamp - Timestamp of the batch
+     * @param {Array[Field]} l1InfoRoot - l1 info root
+     * @param {Number} timestampLimit - timestampLimit of the batch
      * @param {Number} chainID - L2 chainID
      * @param {Number} forkID - L2 rom fork identifier
+     * @param {String} forcedBlockHashL1 - blockhash L1 in forced batches
      * @param {Object} vm - vm instance
      * @param {Object} options - batch options
      * @param {Bool} options.skipUpdateSystemStorage Skips updates on system smrt contract at the end of processable transactions
-     * @param {Number} options.newBatchGasLimit New batch gas limit
+     * @param {Bool} options.skipVerifyL1InfoRoot Skips verification smt proof against the L1InfoRoot
+     * @param {Number} options.newBlockGasLimit New batch gas limit
+     * @param {Bool} options.skipFirstChangeL2Block Skips verification that first transaction must be a ChangeL2BlockTx
+     * @param {Bool} options.skipWriteBlockInfoRoot Skips writing blockL2Info root on L2
+     * @param {Object} extraData - additional data embedded in the batch
+     * @param {Array[Object]} extraData.l1Info - L1Info - object with the following [key - value] ==> [indexL1InfoTree - L1InfoLeaf]
+     * @param {String} extraData.l1Info[x].globalExitRoot - global exit root
+     * @param {String} extraData.l1Info[x].blockHash - l1 block hash at blockNumber - 1
+     * @param {BigInt} extraData.l1Info[x].timestamp - l1 block timestamp at blockNumber
      */
     constructor(
         db,
@@ -45,12 +67,15 @@ module.exports = class Processor {
         root,
         sequencerAddress,
         accInputHash,
-        globalExitRoot,
-        timestamp,
+        l1InfoRoot,
+        timestampLimit,
         chainID,
         forkID,
+        forcedBlockHashL1,
         vm,
         options,
+        extraData,
+        smtLevels,
     ) {
         this.db = db;
         this.newNumBatch = numBatch;
@@ -60,30 +85,43 @@ module.exports = class Processor {
         this.F = poseidon.F;
         this.tmpSmtDB = new TmpSmtDB(db);
         this.smt = new SMT(this.tmpSmtDB, poseidon, poseidon.F);
-
+        this.smt.setMaxLevel(smtLevels);
         this.rawTxs = [];
         this.decodedTxs = [];
         this.builded = false;
         this.starkInput = {};
         this.contractsBytecode = {};
         this.oldStateRoot = root;
+        this.previousBlockHash = root;
         this.currentStateRoot = root;
         this.oldAccInputHash = accInputHash;
-        this.globalExitRoot = globalExitRoot;
+        this.l1InfoRoot = l1InfoRoot;
 
         this.batchHashData = '0x';
         this.inputHash = '0x';
 
         this.sequencerAddress = sequencerAddress;
-        this.timestamp = timestamp;
+        this.timestampLimit = timestampLimit;
         this.chainID = chainID;
         this.forkID = forkID;
+        this.forcedBlockHashL1 = (typeof forcedBlockHashL1 === 'undefined') ? Constants.ZERO_BYTES32 : forcedBlockHashL1;
+        this.isForced = Scalar.neq(0, this.forcedBlockHashL1);
+        this.l1InfoTree = {};
 
         this.vm = vm;
+        this.oldVm = cloneDeep(vm);
+        this.oldVm.stateManager = vm.stateManager.copy();
         this.evmSteps = [];
         this.updatedAccounts = {};
         this.isLegacyTx = false;
+        this.isInvalid = false;
         this.options = options;
+        this.extraData = extraData;
+        this.cumulativeGasUsed = 0;
+        this.txIndex = 0;
+        this.logIndex = 0;
+        this.blockInfoRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.vcm = new VirtualCountersManager(options.vcmConfig);
     }
 
     /**
@@ -93,7 +131,7 @@ module.exports = class Processor {
     addRawTx(rawTx) {
         this._isNotBuilded();
         if (this.rawTxs.length >= this.maxNTx) {
-            throw new Error('Batch is already full of transactions');
+            throw new Error(`${getFuncName()}: Batch is already full of transactions`);
         }
         this.rawTxs.push(rawTx);
     }
@@ -107,11 +145,15 @@ module.exports = class Processor {
         // Check the validity of rawTxs
         await this._decodeAndCheckRawTx();
 
-        // Set global exit root
-        await this._setGlobalExitRoot();
+        // Process transactions and update the state if RLP decoding has not been invalid
+        if (!this.isInvalid) {
+            await this._processTx();
+        }
 
-        // Process transactions and update the state
-        await this._processTx();
+        // if batch has been invalid, revert current state root
+        if (this.isInvalid) {
+            this._rollbackBatch();
+        }
 
         // Read Local exit root
         await this._readLocalExitRoot();
@@ -120,6 +162,11 @@ module.exports = class Processor {
         await this._computeStarkInput();
 
         this.builded = true;
+
+        // Check virtual counters
+        const virtualCounters = this.vcm.getCurrentSpentCounters();
+
+        return { virtualCounters };
     }
 
     /**
@@ -134,7 +181,7 @@ module.exports = class Processor {
      */
     async _decodeAndCheckRawTx() {
         if (this.decodedTxs.length !== 0) {
-            throw new Error('Transactions array should be empty');
+            throw new Error(`${getFuncName()}: Transactions array should be empty`);
         }
 
         // Checks transactions:
@@ -144,12 +191,21 @@ module.exports = class Processor {
             // Decode raw transaction using prover method
             let txDecoded;
             let rlpSignData;
+
+            // check is changeL2Block transaction
+            if (rawTx.startsWith(`0x${Constants.TX_CHANGE_L2_BLOCK.toString(16).padStart(2, '0')}`)) {
+                txDecoded = await decodeChangeL2BlockTx(rawTx);
+                this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
+                continue;
+            }
+
             try {
                 const decodedObject = decodeCustomRawTxProverMethod(rawTx);
                 txDecoded = decodedObject.txDecoded;
                 rlpSignData = decodedObject.rlpSignData;
             } catch (error) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Failed to RLP decode signing data', tx: txDecoded });
+                this.isInvalid = true;
                 continue;
             }
             txDecoded.from = undefined;
@@ -192,34 +248,17 @@ module.exports = class Processor {
 
     /**
      * Set the global exit root in a specific storage slot of the globalExitRootManagerL2 for both vm and SMT
-     * Not store global exit root if it is zero
-     * Not overwrite storage position if timestamp is already set
      * This will be performed before process the transactions
+     * @param {String} globalExitRoot - global exit root
+     * @param {String} blockhash - block hash
      */
-    async _setGlobalExitRoot() {
-        // return if globalExitRoot is 0
-        if (Scalar.eq(smtUtils.h4toScalar(this.globalExitRoot), Scalar.e(0))) {
-            return;
-        }
+    async _setGlobalExitRoot(globalExitRoot, blockhash) {
+        // compute globalExitRootPos storage position
+        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
 
-        // check if timestamp is already set
-        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [smtUtils.h4toString(this.globalExitRoot), Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
-        const globalExitRootPosScalar = Scalar.e(globalExitRootPos).toString();
-
-        const resTimestamp = await stateUtils.getContractStorage(
-            Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
-            this.smt,
-            this.currentStateRoot,
-            [globalExitRootPos],
-        );
-
-        if (Scalar.neq(resTimestamp[globalExitRootPosScalar], Scalar.e(0))) {
-            return;
-        }
-
-        // Set globalExitRoot - timestamp
+        // Set globalExitRoot - blockchash
         const newStorageEntry = {};
-        newStorageEntry[globalExitRootPos] = this.timestamp;
+        newStorageEntry[globalExitRootPos] = blockhash;
 
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
@@ -229,10 +268,11 @@ module.exports = class Processor {
         );
 
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2));
+
         await this.vm.stateManager.putContractStorage(
             addressInstance,
             toBuffer(globalExitRootPos),
-            toBuffer(this.timestamp),
+            toBuffer(blockhash),
         );
 
         // store data in internal DB
@@ -252,7 +292,37 @@ module.exports = class Processor {
         for (let k = 0; k < keys.length; k++) {
             storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
         }
+
         await this.db.setValue(keyDumpStorage, storage);
+    }
+
+    /**
+     * Checks if GER is != 0 and if it does not exist in the global exit root manager
+     * @param {String} globalExitRoot - global exit root
+     * @returns {Bool} - flag indicating if l1Info needs to be writen
+     */
+    async _shouldWriteL1Info(globalExitRoot) {
+        // return if globalExitRoot is 0
+        if (Scalar.eq(globalExitRoot, Scalar.e(0))) {
+            return false;
+        }
+
+        // check if blockchash is already set
+        const globalExitRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [globalExitRoot, Constants.GLOBAL_EXIT_ROOT_STORAGE_POS]);
+        const globalExitRootPosScalar = Scalar.e(globalExitRootPos).toString();
+
+        const resBlockhash = await stateUtils.getContractStorage(
+            Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
+            this.smt,
+            this.currentStateRoot,
+            [globalExitRootPos],
+        );
+
+        if (Scalar.neq(resBlockhash[globalExitRootPosScalar], Scalar.e(0))) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -290,70 +360,175 @@ module.exports = class Processor {
      * finally pay all the fees to the sequencer address
      */
     async _processTx() {
+        this.vcm.setSMTLevels((2 ** this.smt.maxLevel + 50000).toString(2).length);
+        // Compute init processing counters
+        this.vcm.computeFunctionCounters('batchProcessing', { batchL2DataLength: (this.rawTxs.join('').length - this.rawTxs.length * 2) / 2 });
+        // Compute rlp parsing counters
         for (let i = 0; i < this.decodedTxs.length; i++) {
+            if (this.decodedTxs[i].tx.type === Constants.TX_CHANGE_L2_BLOCK) {
+                // If is forced and it contains a changeL2Block, invalid batch
+                if (this.isForced) {
+                    this.isInvalid = true;
+
+                    return;
+                }
+                this.vcm.computeFunctionCounters('decodeChangeL2BlockTx');
+            } else {
+                const txDataLen = this.decodedTxs[i].tx.data ? (this.decodedTxs[i].tx.data.length - 2) / 2 : 0;
+                this.vcm.computeFunctionCounters('rlpParsing', {
+                    txRLPLength: (this.rawTxs[i].length - 2) / 2,
+                    txDataLen,
+                    v: Scalar.e(this.decodedTxs[i].tx.v),
+                    r: Scalar.e(this.decodedTxs[i].tx.r),
+                    s: Scalar.e(this.decodedTxs[i].tx.s),
+                    gasPriceLen: (this.decodedTxs[i].tx.gasPrice.length - 2) / 2,
+                    gasLimitLen: (this.decodedTxs[i].tx.gasLimit.length - 2) / 2,
+                    valueLen: (this.decodedTxs[i].tx.value.length - 2) / 2,
+                    chainIdLen: typeof this.decodedTxs[i].tx.chainID === 'undefined' ? 0 : (ethers.utils.hexlify(this.decodedTxs[i].tx.chainID).length - 2) / 2,
+                    nonceLen: (this.decodedTxs[i].tx.nonce.length - 2) / 2,
+                });
+            }
+        }
+        for (let i = 0; i < this.decodedTxs.length; i++) {
+            /**
+             * Set vcm poseidon levels. Maximum (theoretical) levels that can be added in a tx is 50k poseidons.
+             * We count how much can the smt increase in a tx and compute the virtual poseidons with this worst case scenario. This is a tx full of SSTORE (20000 gas), max gas in a tx is 30M so we can do 1.5k sstore in a tx. Assuming tree already has 0 leafs, increases to 2**11. 11*1.5k = 22.5k * 2 (go up and down in the tree) = 45k poseidon, we round up to 50k for safety reasons. This happens in case the tree levels are greater than 32, in case are lower, we will put the levels to 32
+             */
+            const maxLevelPerTx = (2 ** this.smt.maxLevel + 50000).toString(2).length < 32 ? 32 : (2 ** this.smt.maxLevel + 50000).toString(2).length;
+            this.vcm.setSMTLevels(maxLevelPerTx);
             const currentDecodedTx = this.decodedTxs[i];
 
+            // skip verification first tx is a changeL2Block
+            if (this.options.skipFirstChangeL2Block !== true) {
+                // First transaction must be a ChangeL2BlockTx if the batch is not a forced one. Otherwise, invalid batch
+                // This will be ensured by the blob
+                if (i === 0 && currentDecodedTx.tx.type !== Constants.TX_CHANGE_L2_BLOCK && !this.isForced) {
+                    this.isInvalid = true;
+
+                    return;
+                }
+            }
+            const currentTx = currentDecodedTx.tx;
+
+            // If it is a forced batch, we create a changeL2Block at the beginning
+            if (i === 0 && this.isForced) {
+                const err = await this._processChangeL2BlockTx(currentDecodedTx.tx);
+                if (err) {
+                    this.isInvalid = true;
+
+                    return;
+                }
+            }
             if (currentDecodedTx.isInvalid) {
                 continue;
             } else {
-                const currenTx = currentDecodedTx.tx;
+                if (currentTx.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    // Final function call that saves internal DB storage keys
+                    const err = await this._processChangeL2BlockTx(currentTx);
+                    if (err) {
+                        this.isInvalid = true;
+
+                        return;
+                    }
+                    // If next tx is a changeL2 block tx, we must consolidate current block
+                    if (this.decodedTxs[i + 1] && this.decodedTxs[i + 1].tx.type === Constants.TX_CHANGE_L2_BLOCK) {
+                        await this.consolidateBlock();
+                    }
+                    continue;
+                }
                 // Get from state
-                const oldStateFrom = await stateUtils.getState(currenTx.from, this.smt, this.currentStateRoot);
+                const oldStateFrom = await stateUtils.getState(currentTx.from, this.smt, this.currentStateRoot);
 
                 // A: VALID NONCE
-                if (Number(oldStateFrom.nonce) !== Number(currenTx.nonce)) {
+                if (Number(oldStateFrom.nonce) !== Number(currentTx.nonce)) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: Invalid nonce';
                     continue;
                 }
 
                 // B: ENOUGH UPFRONT TX COST
-                const gasLimitCost = Scalar.mul(Scalar.e(currenTx.gasLimit), Scalar.e(currenTx.gasPrice));
-                const upfronTxCost = Scalar.add(gasLimitCost, Scalar.e(currenTx.value));
+                const effectiveGasPrice = computeEffectiveGasPrice(currentTx.gasPrice, currentTx.effectivePercentage);
+                const gasLimitCost = Scalar.mul(Scalar.e(currentTx.gasLimit), effectiveGasPrice);
+                const upfronTxCost = Scalar.add(gasLimitCost, Scalar.e(currentTx.value));
 
                 if (Scalar.gt(upfronTxCost, Scalar.e(oldStateFrom.balance))) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: Not enough funds to pay total transaction cost';
                     continue;
                 }
-                const v = this.isLegacyTx ? currenTx.v : Number(currenTx.v) - 27 + currenTx.chainID * 2 + 35;
+                const v = this.isLegacyTx ? currentTx.v : Number(currentTx.v) - 27 + currentTx.chainID * 2 + 35;
 
-                const bytecodeLength = await stateUtils.getContractBytecodeLength(currenTx.from, this.smt, this.currentStateRoot);
-                if (bytecodeLength > 0) {
+                const bytecodeLen = await stateUtils.getContractBytecodeLength(currentTx.from, this.smt, this.currentStateRoot);
+                if (bytecodeLen > 0) {
                     currentDecodedTx.isInvalid = true;
                     currentDecodedTx.reason = 'TX INVALID: EIP3607 Do not allow transactions for which tx.sender has any code deployed';
                     continue;
                 }
 
+                // Check TX_GAS_LIMIT
+                const gasLimitTx = (typeof this.options.newBlockGasLimit === 'undefined')
+                    ? Constants.TX_GAS_LIMIT
+                    : this.options.newBlockGasLimit;
+
+                if (Scalar.gt(currentTx.gasLimit, Scalar.e(gasLimitTx))) {
+                    currentDecodedTx.isInvalid = true;
+                    currentDecodedTx.reason = 'TX INVALID: Gas limit exceeds maximum allowed';
+                    continue;
+                }
+
                 // Run tx in the EVM
                 const evmTx = Transaction.fromTxData({
-                    nonce: currenTx.nonce,
-                    gasPrice: currenTx.gasPrice,
-                    gasLimit: currenTx.gasLimit,
-                    to: currenTx.to,
-                    value: currenTx.value,
-                    data: currenTx.data,
+                    nonce: currentTx.nonce,
+                    gasPrice: currentTx.gasPrice,
+                    gasLimit: currentTx.gasLimit,
+                    to: currentTx.to,
+                    value: currentTx.value,
+                    data: currentTx.data,
                     v,
-                    r: currenTx.r,
-                    s: currenTx.s,
+                    r: currentTx.r,
+                    s: currentTx.s,
                 });
 
                 // Build block information
                 const blockData = {};
                 blockData.header = {};
-                blockData.header.timestamp = new BN(Scalar.e(this.timestamp));
+                blockData.header.timestamp = new BN(Scalar.e(await this._getTimestamp()));
                 blockData.header.coinbase = new Address(toBuffer(this.sequencerAddress));
-                blockData.header.gasLimit = this.options.newBatchGasLimit
-                    ? new BN(Scalar.e(this.options.newBatchGasLimit)) : new BN(Scalar.e(Constants.BATCH_GAS_LIMIT));
+                blockData.header.gasLimit = this.options.newBlockGasLimit
+                    ? new BN(Scalar.e(this.options.newBlockGasLimit)) : new BN(Scalar.e(Constants.BLOCK_GAS_LIMIT));
                 blockData.header.difficulty = new BN(Scalar.e(Constants.BATCH_DIFFICULTY));
 
                 const evmBlock = Block.fromBlockData(blockData, { common: evmTx.common });
                 try {
-                    const txResult = await this.vm.runTx({ tx: evmTx, block: evmBlock });
-                    this.evmSteps.push(txResult.execResult.evmSteps);
+                    // init custom counters snapshot
+                    this.vcm.initCustomSnapshot(i);
+                    const txResult = await this.vm.runTx({
+                        tx: evmTx, block: evmBlock, effectivePercentage: currentTx.effectivePercentage, vcm: this.vcm,
+                    });
+                    // Compute counters
+                    let bytecodeLength;
+                    let isDeploy = false;
+                    if (typeof currentDecodedTx.tx.to === 'undefined' || currentDecodedTx.tx.to.length <= 2) {
+                        bytecodeLength = txResult.execResult.returnValue.length;
+                        isDeploy = true;
+                    } else {
+                        bytecodeLength = await stateUtils.getContractBytecodeLength(currentDecodedTx.tx.to, this.smt, this.currentStateRoot);
+                    }
+                    this.vcm.computeFunctionCounters('processTx', { bytecodeLength, isDeploy });
+                    this.evmSteps.push({
+                        steps: txResult.execResult.evmSteps,
+                        counters: this.vcm.computeCustomSnapshotConsumption(i),
+                    });
 
                     currentDecodedTx.receipt = txResult.receipt;
                     currentDecodedTx.createdAddress = txResult.createdAddress;
+                    // Increment block gas used
+                    this.cumulativeGasUsed += bufferToInt(txResult.receipt.gasUsed);
+                    // Fill block info tree with tx receipt
+                    const l2TxHash = await computeL2TxHash(currentTx);
+                    this.blockInfoRoot = await fillReceiptTree(this.smt, this.blockInfoRoot, this.txIndex, txResult.receipt.logs, this.logIndex, txResult.receipt.status, l2TxHash, this.cumulativeGasUsed, currentTx.effectivePercentage);
+                    this.logIndex += txResult.receipt.logs.length;
+                    this.txIndex += 1;
 
                     // Check transaction completed
                     if (txResult.execResult.exceptionError) {
@@ -369,11 +544,11 @@ module.exports = class Processor {
                         } else currentDecodedTx.reason = txResult.execResult.exceptionError;
 
                         // UPDATE sender account adding the nonce and substracting the gas spended
-                        const senderAcc = await this.vm.stateManager.getAccount(Address.fromString(currenTx.from));
-                        this.updatedAccounts[currenTx.from] = senderAcc;
+                        const senderAcc = await this.vm.stateManager.getAccount(Address.fromString(currentTx.from));
+                        this.updatedAccounts[currentTx.from] = senderAcc;
                         // Update smt with touched accounts
                         this.currentStateRoot = await stateUtils.setAccountState(
-                            currenTx.from,
+                            currentTx.from,
                             this.smt,
                             this.currentStateRoot,
                             Scalar.e(senderAcc.balance),
@@ -399,8 +574,6 @@ module.exports = class Processor {
                             Scalar.e(accountSeq.nonce),
                         );
 
-                        await this._updateSystemStorage();
-
                         // Clear touched accounts
                         this.vm.stateManager._customTouched.clear();
 
@@ -411,6 +584,7 @@ module.exports = class Processor {
                     if (e.toString().includes('base fee exceeds gas limit')) {
                         continue;
                     } else {
+                        console.log(e);
                         throw Error(e);
                     }
                 }
@@ -496,77 +670,273 @@ module.exports = class Processor {
                     }
                 }
 
-                await this._updateSystemStorage();
-
                 // Clear touched accounts
                 this.vm.stateManager._customTouched.clear();
+                // If next tx is a changeL2 block tx, we must consolidate current block
+                if (this.decodedTxs[i + 1] && this.decodedTxs[i + 1].tx.type === Constants.TX_CHANGE_L2_BLOCK) {
+                    await this.consolidateBlock();
+                }
+            }
+            /**
+             * We check how much the smt has increased. In case it has increased more than expected, it means we may have a pow attack so we have to recompute counters cost with this new smt levels
+             * We re run the batch with a new maxLevel value at the smt
+             */
+            if (this.smt.maxLevel > maxLevelPerTx) {
+                console.log('WARNING: smt levels increased more than expected, re running batch with new smt levels');
+                this._rollbackBatch();
+                i = -1;
             }
         }
+        await this.consolidateBlock();
     }
 
-    /**
-     * Updates system storage with new state root after finishing transaction
-     */
-    async _updateSystemStorage() {
-        if (this.options.skipUpdateSystemStorage) return;
+    // Write values at storage at the end of block processing
+    async consolidateBlock() {
+        // Set block gasUsed at block header on finished processing all txs
+        this.blockInfoRoot = await setBlockGasUsed(this.smt, this.blockInfoRoot, this.cumulativeGasUsed);
 
-        // Set system address storage with updated values
-        const lastTxCount = await stateUtils.getContractStorage(
-            Constants.ADDRESS_SYSTEM,
-            this.smt,
-            this.currentStateRoot,
-            [Constants.LAST_TX_STORAGE_POS], // Storage key of last tx count
-        );
-        const newTxCount = Number(Scalar.add(lastTxCount[Constants.LAST_TX_STORAGE_POS], 1n));
-        // Update smt with new last tx count
+        // set blockInfoRoot to write to 0 in order to avoid a SR change
+        if (this.options.skipWriteBlockInfoRoot === true) {
+            this.blockInfoRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        }
+
+        // Set blockInfoRoot on storage
+        // Current state root will be the block hash, stored in SC at the begginning of next block
         this.currentStateRoot = await stateUtils.setContractStorage(
             Constants.ADDRESS_SYSTEM,
             this.smt,
             this.currentStateRoot,
-            { [Constants.LAST_TX_STORAGE_POS]: newTxCount },
+            { [Constants.BLOCK_INFO_ROOT_STORAGE_POS]: smtUtils.h4toString(this.blockInfoRoot) },
         );
-        // Update vm with new last tx count
         const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
-
-        await this.vm.stateManager.putContractStorage(
-            addressInstance,
-            toBuffer(`0x${Constants.LAST_TX_STORAGE_POS.toString(16).padStart(64, '0')}`),
-            toBuffer(Number(newTxCount)),
-        );
-
-        // Update smt with new state root
-        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [newTxCount, Constants.STATE_ROOT_STORAGE_POS]);
-        const tmpStateRoot = smtUtils.h4toString(this.currentStateRoot);
-        this.currentStateRoot = await stateUtils.setContractStorage(
-            Constants.ADDRESS_SYSTEM,
-            this.smt,
-            this.currentStateRoot,
-            { [stateRootPos]: smtUtils.h4toString(this.currentStateRoot) },
-        );
-
         // Update vm with new state root
         await this.vm.stateManager.putContractStorage(
             addressInstance,
-            toBuffer(stateRootPos),
-            toBuffer(tmpStateRoot),
+            toBuffer(`0x${Constants.BLOCK_INFO_ROOT_STORAGE_POS.toString(16).padStart(64, '0')}`),
+            toBuffer(smtUtils.h4toString(this.blockInfoRoot)),
         );
+
+        // add system address to updatedAccounts
+        const account = await this.vm.stateManager.getAccount(addressInstance);
+        this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
 
         // store data in internal DB
         const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
 
-        // add address to updatedAccounts
-        const account = await this.vm.stateManager.getAccount(addressInstance);
-        this.updatedAccounts[Constants.ADDRESS_SYSTEM.toLowerCase()] = account;
-
-        // update its storage
+        // update smart contract it storage
         const sto = await this.vm.stateManager.dumpStorage(addressInstance);
-        const storage = {};
+        const storage = await this.db.getValue(keyDumpStorage) || {};
         const keys = Object.keys(sto).map((k) => `0x${k}`);
         const values = Object.values(sto).map((k) => `0x${k}`);
         for (let k = 0; k < keys.length; k++) {
             storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
         }
         await this.db.setValue(keyDumpStorage, storage);
+    }
+
+    /**
+     * Read the timestamp, which is a variable stored in the system smart contract
+     */
+    async _getTimestamp() {
+        const res = await stateUtils.getContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            [Constants.TIMESTAMP_STORAGE_POS],
+        );
+
+        return res[Constants.TIMESTAMP_STORAGE_POS];
+    }
+
+    /**
+     * Write timestamp in the system smart contract
+     * @param {BigInt} - timestamp
+     */
+    async _setTimestamp(timestamp) {
+        // Update smt with the new timestamp
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            { [Constants.TIMESTAMP_STORAGE_POS]: timestamp },
+        );
+
+        // Update the vm with the new timestamp
+        const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
+
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(`0x${Constants.TIMESTAMP_STORAGE_POS.toString(16).padStart(64, '0')}`),
+            toBuffer(valueToHexStr(timestamp, true)),
+        );
+    }
+
+    async _processChangeL2BlockTx(tx) {
+        // Reduce counters
+        this.vcm.computeFunctionCounters('processChangeL2Block');
+
+        // write old blockhash (oldStateRoot) on storage
+        // Get old blockNumber
+        const oldBlockNumber = await stateUtils.getContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            [Constants.LAST_BLOCK_STORAGE_POS], // Storage key of last block num
+        );
+
+        // Set block hash (current state root) on storage
+        const stateRootPos = ethers.utils.solidityKeccak256(['uint256', 'uint256'], [oldBlockNumber[Constants.LAST_BLOCK_STORAGE_POS], Constants.STATE_ROOT_STORAGE_POS]);
+        this.previousBlockHash = smtUtils.h4toString(this.currentStateRoot);
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            { [stateRootPos]: this.previousBlockHash },
+        );
+
+        const addressInstance = new Address(toBuffer(Constants.ADDRESS_SYSTEM));
+
+        // Update vm with new state root
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(stateRootPos),
+            toBuffer(this.previousBlockHash),
+        );
+
+        // Compute new block number
+        const newBlockNumber = Number(Scalar.add(oldBlockNumber[Constants.LAST_BLOCK_STORAGE_POS], 1n));
+
+        // Update zkEVM smt with the new block number
+        this.currentStateRoot = await stateUtils.setContractStorage(
+            Constants.ADDRESS_SYSTEM,
+            this.smt,
+            this.currentStateRoot,
+            { [Constants.LAST_BLOCK_STORAGE_POS]: newBlockNumber },
+        );
+
+        // Update vm with the new block number
+        await this.vm.stateManager.putContractStorage(
+            addressInstance,
+            toBuffer(`0x${Constants.LAST_BLOCK_STORAGE_POS.toString(16).padStart(64, '0')}`),
+            toBuffer(Number(newBlockNumber)),
+        );
+
+        // get last timestamp
+        const currentTimestamp = await this._getTimestamp();
+
+        // final timestamp, GER and blockHashL1 of the block
+        let finalTimestamp = 0;
+        let finalGER = '0x0000000000000000000000000000000000000000000000000000000000000000';
+        let finalBlockHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+        if (this.isForced) {
+            const timestampForced = this.timestampLimit;
+            const lastGERForced = smtUtils.h4toString(this.l1InfoRoot);
+
+            // Update timestamp only if limitTimestamp > currentTimestamp
+            if (Scalar.gt(this.timestampLimit, currentTimestamp)) {
+                // set new timestamp
+                finalTimestamp = timestampForced;
+                await this._setTimestamp(timestampForced);
+            }
+
+            // set forced global exit root and default blockHash
+            finalGER = lastGERForced;
+            finalBlockHash = this.forcedBlockHashL1;
+            // forced batch has no enforced blockhash
+            await this._setGlobalExitRoot(lastGERForced, finalBlockHash);
+        } else {
+            const newTimestamp = Scalar.add(currentTimestamp, Scalar.e(tx.deltaTimestamp));
+
+            // Verify deltaTimestamp + currentTimestamp <= limitTimestamp
+            if (Scalar.gt(newTimestamp, this.timestampLimit)) {
+                return true;
+            }
+
+            // write timestamp
+            finalTimestamp = newTimestamp;
+            await this._setTimestamp(newTimestamp);
+
+            // verify l1InfoRoot data if index != 0
+            if (tx.indexL1InfoTree !== 0) {
+                const l1Info = this.extraData.l1Info[tx.indexL1InfoTree];
+
+                // Verify l1Info & indexL1InfoTree belong to l1InfoRoot
+                const valueLeaf = getL1InfoTreeValue(
+                    l1Info.globalExitRoot,
+                    l1Info.blockHash,
+                    l1Info.timestamp,
+                );
+
+                if (!this.options.skipVerifyL1InfoRoot) {
+                    if (typeof this.extraData.l1Info[tx.indexL1InfoTree] === 'undefined') {
+                        throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing smtProof`);
+                    }
+
+                    // fulfill l1InfoTree information
+                    this.l1InfoTree[tx.indexL1InfoTree] = l1Info;
+
+                    if (!verifyMerkleProof(valueLeaf, l1Info.smtProof, tx.indexL1InfoTree, smtUtils.h4toString(this.l1InfoRoot))) {
+                        return true;
+                    }
+                }
+
+                // Verify newTimestamp >= l1InfoRoot.timestamp
+                if (Scalar.lt(newTimestamp, l1Info.timestamp)) {
+                    return true;
+                }
+
+                // write l1Info data depending if the global exit root already exist or is zero
+                finalGER = l1Info.globalExitRoot;
+                const writeL1Info = this._shouldWriteL1Info(l1Info.globalExitRoot);
+
+                if (writeL1Info) {
+                    finalBlockHash = l1Info.blockHash;
+                    this._setGlobalExitRoot(l1Info.globalExitRoot, l1Info.blockHash);
+                }
+            }
+        }
+
+        // setup new block tree
+        this.blockInfoRoot = [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
+        this.blockInfoRoot = await initBlockHeader(
+            this.smt,
+            this.blockInfoRoot,
+            this.previousBlockHash,
+            this.sequencerAddress,
+            newBlockNumber,
+            Constants.BLOCK_GAS_LIMIT,
+            finalTimestamp,
+            finalGER,
+            finalBlockHash,
+        );
+
+        // Reset txIndex, cumulativeGasUsed, logIndex and blockInfoRoot
+        this.txIndex = 0;
+        this.cumulativeGasUsed = 0;
+        this.logIndex = 0;
+
+        // store data in internal DB
+        const keyDumpStorage = Scalar.add(Constants.DB_ADDRESS_STORAGE, Scalar.fromString(Constants.ADDRESS_SYSTEM, 16));
+
+        // update smart contract storage
+        const sto = await this.vm.stateManager.dumpStorage(addressInstance);
+        const storage = await this.db.getValue(keyDumpStorage) || {};
+        const keys = Object.keys(sto).map((k) => `0x${k}`);
+        const values = Object.values(sto).map((k) => `0x${k}`);
+        for (let k = 0; k < keys.length; k++) {
+            storage[keys[k]] = ethers.utils.RLP.decode(values[k]);
+        }
+        await this.db.setValue(keyDumpStorage, storage);
+
+        return false;
+    }
+
+    _rollbackBatch() {
+        this.currentStateRoot = this.oldStateRoot;
+        this.vm = cloneDeep(this.oldVm);
+        this.vm.stateManager = this.oldVm.stateManager.copy();
+        this.updatedAccounts = {};
     }
 
     /**
@@ -578,7 +948,7 @@ module.exports = class Processor {
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
         const oldAccInputHash = smtUtils.h4toString(this.oldAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
-        const globalExitRoot = smtUtils.h4toString(this.globalExitRoot);
+        const l1InfoRoot = smtUtils.h4toString(this.l1InfoRoot);
 
         this.batchHashData = calculateBatchHashData(
             this.getBatchL2Data(),
@@ -587,12 +957,18 @@ module.exports = class Processor {
         const newAccInputHash = calculateAccInputHash(
             oldAccInputHash,
             this.batchHashData,
-            globalExitRoot,
-            this.timestamp,
+            l1InfoRoot,
+            this.timestampLimit,
             this.sequencerAddress,
+            this.forcedBlockHashL1,
         );
 
         this.newAccInputHash = smtUtils.stringToH4(newAccInputHash);
+
+        // add flag to skip l1InfoTree verification
+        if (this.options.skipVerifyL1InfoRoot === true) {
+            this.l1InfoTree.skipVerifyL1InfoRoot = true;
+        }
 
         this.starkInput = {
             oldStateRoot,
@@ -604,14 +980,29 @@ module.exports = class Processor {
             newNumBatch: this.newNumBatch, // output
             chainID: this.chainID,
             forkID: this.forkID,
+            forcedBlockHashL1: this.forcedBlockHashL1,
             batchL2Data: this.getBatchL2Data(),
-            globalExitRoot,
-            timestamp: this.timestamp,
+            l1InfoRoot,
+            timestampLimit: this.timestampLimit.toString(),
             sequencerAddr: this.sequencerAddress,
             batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
-            db: await getCurrentDB(this.oldStateRoot, this.db, this.F),
+            l1InfoTree: this.l1InfoTree,
         };
+
+        //  add flags
+        // skipFirstChangeL2Block
+        if (this.options.skipFirstChangeL2Block === true) {
+            this.starkInput.skipFirstChangeL2Block = true;
+        }
+
+        // skipWriteBlockInfoRoot
+        if (this.options.skipWriteBlockInfoRoot === true) {
+            this.starkInput.skipWriteBlockInfoRoot = true;
+        }
+
+        // add DB
+        this.starkInput.db = await getCurrentDB(this.oldStateRoot, this.db, this.F);
     }
 
     /**
@@ -630,14 +1021,14 @@ module.exports = class Processor {
         return calculateSnarkInput(
             oldStateRoot,
             newStateRoot,
+            newLocalExitRoot,
             oldAccInputHash,
             newAccInputHash,
-            newLocalExitRoot,
             this.oldNumBatch,
             this.newNumBatch,
             this.chainID,
-            this.forkID,
             aggregatorAddress,
+            this.forkID,
         );
     }
 
@@ -671,14 +1062,14 @@ module.exports = class Processor {
      * Throw error if batch is already built
      */
     _isNotBuilded() {
-        if (this.builded) throw new Error('Batch already built');
+        if (this.builded) throw new Error(`${getFuncName()}: Batch already built`);
     }
 
     /**
      * Throw error if batch is already built
      */
     _isBuilded() {
-        if (!this.builded) throw new Error('Batch must first be built');
+        if (!this.builded) throw new Error(`${getFuncName()}: Batch must first be built`);
     }
 
     /**
