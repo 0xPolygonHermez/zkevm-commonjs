@@ -2,7 +2,6 @@
 /* eslint-disable no-console */
 const { expect } = require('chai');
 const fs = require('fs');
-const { argv } = require('yargs');
 const path = require('path');
 const MerkleTreeBridge = require('../../index').MTBridge;
 const { verifyMerkleProof } = require('../../index').mtBridgeUtils;
@@ -12,24 +11,41 @@ const { Constants } = require('../../index');
 async function main() {
     // read gen file
     const genFile = JSON.parse(fs.readFileSync(path.join(__dirname, 'generator.json')));
-
+    let previousL1InfoTreeIndex = 0;
     // Compute leafs value and add it to the tree
     const height = 32;
     const merkleTree = new MerkleTreeBridge(height);
     const leafs = [];
+    const l1InfoTree = {};
     // Insert first leaf, all zeros (no changes in tree, just to skip leaf with index 0)
     let historicL1InfoRoot = Constants.ZERO_BYTES32;
     leafs.push({ l1DataHash: historicL1InfoRoot, l1InfoTreeRoot: historicL1InfoRoot, historicL1InfoRoot });
     merkleTree.add(historicL1InfoRoot);
     // Get root of empty tree (should be 0x27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757)
     historicL1InfoRoot = merkleTree.getRoot();
+    const genFileLeafs = genFile.leafs;
     // Create recursive tree for each new l1Data
-    for (let i = 1; i < genFile.length; i++) {
-        // 1- Get leaf value (l1Data) keccak(globalExitRoot, blockHash, timestamp)
+    for (let i = 1; i < genFileLeafs.length; i++) {
+        // 0 - Check if currentIndex is included in index transition and compute l1InfoTree object
+        if (genFile.l1InfoTreeIndexTransition.includes(i)) {
+            l1InfoTree[i] = {
+                globalExitRoot: genFileLeafs[i].globalExitRoot,
+                blockHash: genFileLeafs[i].blockHash,
+                minTimestamp: genFileLeafs[i].minTimestamp,
+            };
+            // If previous l1InfoTreeIndex is 0, set historicRoot else set smtProofPreviousIndex
+            if (previousL1InfoTreeIndex === 0) {
+                l1InfoTree[i].historicRoot = historicL1InfoRoot;
+            } else {
+                l1InfoTree[i].smtProofPreviousIndex = merkleTree.getProofTreeByIndex(previousL1InfoTreeIndex);
+            }
+            previousL1InfoTreeIndex = i;
+        }
+        // 1- Get leaf value (l1Data) keccak(globalExitRoot, blockHash, minTimestamp)
         const leafValue = getL1InfoTreeValue(
-            genFile[i].globalExitRoot,
-            genFile[i].blockHash,
-            genFile[i].timestamp,
+            genFileLeafs[i].globalExitRoot,
+            genFileLeafs[i].blockHash,
+            genFileLeafs[i].minTimestamp,
         );
         // 2- Get l1InfoTreeRoot keccak(historicL1InfoRoot, l1Data)
         const l1InfoTreeRoot = getL1InfoTreeRoot(historicL1InfoRoot, leafValue);
@@ -44,12 +60,12 @@ async function main() {
 
     // generate proofs for all indexes
     const proofs = [];
-    for (let i = 0; i < genFile.length; i++) {
+    for (let i = 0; i < genFileLeafs.length; i++) {
         proofs.push(merkleTree.getProofTreeByIndex(i));
     }
 
     // verify proofs
-    for (let i = 0; i < genFile.length; i++) {
+    for (let i = 0; i < genFileLeafs.length; i++) {
         const proof = proofs[i];
         const index = i;
         const valueLeaf = leafs[index].l1InfoTreeRoot;
@@ -59,13 +75,13 @@ async function main() {
     // create output json file with gen info plus value leafs and proofs
     const output = [];
     const fullOutput = [];
-    for (let i = 1; i < genFile.length; i++) {
-        const smtProofPreviousIndex = proofs[i - 1];
+    for (let i = 1; i < genFileLeafs.length; i++) {
+        const smtProof = proofs[i];
         const l1Info = {
-            globalExitRoot: genFile[i].globalExitRoot,
-            blockHash: genFile[i].blockHash,
-            timestamp: genFile[i].timestamp,
-            smtProofPreviousIndex,
+            globalExitRoot: genFileLeafs[i].globalExitRoot,
+            blockHash: genFileLeafs[i].blockHash,
+            minTimestamp: genFileLeafs[i].minTimestamp,
+            smtProof,
         };
         output.push(l1Info);
         const fullL1Info = {
@@ -78,11 +94,9 @@ async function main() {
         fullOutput.push(fullL1Info);
     }
 
-    if (argv.output !== undefined) {
-        fs.writeFileSync(path.join(__dirname, 'smt-output.json'), JSON.stringify(output, null, 2));
-        fs.writeFileSync(path.join(__dirname, 'smt-full-output.json'), JSON.stringify(fullOutput, null, 2));
-    }
-
+    fs.writeFileSync(path.join(__dirname, 'smt-output.json'), JSON.stringify(output, null, 2));
+    fs.writeFileSync(path.join(__dirname, 'smt-full-output.json'), JSON.stringify(fullOutput, null, 2));
+    fs.writeFileSync(path.join(__dirname, 'l1-info-tree.json'), JSON.stringify(l1InfoTree, null, 2));
     // print output in console
     console.log(JSON.stringify(output, null, 2));
 }
