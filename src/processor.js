@@ -172,9 +172,9 @@ module.exports = class Processor {
     /**
      * Try to decode and check the validity of rawTxs
      * Save the decoded transaction, whether is valid or not, and the invalidated reason if any in a new array: decodedTxs
-     * Note that, even if this funcion mark a transactions as valid, there are some checks that are performed
+     * Note that, even if this function mark a transactions as valid, there are some checks that are performed
      * During the processing of the transactions, therefore can be invalidated after
-     * This funcion will check:
+     * This function will check:
      * A: Well formed RLP encoding
      * B: Valid ChainID
      * C: Valid signature
@@ -348,7 +348,7 @@ module.exports = class Processor {
     /**
      * Process the decoded transactions decodedTxs
      * Also this function will perform several checks and can mark a transactions as invalid
-     * This funcion will check:
+     * This function will check:
      * A: VALID NONCE
      * B: ENOUGH UPFRONT TX COST
      * Process transaction will perform the following operations
@@ -1059,17 +1059,17 @@ module.exports = class Processor {
     }
 
     /**
-     * Throw error if batch is already builded
+     * Throw error if batch is already built
      */
     _isNotBuilded() {
-        if (this.builded) throw new Error(`${getFuncName()}: Batch already builded`);
+        if (this.builded) throw new Error(`${getFuncName()}: Batch already built`);
     }
 
     /**
-     * Throw error if batch is already builded
+     * Throw error if batch is already built
      */
     _isBuilded() {
-        if (!this.builded) throw new Error(`${getFuncName()}: Batch must first be builded`);
+        if (!this.builded) throw new Error(`${getFuncName()}: Batch must first be built`);
     }
 
     /**

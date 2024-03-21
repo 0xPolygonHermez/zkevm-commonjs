@@ -84,7 +84,7 @@ class Database {
      * @param {String} dbNodesTable - Name of the table used to store/read nodes data. Default is "state.nodes"
      * @param {String} dbProgramTable - Name of the table used to store/read program data. Default is "state.program"
      * @param {Object} options - options for DB connection
-     * @param {Boolean} options.readOnly - read only on SQL DB connecton. Default: true
+     * @param {Boolean} options.readOnly - read only on SQL DB connection. Default: true
      */
     async connect(connectionString, dbNodesTable, dbProgramTable, options = {}) {
         if (connectionString && !['local', 'memdb'].includes(connectionString)) {

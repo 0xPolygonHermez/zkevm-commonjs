@@ -28,7 +28,7 @@ function unarrayifyInteger(data, offset, length) {
  *   - Legacy: [rlp(nonce, gasprice, gaslimit, to, value, data, chainId, 0, 0)|r|s|v|effectivePercentage]
  * to a standard raw ethereum tx: [rlp(nonce, gasprice, gaslimit, to, value, data, r, s, v)]
  * @param {String} customRawTx -  Custom raw transaction
- * @returns {String} - Standar raw transaction
+ * @returns {String} - Standard raw transaction
  */
 function customRawTxToRawTx(customRawTx) {
     const signatureCharacters = Constants.SIGNATURE_BYTES * 2;
@@ -56,7 +56,7 @@ function customRawTxToRawTx(customRawTx) {
 }
 
 /**
- * Reduce an array of rawTx to a single string wich will be the BatchL2Data
+ * Reduce an array of rawTx to a single string which will be the BatchL2Data
  * @param {Array} rawTxs -  Array of rawTxs
  * @returns {String} - Reduced array
  */
@@ -110,7 +110,7 @@ function addressToHexStringRlp(address) {
  * to our custom raw tx:
  *   - preEIP155: [rlp(nonce,gasprice,gaslimit,to,value,data)|r|s|v|effectivePercentage]
  *   - Legacy: [rlp(nonce,gasprice,gaslimit,to,value,data,chainId,0,0)|r|s|v|effectivePercentage]
- * @param {String} rawTx - Standar raw transaction
+ * @param {String} rawTx - Standard raw transaction
  * @returns {String} - Custom raw transaction
  */
 function rawTxToCustomRawTx(rawTx, effectivePercentage) {
@@ -209,7 +209,7 @@ function encodedStringToArray(encodedTransactions) {
 }
 
 /**
- * Decode The next string in rlp, wich has 0-55 bytes long
+ * Decode The next string in rlp, that is 0-55 bytes long
  * @param {Uint8Array} data - Byte array
  * @param {Number} offset - Offset of the data array
  * @returns {Object} - Return the bytes consumed and the result encoded in hex string
