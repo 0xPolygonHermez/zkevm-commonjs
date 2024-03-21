@@ -62,7 +62,6 @@ describe('Block info tests', function () {
                 oldBatchAccInputHash,
                 forkID,
                 chainID,
-                type,
                 forcedHashData,
                 previousL1InfoTreeRoot,
                 previousL1InfoTreeIndex,
@@ -253,7 +252,6 @@ describe('Block info tests', function () {
 
                 const batch = await zkEVMDB.buildBatch(
                     sequencerAddress,
-                    type,
                     forcedHashData,
                     previousL1InfoTreeRoot,
                     previousL1InfoTreeIndex,

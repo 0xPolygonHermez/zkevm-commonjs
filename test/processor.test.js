@@ -30,7 +30,6 @@ const {
 } = require('../index');
 const { pathTestVectors } = require('./helpers/test-utils');
 const { serializeChangeL2Block } = require('../index').processorUtils;
-const { getL1InfoTreeValue } = require('../src/l1-info-tree-utils');
 
 const pathInputs = path.join(__dirname, '../tools/inputs-examples');
 
@@ -84,7 +83,6 @@ describe('Processor', async function () {
                 batchHashData,
                 chainID,
                 forkID,
-                type,
                 forcedHashData,
                 forcedData,
                 previousL1InfoTreeRoot,
@@ -149,23 +147,16 @@ describe('Processor', async function () {
                     }
                 }
             }
-            const computedForcedHashData = type === 2 ? getL1InfoTreeValue(
-                forcedData.globalExitRoot,
-                forcedData.blockHashL1,
-                forcedData.minTimestamp,
-            ) : Constants.ZERO_BYTES32;
+
             if (!update) {
                 expect(smtUtils.h4toString(zkEVMDB.stateRoot)).to.be.equal(oldStateRoot);
-                expect(forcedHashData).to.be.equal(computedForcedHashData);
             } else {
                 testVectors[i].oldStateRoot = smtUtils.h4toString(zkEVMDB.stateRoot);
-                testVectors[i].forcedHashData = computedForcedHashData;
             }
 
             const extraData = { forcedData, l1Info: {} };
             const batch = await zkEVMDB.buildBatch(
                 sequencerAddress,
-                type,
                 forcedHashData,
                 previousL1InfoTreeRoot,
                 previousL1InfoTreeIndex,

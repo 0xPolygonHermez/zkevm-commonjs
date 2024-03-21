@@ -76,7 +76,6 @@ function computeBlobAccInputHash(
  * @param {String} batchL2HashData - blob hash data (32 bytes)
  * @param {String} sequencerAddress - Sequencer address (20 bytes)
  * @param {String} forcedHashData - forced hash data (32 bytes)
- * @param {Number} type - blob type (1 byte)
  * @returns {String} - accumulateInputHash in hex encoding
  */
 async function computeBatchAccInputHash(
@@ -84,7 +83,6 @@ async function computeBatchAccInputHash(
     _batchL2HashData,
     _sequencerAddress,
     _forcedHashData,
-    _type,
 ) {
     // oldBlobAccInputHash
     let oldBlobAccInputHash = _oldBlobAccInputHash.startsWith('0x') ? _oldBlobAccInputHash.slice(2) : _oldBlobAccInputHash;
@@ -102,11 +100,8 @@ async function computeBatchAccInputHash(
     let forcedHashData = _forcedHashData.startsWith('0x') ? _forcedHashData.slice(2) : _forcedHashData;
     forcedHashData = forcedHashData.padStart(64, '0');
 
-    // type
-    const type = _type.toString(16).padStart(2, '0');
-
     // compute linearPoseidon
-    return linearPoseidon(`0x${oldBlobAccInputHash}${batchL2HashData}${sequencerAddress}${forcedHashData}${type}`);
+    return linearPoseidon(`0x${oldBlobAccInputHash}${batchL2HashData}${sequencerAddress}${forcedHashData}`);
 }
 
 /**

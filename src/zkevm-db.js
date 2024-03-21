@@ -23,7 +23,7 @@ const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
 const { calculateSnarkInput } = require('./contract-utils');
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, batchAccInputHash, localExitRoot, poseidon, vm, smt, chainID, forkID, type, forcedHashData) {
+    constructor(db, lastBatch, stateRoot, batchAccInputHash, localExitRoot, poseidon, vm, smt, chainID, forkID) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
@@ -32,8 +32,6 @@ class ZkEVMDB {
         this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.batchAccInputHash = batchAccInputHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
-        this.type = type;
-        this.forcedHashData = forcedHashData;
         this.chainID = chainID;
         this.forkID = forkID;
         this.smt = smt;
@@ -62,7 +60,6 @@ class ZkEVMDB {
      */
     async buildBatch(
         sequencerAddress,
-        type,
         forcedHashData,
         previousL1InfoTreeRoot,
         previousL1InfoTreeIndex,
@@ -80,7 +77,6 @@ class ZkEVMDB {
             this.batchAccInputHash,
             this.chainID,
             this.forkID,
-            type,
             forcedHashData,
             previousL1InfoTreeRoot,
             previousL1InfoTreeIndex,

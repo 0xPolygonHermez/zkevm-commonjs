@@ -20,7 +20,6 @@
       }
     ],
     "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
-    "type": 0,
     "forcedHashData": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "previousL1InfoTreeRoot": "0xcc4105312818e9b7f692c9c807ea09699f4f290e5e31671a8e0c2c937f1c43f0",
     "previousL1InfoTreeIndex": 1,
@@ -201,7 +200,6 @@
       }
     ],
     "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
-    "type": 0,
     "forcedHashData": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "previousL1InfoTreeRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "previousL1InfoTreeIndex": 0,
@@ -383,7 +381,6 @@
       }
     ],
     "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
-    "type": 2,
     "forcedData": {
       "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
       "blockHashL1": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
@@ -475,7 +472,6 @@
       }
     ],
     "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
-    "type": 2,
     "forcedData": {
       "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
       "blockHashL1": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",

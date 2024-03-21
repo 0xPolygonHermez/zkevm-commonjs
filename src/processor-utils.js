@@ -110,7 +110,7 @@ function addressToHexStringRlp(address) {
  * to our custom raw tx:
  *   - preEIP155: [rlp(nonce,gasprice,gaslimit,to,value,data)|r|s|v|effectivePercentage]
  *   - Legacy: [rlp(nonce,gasprice,gaslimit,to,value,data,chainId,0,0)|r|s|v|effectivePercentage]
- * @param {String} rawTx - Standar raw transaction
+ * @param {String} rawTx - Standard raw transaction
  * @returns {String} - Custom raw transaction
  */
 function rawTxToCustomRawTx(rawTx, effectivePercentage) {
