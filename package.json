@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "setup": "npm i",
-    "test": "cd test && npx hardhat compile && cd .. && npx mocha ./test/*.test.js && npm run test:e2e && npm run test:blockinfo && npm run test:selfdestruct && npm run test:etrog",
+    "test": "./tools/run-all-tests/run-all-tests.sh",
     "test:etrog": "npx mocha ./test/processor.test.js --etrog",
     "test:e2e": "npx mocha ./test/processor.test.js --e2e",
     "test:blockinfo": "npx mocha ./test/processor.test.js --blockinfo",

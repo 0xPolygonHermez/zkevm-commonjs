@@ -22,3 +22,5 @@ npx mocha ./test/processor.test.js --update --blockinfo --geninput
 npx mocha ./test/processor.test.js --update --selfdestruct --geninput
 # npx mocha ./test/processor.test.js --update --etrog --geninput
 npx mocha ./test/zkevm-db.test.js --update
+# blob inner
+npx mocha ./test/blob-inner/blob-inner-processor.test.js --update --geninput

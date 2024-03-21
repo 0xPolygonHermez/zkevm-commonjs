@@ -1,3 +1,4 @@
+/* eslint-disable no-continue */
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
 
@@ -29,8 +30,8 @@ function isHex(str) {
  * @param {String} lastL1InfoTreeRoot - last root of the l1InfoTree
  * @param {Number} timestampLimit - Block timestampLimit
  * @param {String} sequencerAddress - Sequencer address
- * @param {String} zkGasLimit - zkGasLimit
- * @param {Number} type - blob type
+ * @param {BigInt} zkGasLimit - zkGasLimit
+ * @param {Number} blobType - blob type
  * @param {String} pointZ - pointZ
  * @param {String} pointY - pointY
  * @param {String} blobL2HashData - blob hash data
@@ -44,14 +45,14 @@ function computeBlobAccInputHash(
     timestampLimit,
     sequencerAddress,
     zkGasLimit,
-    type,
+    blobType,
     pointZ,
     pointY,
     blobL2HashData,
     forcedHashData,
 ) {
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'uint32', 'bytes32', 'uint64', 'address', 'uint256', 'uint8', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
+        ['bytes32', 'uint32', 'bytes32', 'uint64', 'address', 'uint64', 'uint8', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
         [
             oldBlobAccInputHash,
             lastL1InfoTreeIndex,
@@ -59,7 +60,7 @@ function computeBlobAccInputHash(
             timestampLimit,
             sequencerAddress,
             zkGasLimit,
-            type,
+            blobType,
             pointZ,
             pointY,
             blobL2HashData,
@@ -147,7 +148,16 @@ async function computePointY(_blobData, _pointZ) {
     const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
     const pointZ = Scalar.e(_pointZ);
 
-    // Compute f(x) = (x⁴⁰⁹⁶-1)/4096·∑ᵢ fᵢ·ωⁱ/(x-ωⁱ)
+    // f(z) = fᵢ, z = ωⁱ
+    // if pointZ is any of the rootUnity, return the blobData on index i
+    for (let i = 0; i < blobConstants.FIELD_ELEMENTS_PER_BLOB; i++) {
+        const rooti = Scalar.e(rootsUnity[i]);
+        if (frBLS12381.eq(pointZ, rooti)) {
+            return `0x${blobData.slice(64 * i, 64 + (64 * i))}`;
+        }
+    }
+
+    // f(z) = (z⁴⁰⁹⁶-1)/4096·∑ᵢ fᵢ·ωⁱ/(z-ωⁱ), z != ωⁱ
     let a = frBLS12381.exp(pointZ, blobConstants.FIELD_ELEMENTS_PER_BLOB);
     a = frBLS12381.sub(a, 1n);
     a = frBLS12381.mul(a, inv4096Fr);

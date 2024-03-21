@@ -1005,7 +1005,6 @@ module.exports = class Processor {
             sequencerAddr: this.sequencerAddress,
             batchHashData: this.batchHashData, // sanity check
             contractsBytecode: this.contractsBytecode,
-            type: this.type,
             forcedData: this.forcedData,
             previousL1InfoTreeRoot: this.previousL1InfoTreeRoot,
             previousL1InfoTreeIndex: this.previousL1InfoTreeIndex,

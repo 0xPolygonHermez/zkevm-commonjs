@@ -93,7 +93,7 @@ class ZkEVMDB {
      * @param {String} _lastL1InfoTreeRoot - Last L1 info tree root
      * @param {Scalar} _timestampLimit - Timestamp limit
      * @param {Scalar} _zkGasLimit - zk gas limit
-     * @param {Number} _type - type of blob
+     * @param {Number} _blobType - type of blob
      * @param {String} _forcedHashData - forced hash data
      * @returns
      */
@@ -102,7 +102,7 @@ class ZkEVMDB {
         _lastL1InfoTreeRoot,
         _timestampLimit,
         _zkGasLimit,
-        _type,
+        _blobType,
         _forcedHashData,
     ) {
         // build globalInputs
@@ -120,7 +120,7 @@ class ZkEVMDB {
             lastL1InfoTreeRoot: _lastL1InfoTreeRoot,
             timestampLimit: _timestampLimit,
             zkGasLimit: _zkGasLimit,
-            type: _type,
+            blobType: _blobType,
             forcedHashData: _forcedHashData,
         };
 
