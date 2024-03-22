@@ -1,8 +1,6 @@
 /* eslint-disable max-len */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-continue */
-const ethers = require('ethers');
-
 const { Scalar } = require('ffjavascript');
 const SMT = require('../smt');
 const TmpDB = require('../tmp-smt-db');
@@ -34,7 +32,7 @@ module.exports = class BlobProcessor {
      * @param {BigInt} privateInputs.timestampLimit
      * @param {String} privateInputs.sequencerAddress
      * @param {BigInt} privateInputs.zkGasLimit
-     * @param {Number} privateInputs.type
+     * @param {Number} privateInputs.blobType
      * @param {String} privateInputs.forcedHashData
      */
     constructor(
@@ -61,7 +59,7 @@ module.exports = class BlobProcessor {
         this.timestampLimit = privateInputs.timestampLimit; // exposed as an output
         this.sequencerAddress = privateInputs.sequencerAddress;
         this.zkGasLimit = privateInputs.zkGasLimit;
-        this.type = privateInputs.type;
+        this.blobType = privateInputs.blobType;
         this.forcedHashData = privateInputs.forcedHashData;
 
         // outputs
@@ -155,7 +153,7 @@ module.exports = class BlobProcessor {
 
         // read local exit root if necessary
         if (this.isInvalid === true) {
-            this._readLocalExitRoot();
+            await this._readLocalExitRoot();
         }
 
         // compute stark input
@@ -187,9 +185,9 @@ module.exports = class BlobProcessor {
             // add batches data
             resBlobdata += batchesData;
 
-            if (this.type === blobConstants.BLOB_TYPE.CALLDATA || this.type === blobConstants.BLOB_TYPE.FORCED) {
+            if (this.blobType === blobConstants.BLOB_TYPE.CALLDATA || this.blobType === blobConstants.BLOB_TYPE.FORCED) {
                 this.blobData = resBlobdata;
-            } else if (this.type === blobConstants.BLOB_TYPE.EIP4844) {
+            } else if (this.blobType === blobConstants.BLOB_TYPE.EIP4844) {
             // build blob data with no spaces and then add 0x00 each 32 bytes
                 this.blobData = '';
                 const blobDataNoSpaces = resBlobdata.slice(2);
@@ -206,9 +204,9 @@ module.exports = class BlobProcessor {
             let tmpBlobdata = '';
 
             // if blobData is calldata or forced, no need to check and remove MSB each 32 bytes
-            if (this.type === blobConstants.BLOB_TYPE.CALLDATA || this.type === blobConstants.BLOB_TYPE.FORCED) {
+            if (this.blobType === blobConstants.BLOB_TYPE.CALLDATA || this.blobType === blobConstants.BLOB_TYPE.FORCED) {
                 tmpBlobdata = this.blobData;
-            } else if (this.type === blobConstants.BLOB_TYPE.EIP4844) {
+            } else if (this.blobType === blobConstants.BLOB_TYPE.EIP4844) {
                 // assure the most significant byte is '00' each slot of 32 bytes
                 for (let i = 0; i < this.blobData.length; i += 64) {
                     const slot32 = this.blobData.slice(i, i + 64);
@@ -310,21 +308,21 @@ module.exports = class BlobProcessor {
 
         const newLocalExitRoot = res[Constants.LOCAL_EXIT_ROOT_STORAGE_POS];
         if (Scalar.eq(newLocalExitRoot, Scalar.e(0))) {
-            this.localExitRootFromBlob = smtUtils.stringToH4(ethers.constants.HashZero);
+            this.localExitRootFromBlob = Constants.ZERO_BYTES32;
         } else {
-            this.localExitRootFromBlob = smtUtils.scalar2h4(newLocalExitRoot);
+            this.localExitRootFromBlob = `0x${Scalar.e(newLocalExitRoot).toString(16).padStart(64, '0')}`;
         }
     }
 
     async _computeStarkInput() {
         // compute points Z & Y dependng on the blob type. Otherwise, compute batchL2HashData
-        if (this.type === blobConstants.BLOB_TYPE.CALLDATA || this.type === blobConstants.BLOB_TYPE.FORCED) {
+        if (this.blobType === blobConstants.BLOB_TYPE.CALLDATA || this.blobType === blobConstants.BLOB_TYPE.FORCED) {
             // compute blobL2HashData
             this.blobL2HashData = await computeBlobL2HashData(this.blobData);
             // points not used
             this.pointZ = Constants.ZERO_BYTES32;
             this.pointY = Constants.ZERO_BYTES32;
-        } else if (this.type === blobConstants.BLOB_TYPE.EIP4844) {
+        } else if (this.blobType === blobConstants.BLOB_TYPE.EIP4844) {
             // blobL2HashData not used
             this.blobL2HashData = Constants.ZERO_BYTES32;
             // compute points
@@ -341,23 +339,27 @@ module.exports = class BlobProcessor {
             this.timestampLimit,
             this.sequencerAddress,
             this.zkGasLimit,
-            this.type,
+            this.blobType,
             this.pointZ,
             this.pointY,
             this.blobL2HashData,
             this.forcedHashData,
         );
 
-        // compute finalAccBatchHashData
-        for (let i = 0; i < this.batches.length; i++) {
-            const batchData = this.batches[i];
-            this.finalAccBatchHashData = await computeBatchAccInputHash(
-                this.finalAccBatchHashData,
-                await computeBatchL2HashData(batchData),
-                this.sequencerAddress,
-                this.forcedHashData,
-                this.type,
-            );
+        // invalidate blob
+        if (this.inInvalid === true) {
+            this.finalAccBatchHashData = Constants.ZERO_BYTES32;
+        } else {
+            // compute finalAccBatchHashData
+            for (let i = 0; i < this.batches.length; i++) {
+                const batchData = this.batches[i];
+                this.finalAccBatchHashData = await computeBatchAccInputHash(
+                    this.finalAccBatchHashData,
+                    await computeBatchL2HashData(batchData),
+                    this.sequencerAddress,
+                    this.forcedHashData,
+                );
+            }
         }
 
         this.starkInput = {
@@ -370,7 +372,7 @@ module.exports = class BlobProcessor {
             // compute accInputHash
             y: this.pointY,
             z: this.pointZ,
-            type: this.type,
+            blobType: this.blobType,
             sequencerAddr: this.sequencerAddress,
             zkGasLimit: this.zkGasLimit.toString(),
             forcedHashData: this.forcedHashData,

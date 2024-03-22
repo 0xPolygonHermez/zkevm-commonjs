@@ -86,8 +86,3 @@ module.exports.GLOBAL_INDEX_MAINNET_FLAG = Scalar.pow(2, 64);
 
 // Common
 module.exports.ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
-
-// Blob type
-module.exports.BLOB_TYPE_CALLDATA = 0;
-module.exports.BLOB_TYPE_4844 = 1;
-module.exports.BLOB_TYPE_FORCED = 2;

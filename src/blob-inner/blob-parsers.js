@@ -18,7 +18,7 @@ function parsePrivateInputs(_privateInputs) {
         timestampLimit: Scalar.e(_privateInputs.timestampLimit),
         sequencerAddress: _privateInputs.sequencerAddress,
         zkGasLimit: Scalar.e(_privateInputs.zkGasLimit),
-        type: Number(_privateInputs.type),
+        blobType: Number(_privateInputs.blobType),
         forcedHashData: _privateInputs.forcedHashData,
     };
 }
