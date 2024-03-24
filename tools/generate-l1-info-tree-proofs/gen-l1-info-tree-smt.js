@@ -3,6 +3,7 @@
 const { expect } = require('chai');
 const fs = require('fs');
 const { argv } = require('yargs');
+const { Constants } = require('../../index');
 
 const MerkleTreeBridge = require('../../index').MTBridge;
 const { verifyMerkleProof } = require('../../index').mtBridgeUtils;
@@ -17,11 +18,11 @@ async function main() {
     const merkleTree = new MerkleTreeBridge(height);
     const leafs = [];
 
-    for (let i = 0; i < genFile.length; i++) {
+    for (let i = 0; i < genFile.leafs.length; i++) {
         const leafValue = getL1InfoTreeValue(
-            genFile[i].globalExitRoot,
-            genFile[i].blockHash,
-            genFile[i].timestamp,
+            genFile.leafs[i].globalExitRoot,
+            genFile.leafs[i].blockHash,
+            genFile.leafs[i].timestamp,
         );
         leafs.push(leafValue);
         merkleTree.add(leafValue);
@@ -32,7 +33,7 @@ async function main() {
 
     // generate proofs for all indexes
     const proofs = [];
-    for (let i = 0; i < genFile.length; i++) {
+    for (let i = 0; i < genFile.leafs.length; i++) {
         proofs.push(merkleTree.getProofTreeByIndex(i));
     }
 
@@ -44,18 +45,39 @@ async function main() {
         expect(verifyMerkleProof(valueLeaf, proof, index, root)).to.be.equal(true);
     }
 
-    // create output json file with gen infoi plus value leafs and proofs
+    // create output json file with gen info plus value leafs and proofs
     const output = [];
-    for (let i = 0; i < genFile.length; i++) {
+    for (let i = 0; i < genFile.leafs.length; i++) {
         const smtProof = proofs[i];
         const index = i;
         const valueLeaf = leafs[index];
         output.push({
-            ...genFile[i],
-            root,
+            ...genFile.leafs[i],
+            l1InfoRoot: root,
             valueLeaf,
+            index,
             smtProof,
         });
+    }
+
+    // generate proofs for extra indexes
+    for (let i = 0; i < genFile.extraMTProofs.length; i++) {
+        const indexToGetProof = genFile.extraMTProofs[i];
+        const proof = merkleTree.getProofTreeByIndex(indexToGetProof);
+
+        if (indexToGetProof > genFile.leafs.length - 1) {
+            output.push({
+                globalExitRoot: Constants.ZERO_BYTES32,
+                blockHash: Constants.ZERO_BYTES32,
+                timestamp: 0,
+                l1InfoRoot: root,
+                valueLeaf: Constants.ZERO_BYTES32,
+                index: indexToGetProof,
+                smtProof: proof,
+            });
+
+            expect(verifyMerkleProof(Constants.ZERO_BYTES32, proof, indexToGetProof, root)).to.be.equal(true);
+        }
     }
 
     // save outout file depending on flag by argv --output and the timestamp
