@@ -862,21 +862,30 @@ module.exports = class Processor {
                 const l1Info = this.extraData.l1Info[tx.indexL1InfoTree];
 
                 // Verify l1Info & indexL1InfoTree belong to l1InfoRoot
-                const valueLeaf = getL1InfoTreeValue(
+                let valueLeaf = getL1InfoTreeValue(
                     l1Info.globalExitRoot,
                     l1Info.blockHash,
                     l1Info.timestamp,
                 );
 
+                if (Scalar.eq(valueLeaf, Constants.L1_INFO_DATA_ZERO)) {
+                    valueLeaf = Constants.ZERO_BYTES32;
+                }
+
                 if (!this.options.skipVerifyL1InfoRoot) {
                     if (typeof this.extraData.l1Info[tx.indexL1InfoTree] === 'undefined') {
-                        throw new Error(`${getFuncName()}: BatchProcessor:_processChangeL2BlockTx:: missing smtProof`);
+                        throw new Error('BatchProcessor:_processChangeL2BlockTx:: missing smtProof');
                     }
 
                     // fulfill l1InfoTree information
                     this.l1InfoTree[tx.indexL1InfoTree] = l1Info;
 
                     if (!verifyMerkleProof(valueLeaf, l1Info.smtProof, tx.indexL1InfoTree, smtUtils.h4toString(this.l1InfoRoot))) {
+                        throw new Error('BatchProcessor:_processChangeL2BlockTx:: invalid l1 info tree index');
+                    }
+
+                    // invalid batch if valueLeaf is 0
+                    if (valueLeaf === Constants.ZERO_BYTES32) {
                         return true;
                     }
                 }
