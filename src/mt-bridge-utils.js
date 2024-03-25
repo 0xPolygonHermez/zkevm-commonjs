@@ -20,7 +20,7 @@ function generateZeroHashes(height) {
 /**
  * Verify merkle proof
  * @param {BigNumber} leaf - Leaf value
- * @param {Array} smtProof - Array of sibilings
+ * @param {Array} smtProof - Array of siblings
  * @param {Number} index - Index of the leaf
  * @param {BigNumber} root - Merkle root
  * @returns {Boolean} - Whether the merkle proof is correct or not
