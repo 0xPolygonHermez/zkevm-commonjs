@@ -347,7 +347,7 @@ module.exports = class BlobProcessor {
         );
 
         // invalidate blob
-        if (this.inInvalid === true) {
+        if (this.isInvalid === true) {
             this.finalAccBatchHashData = Constants.ZERO_BYTES32;
         } else {
             // compute finalAccBatchHashData
