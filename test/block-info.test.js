@@ -73,12 +73,11 @@ describe('Block info tests', function () {
                 db,
                 poseidon,
                 [F.zero, F.zero, F.zero, F.zero],
-                smtUtils.stringToH4(oldBatchAccInputHash),
                 genesis,
                 null,
                 null,
-                chainID, // could be read from contracts
-                forkID, // could be read from contracts
+                chainID,
+                forkID,
             );
 
             // Check evm contract params
@@ -253,6 +252,7 @@ describe('Block info tests', function () {
                 const batch = await zkEVMDB.buildBatch(
                     sequencerAddress,
                     forcedHashData,
+                    oldBatchAccInputHash,
                     previousL1InfoTreeRoot,
                     previousL1InfoTreeIndex,
                     Constants.DEFAULT_MAX_TX,

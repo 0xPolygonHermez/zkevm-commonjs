@@ -3,7 +3,7 @@
     "id": 0,
     "description": "2 accounts and 1 valid transaction.",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
@@ -92,7 +92,7 @@
     "id": 1,
     "description": "5 accounts. 2 valid tx, 3 invalid tx (same amount as balance, invalid nonce, invalid chain id 1)",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
@@ -272,7 +272,7 @@
     "id": 2,
     "description": "2 accounts and 1 invalid tx (tx with more value than balance). Old root equals new root.",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
@@ -357,7 +357,7 @@
     "id": 3,
     "description": "2 accounts and 4 invalid transactions. Two of the transactions have invalid from and to address so no rawTx is provided for them, can be ignored.Tx with same amount than balance and tx with invalid chain id (different chain id than sequencer). Old root equals new root",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
@@ -477,7 +477,7 @@
     "id": 4,
     "description": "2 accounts and 1 invalid transaction. Wrong encode of the tx (invalid signature). Old root equals new root",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
@@ -551,7 +551,7 @@
     "id": 5,
     "description": "2 accounts and 1 valid transaction, from and to are the same",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
     "genesis": [
       {
@@ -640,7 +640,7 @@
     "id": 6,
     "description": "2 accounts. 1 valid tx, 3 invalid tx (same amount as balance, invalid nonce, invalid chain id",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
     "genesis": [
       {
@@ -768,7 +768,7 @@
     "id": 7,
     "description": "2 accounts and 1 valid transaction, from, to and sequencer are the same",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
@@ -857,7 +857,7 @@
     "id": 8,
     "description": "2 accounts and 2 valid transaction, sequencer is able to do the transaction because the fees are payed at the end of every tx",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
@@ -959,7 +959,7 @@
     "id": 9,
     "description": "2 accounts and 4 valid transaction, 4 transactions from the same account",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x4d5Cf5032B2a844602278b01199ED191A86c93ff",
     "genesis": [
       {
@@ -1087,7 +1087,7 @@
     "id": 10,
     "description": "2 accounts + 1 contract + and 2 valid transaction.",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
     "genesis": [
@@ -1217,7 +1217,7 @@
     "id": 11,
     "description": "2 accounts + 2 contract + and 1 tx to contract + contract call ",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
     "genesis": [
@@ -1342,7 +1342,7 @@
     "id": 12,
     "description": "2 accounts + 2 contract with constructor + and 1 tx to contract + 1 contract call",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
     "genesis": [
@@ -1478,7 +1478,7 @@
     "id": 13,
     "description": "2 accounts  + and 1 tx to contract deploy + 1 call to deplyed contract",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "sequencerPvtKey": "0x28b2b0318721be8c8339199172cd7cc8f5e273800a35616ec893083a4b32c02e",
     "genesis": [
@@ -1614,7 +1614,7 @@
     "id": 14,
     "description": "2 accounts and 3 valid transactions",
     "chainID": 1000,
-    "forkID": 9,
+    "forkID": 10,
     "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {

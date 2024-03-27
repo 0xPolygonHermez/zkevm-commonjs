@@ -104,6 +104,7 @@ describe('BlobProcessor', async function () {
 
             // get stark input
             const inputBlobInner = await blobInnerProcessor.getStarkInput();
+
             // check expected result
             if (!update) {
                 expect(expected.newBlobStateRoot).to.be.equal(inputBlobInner.newBlobStateRoot);

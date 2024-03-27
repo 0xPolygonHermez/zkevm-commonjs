@@ -1,47 +1,41 @@
-const fs = require('fs');
-const path = require('path');
 const { expect } = require('chai');
-
 const { contractUtils } = require('../index');
-
-const { pathTestVectors } = require('./helpers/test-utils');
 
 describe('contractUtils', function () {
     this.timeout(10000);
-    let testVector;
-
-    const expectedSnarkInputHash = '1945042d70b86b81b1d301119ea2bffa6b131f651ebf66858796980298fb76f8';
-
-    before(async () => {
-        testVector = JSON.parse(fs.readFileSync(path.join(pathTestVectors, 'inputs-executor/input_executor.json')));
-    });
 
     it('calculateSnarkInput', async () => {
-        const aggregatorAddress = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
+        const expectedSnarkInputHash = '0xcb4024f9c037e6d88842ab51ece5c25f8c64fa4087c76e904e305bdb55e9090';
 
-        const {
-            oldStateRoot,
-            newStateRoot,
-            newLocalExitRoot,
-            oldBatchAccInputHash,
-            newBatchAccInputHash,
-
-            chainID,
-            forkID,
-        } = testVector;
+        const initStateRoot = '0x1';
+        const initBlobStateRoot = '0x2';
+        const initBlobAccInputHash = '0x3';
+        const initNumBlob = 4;
+        const chainId = 5;
+        const forkID = 6;
+        const finalStateRoot = '0x7';
+        const finalBlobStateRoot = '0x8';
+        const finalBlobAccInputHash = '0x9';
+        const finalNumBlob = 10;
+        const finalLocalExitRoot = '0xa';
+        const aggregatorAddress = '0xb';
 
         const computedSnark = await contractUtils.calculateSnarkInput(
-            oldStateRoot,
-            newStateRoot,
-            newLocalExitRoot,
-            oldBatchAccInputHash,
-            newBatchAccInputHash,
-            chainID,
-            aggregatorAddress,
+            initStateRoot,
+            initBlobStateRoot,
+            initBlobAccInputHash,
+            initNumBlob,
+            chainId,
             forkID,
+            finalStateRoot,
+            finalBlobStateRoot,
+            finalBlobAccInputHash,
+            finalNumBlob,
+            finalLocalExitRoot,
+            aggregatorAddress,
         );
 
-        expect(computedSnark.toString(16)).to.be.equal(expectedSnarkInputHash);
+        expect(`0x${computedSnark.toString(16)}`).to.be.equal(expectedSnarkInputHash);
     });
 
     it('generateSolidityInputs', async () => {
