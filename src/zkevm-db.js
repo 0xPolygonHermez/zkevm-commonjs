@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /* eslint-disable default-param-last */
 /* eslint-disable multiline-comment-style */
 /* eslint-disable no-restricted-syntax */
@@ -14,23 +15,26 @@ const clone = require('lodash/clone');
 const Constants = require('./constants');
 const Processor = require('./processor');
 const BlobProcessor = require('./blob-inner/blob-processor');
+const BlobOuter = require('./blob-inner/blob-outer-processor');
 const SMT = require('./smt');
 const {
     getState, setAccountState, setContractBytecode, setContractStorage, getContractHashBytecode,
     getContractBytecodeLength,
 } = require('./state-utils');
-const { h4toString, stringToH4, hashContractBytecode } = require('./smt-utils');
+const {
+    h4toString, stringToH4,
+    hashContractBytecode, h4toScalar,
+} = require('./smt-utils');
 const { calculateSnarkInput } = require('./contract-utils');
 
 class ZkEVMDB {
-    constructor(db, lastBatch, stateRoot, batchAccInputHash, localExitRoot, poseidon, vm, smt, chainID, forkID) {
+    constructor(db, lastBatch, stateRoot, localExitRoot, poseidon, vm, smt, chainID, forkID) {
         this.db = db;
         this.lastBatch = lastBatch || 0;
         this.poseidon = poseidon;
         this.F = poseidon.F;
 
         this.stateRoot = stateRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
-        this.batchAccInputHash = batchAccInputHash || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.localExitRoot = localExitRoot || [this.F.zero, this.F.zero, this.F.zero, this.F.zero];
         this.chainID = chainID;
         this.forkID = forkID;
@@ -44,11 +48,12 @@ class ZkEVMDB {
     }
 
     /**
-     * Return a new Processor with the current RollupDb state
-     * @param {Number} timestampLimit - Timestamp limit of the batch
-     * @param {String} sequencerAddress - ethereum address represented as hex
-     * @param {Array[Field]} l1InfoRoot - global exit root
-     * @param {Number} forcedBlockHashL1 - Forced blockHash
+     * Build Batch
+     * @param {String} sequencerAddress
+     * @param {String} forcedHashData
+     * @param {String} oldBatchAccInputHash
+     * @param {String} previousL1InfoTreeRoot
+     * @param {Number} previousL1InfoTreeIndex
      * @param {Scalar} maxNTx - Maximum number of transactions (optional)
      * @param {Object} options - additional batch options
      * @param {Bool} options.skipUpdateSystemStorage - Skips updates on system smrt contract at the end of processable transactions
@@ -57,10 +62,12 @@ class ZkEVMDB {
      * @param {String} extraData.l1Info[x].globalExitRoot - global exit root
      * @param {String} extraData.l1Info[x].blockHash - l1 block hash at blockNumber - 1
      * @param {BigInt} extraData.l1Info[x].timestamp - l1 block timestamp
+     * @returns {Object} batch processor
      */
     async buildBatch(
         sequencerAddress,
         forcedHashData,
+        oldBatchAccInputHash,
         previousL1InfoTreeRoot,
         previousL1InfoTreeIndex,
         maxNTx = Constants.DEFAULT_MAX_TX,
@@ -74,7 +81,7 @@ class ZkEVMDB {
             maxNTx,
             this.stateRoot,
             sequencerAddress,
-            this.batchAccInputHash,
+            stringToH4(oldBatchAccInputHash),
             this.chainID,
             this.forkID,
             forcedHashData,
@@ -84,51 +91,6 @@ class ZkEVMDB {
             options,
             extraData,
             this.smt.maxLevel,
-        );
-    }
-
-    /**
-     * Return a new BlobProcessor with the current RollupDb state
-     * @param {Number} _lastL1InfoTreeIndex - Last L1 info tree index
-     * @param {String} _lastL1InfoTreeRoot - Last L1 info tree root
-     * @param {Scalar} _timestampLimit - Timestamp limit
-     * @param {Scalar} _zkGasLimit - zk gas limit
-     * @param {Number} _blobType - type of blob
-     * @param {String} _forcedHashData - forced hash data
-     * @returns
-     */
-    async buildBlob(
-        _lastL1InfoTreeIndex,
-        _lastL1InfoTreeRoot,
-        _timestampLimit,
-        _zkGasLimit,
-        _blobType,
-        _forcedHashData,
-    ) {
-        // build globalInputs
-        const globalInputs = {
-            oldBlobStateRoot: this.blobRoot,
-            oldBlobAccInputHash: this.accBlobInputHash,
-            oldNumBlob: this.lastBlob,
-            oldStateRoot: this.stateRoot,
-            forkId: this.forkID,
-        };
-
-        // build privateInputs
-        const privateInputs = {
-            lastL1InfoTreeIndex: _lastL1InfoTreeIndex,
-            lastL1InfoTreeRoot: _lastL1InfoTreeRoot,
-            timestampLimit: _timestampLimit,
-            zkGasLimit: _zkGasLimit,
-            blobType: _blobType,
-            forcedHashData: _forcedHashData,
-        };
-
-        return new BlobProcessor(
-            this.db,
-            this.poseidon,
-            globalInputs,
-            privateInputs,
         );
     }
 
@@ -234,82 +196,286 @@ class ZkEVMDB {
     }
 
     /**
-     * Get batchL2Data for multiples batches
+     * Get inputs from batch aggregation
      * @param {Number} initNumBatch - initial num batch
      * @param {Number} finalNumBatch - final num batch
      */
-    async sequenceMultipleBatches(initNumBatch, finalNumBatch) {
-        const dataBatches = [];
+    async aggregateBatches(initNumBatch, finalNumBatch) {
+        if (!(finalNumBatch >= initNumBatch)) {
+            throw new Error('Final batch must be greater than or equal initial batch');
+        }
 
+        const fullAggData = {
+            aggBatchData: {},
+            singleBatchData: [],
+        };
+
+        // get data batches that will be aggregated
         for (let i = initNumBatch; i <= finalNumBatch; i++) {
             const keyInitInput = Scalar.add(Constants.DB_STARK_INPUT, i);
             const value = await this.db.getValue(keyInitInput);
             if (value === null) {
                 throw new Error(`Batch ${i} does not exist`);
             }
-
-            const dataBatch = {
-                transactions: value.batchL2Data,
-                l1InfoRoot: value.l1InfoRoot,
-                timestampLimit: value.timestampLimit,
-                forceBatchesTimestamp: [],
-            };
-
-            dataBatches.push(dataBatch);
+            fullAggData.singleBatchData.push(value);
         }
 
-        return dataBatches;
+        // verify batch aggregation
+        // first batch has initial values set to 0
+        if (fullAggData.singleBatchData[0].previousL1InfoTreeRoot !== Constants.ZERO_BYTES32) {
+            throw new Error('First batch must have previousL1InfoTreeRoot set to 0x00...00');
+        }
+
+        if (fullAggData.singleBatchData[0].previousL1InfoTreeIndex !== 0) {
+            throw new Error('First batch must have previousL1InfoTreeRoot set to 0x00...00');
+        }
+
+        if (fullAggData.singleBatchData[0].oldBatchAccInputHash !== Constants.ZERO_BYTES32) {
+            throw new Error('First batch must have previousL1InfoTreeRoot set to 0x00...00');
+        }
+
+        // intermediate fullAggData.singleBatchData signals are correct
+        for (let i = 0; i < fullAggData.singleBatchData.length - 1; i++) {
+            const current = fullAggData.singleBatchData[i];
+            const next = fullAggData.singleBatchData[i + 1];
+
+            if (current.newStateRoot !== next.oldStateRoot) {
+                throw new Error(`Batch ${i} newStateRoot must be equal to next batch oldStateRoot`);
+            }
+
+            if (current.newBatchAccInputHash !== next.oldBatchAccInputHash) {
+                throw new Error(`Batch ${i} newBatchAccInputHash must be equal to next batch oldBatchAccInputHash`);
+            }
+
+            if (current.newL1InfoTreeRoot !== next.previousL1InfoTreeRoot) {
+                throw new Error(`Batch ${i} currentL1InfoTreeRoot must be equal to next batch previousL1InfoTreeRoot`);
+            }
+
+            if (current.newL1InfoTreeIndex !== next.previousL1InfoTreeIndex) {
+                throw new Error(`Batch ${i} currentL1InfoTreeIndex must be equal to next batch previousL1InfoTreeIndex`);
+            }
+
+            if (current.sequencerAddress !== next.sequencerAddress) {
+                throw new Error(`Batch ${i} sequencerAddress must be equal to next batch sequencerAddress`);
+            }
+        }
+
+        // add common data
+        fullAggData.aggBatchData.oldBatchAccInputHash = Constants.ZERO_BYTES32;
+        fullAggData.aggBatchData.previousL1InfoTreeRoot = Constants.ZERO_BYTES32;
+        fullAggData.aggBatchData.previousL1InfoTreeIndex = 0;
+        fullAggData.aggBatchData.chainID = this.chainID;
+        fullAggData.aggBatchData.forkID = this.forkID;
+        fullAggData.aggBatchData.sequencerAddress = fullAggData.singleBatchData[0].sequencerAddr;
+
+        // get data from the first batch
+        fullAggData.aggBatchData.oldStateRoot = fullAggData.singleBatchData[0].oldStateRoot;
+
+        // get data from the last batch
+        fullAggData.aggBatchData.newStateRoot = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newStateRoot;
+        fullAggData.aggBatchData.newBatchAccInputHash = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newBatchAccInputHash;
+        fullAggData.aggBatchData.currentL1InfoTreeRoot = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newL1InfoTreeRoot;
+        fullAggData.aggBatchData.currentL1InfoTreeIndex = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newL1InfoTreeIndex;
+        fullAggData.aggBatchData.newLocalExitRoot = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newLocalExitRoot;
+        fullAggData.aggBatchData.newLastTimestamp = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newLastTimestamp;
+
+        // hash initial and final batch to uniquely identify a batch aggregation
+        // eslint-disable-next-line max-len
+        const aggId = this.poseidon(
+            [initNumBatch, finalNumBatch, this.F.zero, this.F.zero, this.F.zero, this.F.zero, this.F.zero, this.F.zero],
+            [this.F.zero, this.F.zero, this.F.zero, this.F.zero],
+        );
+
+        // Set stark input
+        await this.db.setValue(
+            Scalar.add(Constants.DB_AGG_BATCHES, h4toScalar(aggId)),
+            fullAggData,
+        );
+
+        return fullAggData;
     }
 
     /**
-     * Get batchL2Data for multiples batches
-     * @param {Number} initNumBatch - initial num batch
-     * @param {Number} finalNumBatch - final num batch
-     * @param {String} aggregatorAddress - aggregator Ethereum address
+     * Return a new BlobProcessor with the current RollupDb state
+     * @param {Number} _initNumBatch - first batch of the blobInner
+     * @param {Number} _finalNumBatch - first batch of the blobInner
+     * @param {String} _lastL1InfoTreeRoot - Last L1 info tree root
+     * @param {Number} _lastL1InfoTreeIndex - Last L1 info tree index
+     * @param {Scalar} _timestampLimit - Timestamp limit
+     * @param {Scalar} _zkGasLimit - zk gas limit
+     * @param {Number} _blobType - type of blob
+     * @param {String} _forcedHashData - forced hash data
+     * @returns
      */
-    async verifyMultipleBatches(initNumBatch, finalNumBatch, aggregatorAddress) {
-        const dataVerify = {};
-        dataVerify.singleBatchData = [];
+    async buildBlobInner(
+        _initNumBatch,
+        _finalNumBatch,
+        _lastL1InfoTreeRoot,
+        _lastL1InfoTreeIndex,
+        _timestampLimit,
+        _zkGasLimit,
+        _blobType,
+        _forcedHashData,
+    ) {
+        const aggId = this.poseidon(
+            [_initNumBatch, _finalNumBatch, this.F.zero, this.F.zero, this.F.zero, this.F.zero, this.F.zero, this.F.zero],
+            [this.F.zero, this.F.zero, this.F.zero, this.F.zero],
+        );
 
-        for (let i = initNumBatch; i <= finalNumBatch; i++) {
-            const keyInitInput = Scalar.add(Constants.DB_STARK_INPUT, i);
-            const value = await this.db.getValue(keyInitInput);
-            if (value === null) {
-                throw new Error(`Batch ${i} does not exist`);
-            }
-
-            if (i === initNumBatch) {
-                dataVerify.oldStateRoot = value.oldStateRoot;
-                dataVerify.oldBatchAccInputHash = value.oldBatchAccInputHash;
-                dataVerify.oldNumBatch = value.oldNumBatch;
-            }
-
-            if (i === finalNumBatch) {
-                dataVerify.newStateRoot = value.newStateRoot;
-                dataVerify.newBatchAccInputHash = value.newBatchAccInputHash;
-                dataVerify.newLocalExitRoot = value.newLocalExitRoot;
-                dataVerify.newNumBatch = value.newNumBatch;
-            }
-
-            dataVerify.singleBatchData.push(value);
+        // get aggregate batches inout stark
+        const keyInitInput = Scalar.add(Constants.DB_AGG_BATCHES, h4toScalar(aggId));
+        const fullAggData = await this.db.getValue(keyInitInput);
+        if (fullAggData === null) {
+            throw new Error(`Aggregation batches ${_initNumBatch}__${_finalNumBatch} does not exist`);
         }
 
-        dataVerify.chainID = this.chainID;
-        dataVerify.forkID = this.forkID;
-        dataVerify.aggregatorAddress = aggregatorAddress;
+        // build globalInputs
+        const globalInputs = {
+            oldBlobStateRoot: this.blobRoot,
+            oldBlobAccInputHash: h4toString(this.accBlobInputHash),
+            oldNumBlob: this.lastBlob,
+            oldStateRoot: stringToH4(fullAggData.aggBatchData.oldStateRoot),
+            forkID: this.forkID,
+        };
 
-        dataVerify.inputSnark = `0x${Scalar.toString(await calculateSnarkInput(
-            dataVerify.oldStateRoot,
-            dataVerify.newStateRoot,
-            dataVerify.newLocalExitRoot,
-            dataVerify.oldBatchAccInputHash,
-            dataVerify.newBatchAccInputHash,
-            dataVerify.chainID,
-            dataVerify.aggregatorAddress,
-            dataVerify.forkID,
+        // build privateInputs
+        const privateInputs = {
+            lastL1InfoTreeIndex: _lastL1InfoTreeIndex,
+            lastL1InfoTreeRoot: _lastL1InfoTreeRoot,
+            timestampLimit: _timestampLimit,
+            zkGasLimit: _zkGasLimit,
+            blobType: _blobType,
+            forcedHashData: _forcedHashData,
+            sequencerAddress: fullAggData.aggBatchData.sequencerAddress,
+        };
+
+        const blobInner = new BlobProcessor(
+            this.db,
+            this.poseidon,
+            globalInputs,
+            privateInputs,
+        );
+
+        // add batch data
+        for (fullAggData.singleBatchData of fullAggData.singleBatchData) {
+            await blobInner.addBatchL2Data(fullAggData.singleBatchData.batchL2Data);
+        }
+        await blobInner.execute();
+
+        // save input blobInner
+        await this.db.setValue(
+            Scalar.add(Constants.DB_STARK_BLOB_INNER, blobInner.newNumBlob),
+            blobInner.starkInput,
+        );
+
+        const blobOuter = new BlobOuter(blobInner.starkInput, fullAggData.aggBatchData);
+        await blobOuter.execute();
+
+        const blobOuterInput = blobOuter.getStarkInput();
+
+        // consolidate blobOuter
+        // save state root
+        await this.db.setValue(
+            Scalar.add(Constants.DB_OUTER_STATE_ROOT, blobOuterInput.newNumBlob),
+            blobOuterInput.newStateRoot,
+        );
+
+        // save blob state root
+        this.blobRoot = stringToH4(blobOuterInput.newBlobStateRoot);
+        await this.db.setValue(
+            Scalar.add(Constants.DB_BLOB_STATE_ROOT, blobOuterInput.newNumBlob),
+            blobOuterInput.newBlobStateRoot,
+        );
+
+        // save blob acc input hash
+        this.accBlobInputHash = stringToH4(blobOuterInput.newBlobAccInputHash);
+        await this.db.setValue(
+            Scalar.add(Constants.DB_BLOB_ACC_INPUT_HASH, blobOuterInput.newNumBlob),
+            blobOuterInput.newBlobAccInputHash,
+        );
+
+        // save last num blob
+        this.lastBlob = blobOuterInput.newNumBlob;
+        await this.db.setValue(
+            Constants.DB_LAST_NUM_BLOB,
+            Scalar.toNumber(blobOuterInput.newNumBlob),
+        );
+
+        // save outer local exit root
+        await this.db.setValue(
+            Scalar.add(Constants.DB_OUTER_LOCAL_EXIT_ROOT, blobOuterInput.newNumBlob),
+            blobOuterInput.newLocalExitRoot,
+        );
+
+        // save stark blob outer
+        await this.db.setValue(
+            Scalar.add(Constants.DB_STARK_BLOB_OUTER, blobOuterInput.newNumBlob),
+            blobOuterInput,
+        );
+
+        return {
+            inputBlobInner: blobInner.starkInput,
+            inputBlobOuter: blobOuter.starkInput,
+        };
+    }
+
+    /**
+     * Aggregate multiple blob outers
+     * @param {Number} initNumBlob - initial num batch
+     * @param {Number} finalNumBlob - final num batch
+     * @param {String} aggregatorAddress - aggregator Ethereum address
+     */
+    async aggregateBlobOuters(initNumBlob, finalNumBlob, aggregatorAddress) {
+        const aggBlobOuter = {
+            singleData: [],
+            aggData: {},
+        };
+
+        for (let i = initNumBlob; i <= finalNumBlob; i++) {
+            const keyInitInput = Scalar.add(Constants.DB_STARK_BLOB_OUTER, i);
+            const value = await this.db.getValue(keyInitInput);
+            if (value === null) {
+                throw new Error(`Blob outer ${i} does not exist`);
+            }
+
+            if (i === initNumBlob) {
+                aggBlobOuter.aggData.oldStateRoot = value.oldStateRoot;
+                aggBlobOuter.aggData.oldBlobStateRoot = value.oldBlobStateRoot;
+                aggBlobOuter.aggData.oldBlobAccInputHash = value.oldBlobAccInputHash;
+                aggBlobOuter.aggData.oldNumBlob = value.oldNumBlob;
+            }
+
+            if (i === finalNumBlob) {
+                aggBlobOuter.aggData.newStateRoot = value.newStateRoot;
+                aggBlobOuter.aggData.newBlobStateRoot = value.newBlobStateRoot;
+                aggBlobOuter.aggData.newBlobAccInputHash = value.newBlobAccInputHash;
+                aggBlobOuter.aggData.newNumBlob = value.newNumBlob;
+                aggBlobOuter.aggData.newLocalExitRoot = value.newLocalExitRoot;
+            }
+
+            aggBlobOuter.singleData.push(value);
+        }
+
+        aggBlobOuter.aggData.chainID = this.chainID;
+        aggBlobOuter.aggData.forkID = this.forkID;
+        aggBlobOuter.aggData.aggregatorAddress = aggregatorAddress;
+
+        aggBlobOuter.aggData.inputSnark = `0x${Scalar.toString(await calculateSnarkInput(
+            aggBlobOuter.aggData.oldStateRoot,
+            aggBlobOuter.aggData.oldBlobStateRoot,
+            aggBlobOuter.aggData.oldBlobAccInputHash,
+            aggBlobOuter.aggData.oldNumBlob,
+            aggBlobOuter.aggData.chainID,
+            aggBlobOuter.aggData.forkID,
+            aggBlobOuter.aggData.newStateRoot,
+            aggBlobOuter.aggData.newBlobStateRoot,
+            aggBlobOuter.aggData.newBlobAccInputHash,
+            aggBlobOuter.aggData.newNumBlob,
+            aggBlobOuter.aggData.newLocalExitRoot,
+            aggBlobOuter.aggData.aggregatorAddress,
         ), 16).padStart(64, '0')}`;
 
-        return dataVerify;
+        return aggBlobOuter;
     }
 
     /**
@@ -366,7 +532,6 @@ class ZkEVMDB {
      * @param {Object} db - Mem db object
      * @param {Object} poseidon - Poseidon object
      * @param {Array[Fields]} stateRoot - state merkle root
-     * @param {Array[Fields]} batchAccInputHash - accumulate hash input
      * @param {Object} genesis - genesis block accounts (address, nonce, balance, bytecode, storage)
      * @param {Object} vm - evm if already instantiated
      * @param {Object} smt - smt if already instantiated
@@ -374,7 +539,7 @@ class ZkEVMDB {
      * @param {Number} forkID - L2 rom fork identifier
      * @returns {Object} ZkEVMDB object
      */
-    static async newZkEVM(db, poseidon, stateRoot, batchAccInputHash, genesis, vm, smt, chainID, forkID) {
+    static async newZkEVM(db, poseidon, stateRoot, genesis, vm, smt, chainID, forkID) {
         const common = Common.custom({ chainId: chainID }, { hardfork: Hardfork.Berlin });
         common.setEIPs([3607, 3541, 3855]);
         const lastBatch = await db.getValue(Constants.DB_LAST_BATCH);
@@ -441,7 +606,6 @@ class ZkEVMDB {
                 db,
                 0,
                 genesisStateRoot,
-                batchAccInputHash,
                 null, // localExitRoot
                 poseidon,
                 newVm,
@@ -453,14 +617,12 @@ class ZkEVMDB {
 
         // Update current zkevm instance
         const DBStateRoot = await db.getValue(Scalar.add(Constants.DB_STATE_ROOT, lastBatch));
-        const DBAccInputHash = await db.getValue(Scalar.add(Constants.DB_ACC_INPUT_HASH, lastBatch));
         const DBLocalExitRoot = await db.getValue(Scalar.add(Constants.DB_LOCAL_EXIT_ROOT, lastBatch));
 
         return new ZkEVMDB(
             db,
             lastBatch,
             stringToH4(DBStateRoot),
-            stringToH4(DBAccInputHash),
             stringToH4(DBLocalExitRoot),
             poseidon,
             vm,

@@ -10,6 +10,15 @@ module.exports.DB_GLOBAL_EXIT_ROOT = ethers.utils.id(('ZKEVM_DB_GLOBAL_EXIT_ROOT
 module.exports.DB_ADDRESS_STORAGE = ethers.utils.id(('ZKEVM_DB_ADDRESS_STORAGE'));
 module.exports.DB_TOUCHED_ACCOUNTS = ethers.utils.id(('ZKEVM_DB_TOUCHED_ACCOUNTS'));
 module.exports.DB_STARK_INPUT = ethers.utils.id(('ZKEVM_DB_STARK_INPUT'));
+module.exports.DB_AGG_BATCHES = ethers.utils.id(('ZKEVM_DB_AGG_BATCHES'));
+module.exports.DB_STARK_BLOB_INNER = ethers.utils.id(('ZKEVM_DB_BLOB_INNER'));
+// blob DB keys
+module.exports.DB_OUTER_STATE_ROOT = ethers.utils.id(('DB_OUTER_STATE_ROOT'));
+module.exports.DB_BLOB_STATE_ROOT = ethers.utils.id(('DB_BLOB_STATE_ROOT'));
+module.exports.DB_BLOB_ACC_INPUT_HASH = ethers.utils.id(('DB_BLOB_ACC_INPUT_HASH'));
+module.exports.DB_LAST_NUM_BLOB = ethers.utils.id(('DB_LAST_NUM_BLOB'));
+module.exports.DB_OUTER_LOCAL_EXIT_ROOT = ethers.utils.id(('DB_OUTER_LOCAL_EXIT_ROOT'));
+module.exports.DB_STARK_BLOB_OUTER = ethers.utils.id(('DB_STARK_BLOB_OUTER'));
 
 // Default values and global constants
 module.exports.DEFAULT_MAX_TX = 1000;
