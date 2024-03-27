@@ -996,7 +996,7 @@ module.exports = class VirtualCountersManager {
         this._divArith();
         this._reduceCounters(Math.ceil(input.inputSize / 56) + 4, 'P');
         this._reduceCounters(Math.ceil(input.inputSize / 56) + 4, 'D');
-        this._multiCall('_opLogLoop', Math.floor(input.inputSize + 1 / 32));
+        this._multiCall('_opLogLoop', Math.floor((input.inputSize + 1) / 32));
         this._mLoadX();
         this._SHRarith();
         this._fillBlockInfoTreeWithLog();
