@@ -1008,8 +1008,8 @@ module.exports = class Processor {
             forcedData: this.forcedData,
             previousL1InfoTreeRoot: this.previousL1InfoTreeRoot,
             previousL1InfoTreeIndex: this.previousL1InfoTreeIndex,
-            newL1InfoTreeRoot: this.currentL1InfoTreeRoot,
-            newL1InfoTreeIndex: this.currentL1InfoTreeIndex,
+            currentL1InfoTreeRoot: this.currentL1InfoTreeRoot,
+            currentL1InfoTreeIndex: this.currentL1InfoTreeIndex,
         };
         if (this.extraData.l1Info) {
             this.starkInput.l1InfoTree = this.l1InfoTree;

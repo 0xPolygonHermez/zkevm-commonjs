@@ -87,8 +87,8 @@ describe('Processor', async function () {
                 forcedData,
                 previousL1InfoTreeRoot,
                 previousL1InfoTreeIndex,
-                newL1InfoTreeRoot,
-                newL1InfoTreeIndex,
+                currentL1InfoTreeRoot,
+                currentL1InfoTreeIndex,
             } = testVectors[i];
 
             const db = new MemDB(F);
@@ -400,14 +400,14 @@ describe('Processor', async function () {
                 expect(batchHashData).to.be.equal(circuitInput.batchHashData);
                 expect(newLocalExitRoot).to.be.equal(circuitInput.newLocalExitRoot);
                 // Check l1InfoTreeRoot and l1InfoTreeIndex
-                expect(newL1InfoTreeRoot).to.be.equal(circuitInput.newL1InfoTreeRoot);
-                expect(newL1InfoTreeIndex).to.be.equal(circuitInput.newL1InfoTreeIndex);
+                expect(currentL1InfoTreeRoot).to.be.equal(circuitInput.currentL1InfoTreeRoot);
+                expect(currentL1InfoTreeIndex).to.be.equal(circuitInput.currentL1InfoTreeIndex);
             } else {
                 testVectors[i].batchL2Data = batch.getBatchL2Data();
                 testVectors[i].batchHashData = circuitInput.batchHashData;
                 testVectors[i].newLocalExitRoot = circuitInput.newLocalExitRoot;
-                testVectors[i].newL1InfoTreeRoot = circuitInput.newL1InfoTreeRoot;
-                testVectors[i].newL1InfoTreeIndex = circuitInput.newL1InfoTreeIndex;
+                testVectors[i].currentL1InfoTreeRoot = circuitInput.currentL1InfoTreeRoot;
+                testVectors[i].currentL1InfoTreeIndex = circuitInput.currentL1InfoTreeIndex;
             }
 
             if (update && geninput) {
