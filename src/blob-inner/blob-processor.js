@@ -104,7 +104,7 @@ module.exports = class BlobProcessor {
         }
 
         this.batches.push(batchL2Data);
-        this.blobLength += batchL2Data.length / 2;
+        this.blobLength += 4 + batchL2Data.length / 2;
 
         if (this.blobLength > blobConstants.MAX_BLOB_DATA_BYTES) {
             throw new Error('BlobProcessor:addBatchL2Data: blob length exceeds maximum size');
