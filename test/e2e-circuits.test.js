@@ -113,8 +113,8 @@ describe('e2e circuits', function () {
                         newLocalExitRoot,
                         skipFirstChangeL2Block,
                         skipWriteBlockInfoRoot,
-                        newL1InfoTreeRoot,
-                        newL1InfoTreeIndex,
+                        currentL1InfoTreeRoot,
+                        currentL1InfoTreeIndex,
                     } = batches[k];
 
                     const rawTxs = [];
@@ -270,21 +270,21 @@ describe('e2e circuits', function () {
                         expect(batchHashData).to.be.equal(circuitInput.batchHashData);
                         expect(inputHash).to.be.equal(circuitInput.inputHash);
                         expect(newLocalExitRoot).to.be.equal(circuitInput.newLocalExitRoot);
-                        expect(newL1InfoTreeRoot).to.be.equal(batch.currentL1InfoTreeRoot);
-                        expect(newL1InfoTreeIndex).to.be.equal(batch.currentL1InfoTreeIndex);
+                        expect(currentL1InfoTreeRoot).to.be.equal(batch.currentL1InfoTreeRoot);
+                        expect(currentL1InfoTreeIndex).to.be.equal(batch.currentL1InfoTreeIndex);
                     } else {
                         testVectors[i].blobOuters[n].batches[k].batchL2Data = batch.getBatchL2Data();
                         testVectors[i].blobOuters[n].batches[k].batchHashData = circuitInput.batchHashData;
                         testVectors[i].blobOuters[n].batches[k].inputHash = circuitInput.inputHash;
                         testVectors[i].blobOuters[n].batches[k].newLocalExitRoot = circuitInput.newLocalExitRoot;
-                        testVectors[i].blobOuters[n].batches[k].newL1InfoTreeRoot = batch.currentL1InfoTreeRoot;
-                        testVectors[i].blobOuters[n].batches[k].newL1InfoTreeIndex = batch.currentL1InfoTreeIndex;
+                        testVectors[i].blobOuters[n].batches[k].currentL1InfoTreeRoot = batch.currentL1InfoTreeRoot;
+                        testVectors[i].blobOuters[n].batches[k].currentL1InfoTreeIndex = batch.currentL1InfoTreeIndex;
                     }
 
                     // update vars for the next batch
                     lastBatchInput = circuitInput;
-                    initL1InfoTreeRoot = circuitInput.newL1InfoTreeRoot;
-                    initL1InfoTreeIndex = circuitInput.newL1InfoTreeIndex;
+                    initL1InfoTreeRoot = circuitInput.currentL1InfoTreeRoot;
+                    initL1InfoTreeIndex = circuitInput.currentL1InfoTreeIndex;
                     initBatchAccInputHash = circuitInput.newBatchAccInputHash;
 
                     if (update && geninput) {
@@ -306,8 +306,8 @@ describe('e2e circuits', function () {
                 const { inputBlobInner, inputBlobOuter } = await zkEVMDB.buildBlobInner(
                     initBatchNum,
                     zkEVMDB.lastBatch,
-                    lastBatchInput.newL1InfoTreeRoot,
-                    lastBatchInput.newL1InfoTreeIndex,
+                    lastBatchInput.currentL1InfoTreeRoot,
+                    lastBatchInput.currentL1InfoTreeIndex,
                     lastBatchInput.newLastTimestamp,
                     zkGasLimit,
                     blobType,

@@ -247,11 +247,11 @@ class ZkEVMDB {
                 throw new Error(`Batch ${i} newBatchAccInputHash must be equal to next batch oldBatchAccInputHash`);
             }
 
-            if (current.newL1InfoTreeRoot !== next.previousL1InfoTreeRoot) {
+            if (current.currentL1InfoTreeRoot !== next.previousL1InfoTreeRoot) {
                 throw new Error(`Batch ${i} currentL1InfoTreeRoot must be equal to next batch previousL1InfoTreeRoot`);
             }
 
-            if (current.newL1InfoTreeIndex !== next.previousL1InfoTreeIndex) {
+            if (current.currentL1InfoTreeIndex !== next.previousL1InfoTreeIndex) {
                 throw new Error(`Batch ${i} currentL1InfoTreeIndex must be equal to next batch previousL1InfoTreeIndex`);
             }
 
@@ -274,8 +274,8 @@ class ZkEVMDB {
         // get data from the last batch
         fullAggData.aggBatchData.newStateRoot = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newStateRoot;
         fullAggData.aggBatchData.newBatchAccInputHash = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newBatchAccInputHash;
-        fullAggData.aggBatchData.currentL1InfoTreeRoot = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newL1InfoTreeRoot;
-        fullAggData.aggBatchData.currentL1InfoTreeIndex = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newL1InfoTreeIndex;
+        fullAggData.aggBatchData.currentL1InfoTreeRoot = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].currentL1InfoTreeRoot;
+        fullAggData.aggBatchData.currentL1InfoTreeIndex = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].currentL1InfoTreeIndex;
         fullAggData.aggBatchData.newLocalExitRoot = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newLocalExitRoot;
         fullAggData.aggBatchData.newLastTimestamp = fullAggData.singleBatchData[fullAggData.singleBatchData.length - 1].newLastTimestamp;
 
