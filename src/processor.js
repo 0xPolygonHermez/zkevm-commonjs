@@ -163,7 +163,7 @@ module.exports = class Processor {
         // Read Local exit root
         await this._readLocalExitRoot();
 
-        // Calculate stark and snark input
+        // Calculate stark
         await this._computeStarkInput();
 
         this.builded = true;
@@ -977,7 +977,7 @@ module.exports = class Processor {
         const newStateRoot = smtUtils.h4toString(this.currentStateRoot);
         const oldBatchAccInputHash = smtUtils.h4toString(this.oldBatchAccInputHash);
         const newLocalExitRoot = smtUtils.h4toString(this.newLocalExitRoot);
-        const newTimestamp = this.newLastTimestamp.toString();
+        const newLastTimestamp = this.newLastTimestamp.toString();
         this.batchHashData = await computeBatchL2HashData(
             this.getBatchL2Data(),
         );
@@ -997,7 +997,7 @@ module.exports = class Processor {
             oldBatchAccInputHash,
             newBatchAccInputHash, // output
             newLocalExitRoot, // output
-            newTimestamp, // output
+            newLastTimestamp, // output
             chainID: this.chainID,
             forkID: this.forkID,
             forcedHashData: this.forcedHashData,

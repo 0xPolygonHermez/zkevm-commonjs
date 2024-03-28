@@ -3,62 +3,88 @@ const { Scalar } = require('ffjavascript');
 const { sha256Snark, padZeros } = require('./utils');
 
 /**
- * Compute input for SNARK circuit: sha256(aggrAddress, oldStateRoot, oldAccInputHash, oldNumBatch, chainID, forkID, newStateRoot, newAccInputHash, newLocalExitRoot, newNumBatch) % FrSNARK
- * @param {String} oldStateRoot - Current state Root
- * @param {String} newStateRoot - New State root once the batch is processed
- * @param {String} oldBatchAccInputHash - initial accumulateInputHash
- * @param {String} newBatchAccInputHash - final accumulateInputHash
- * @param {String} newLocalExitRoot - New local exit root once the all batches is processed
- * @param {Number} oldNumBatch - initial batch number
- * @param {Number} newNumBatch - final batch number
- * @param {Number} chainID - L2 chainID
- * @param {String} aggregatorAddress - Aggregator Ethereum address in hex string
- * @param {Number} forkID - L2 rom fork identifier
+ * Compute input for SNARK circuit: sha256(
+ * initStateRoot, initBlobStateRoot, initBlobAccInputHash, initNumBlob, chainId, forkID
+ * finalStateRoot, finalBlobStateRoot, finalBlobAccInputHash, finalNumBlob, finalLocalExitRoot
+ * aggregatorAddress
+ * ) % FrSNARK
+ * @param {String} initStateRoot - old state root in hex encoding
+ * @param {String} initBlobStateRoot - old blob state root in hex encoding
+ * @param {String} initBlobAccInputHash - old blob account input hash in hex encoding
+ * @param {Number} initNumBlob - old number of blobs
+ * @param {Number} chainId - chain id
+ * @param {Number} forkID - fork id
+ * @param {String} initStateRoot - new state root in hex encoding
+ * @param {String} initBlobStateRoot - new blob state root in hex encoding
+ * @param {String} initBlobAccInputHash - new blob account input hash in hex encoding
+ * @param {Number} initNumBlob - new number of blobs
+ * @param {String} initLocalExitRoot - new local exit root in hex encoding
+ * @param {String} aggregatorAddress - aggregator address in hex encoding
  * @returns {String} - input snark in hex encoding
  */
 async function calculateSnarkInput(
-    oldStateRoot,
-    newStateRoot,
-    newLocalExitRoot,
-    oldBatchAccInputHash,
-    newBatchAccInputHash,
-    chainID,
-    aggregatorAddress,
+    initStateRoot,
+    initBlobStateRoot,
+    initBlobAccInputHash,
+    initNumBlob,
+    chainId,
     forkID,
+    finalStateRoot,
+    finalBlobStateRoot,
+    finalBlobAccInputHash,
+    finalNumBlob,
+    finalLocalExitRoot,
+    aggregatorAddress,
 ) {
-    // 20 bytes aggregator address
-    const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
+    // 32 bytes each field element for initStateRoot
+    const strInitStateRoot = padZeros((Scalar.fromString(initStateRoot, 16)).toString(16), 64);
 
-    // 32 bytes each field element for oldStateRoot
-    const strOldStateRoot = padZeros((Scalar.fromString(oldStateRoot, 16)).toString(16), 64);
+    // 32 bytes each field element for initBlobStateRoot
+    const strInitBlobStateRoot = padZeros((Scalar.fromString(initBlobStateRoot, 16)).toString(16), 64);
 
-    // 32 bytes each field element for oldStateRoot
-    const strOldBatchAccInputHash = padZeros((Scalar.fromString(oldBatchAccInputHash, 16)).toString(16), 64);
+    // 32 bytes each field element for initBlobAccInputHash
+    const strInitBlobAccInputHash = padZeros((Scalar.fromString(initBlobAccInputHash, 16)).toString(16), 64);
+
+    // 8 bytes for initNumBlob
+    const strInitNumBlob = padZeros(Scalar.e(initNumBlob).toString(16), 16);
 
     // 8 bytes for chainID
-    const strChainID = padZeros(Scalar.e(chainID).toString(16), 16);
+    const strChainID = padZeros(Scalar.e(chainId).toString(16), 16);
 
     // 8 bytes for forkID
     const strForkID = padZeros(Scalar.e(forkID).toString(16), 16);
 
-    // 32 bytes each field element for oldStateRoot
-    const strNewStateRoot = padZeros((Scalar.fromString(newStateRoot, 16)).toString(16), 64);
+    // 32 bytes each field element for finalStateRoot
+    const strFinalStateRoot = padZeros((Scalar.fromString(finalStateRoot, 16)).toString(16), 64);
 
-    // 32 bytes each field element for oldStateRoot
-    const strNewBatchAccInputHash = padZeros((Scalar.fromString(newBatchAccInputHash, 16)).toString(16), 64);
+    // 32 bytes each field element for finalBlobStateRoot
+    const strFinalBlobStateRoot = padZeros((Scalar.fromString(finalBlobStateRoot, 16)).toString(16), 64);
 
-    // 32 bytes each field element for oldStateRoot
-    const strNewLocalExitRoot = padZeros((Scalar.fromString(newLocalExitRoot, 16)).toString(16), 64);
+    // 32 bytes each field element for finalBlobAccInputHash
+    const strFinalBlobAccInputHash = padZeros((Scalar.fromString(finalBlobAccInputHash, 16)).toString(16), 64);
+
+    // 8 bytes for finalNumBlob
+    const strFinalNumBlob = padZeros(Scalar.e(finalNumBlob).toString(16), 16);
+
+    // 32 bytes each field element for finalLocalExitRoot
+    const strFinalLocalExitRoot = padZeros((Scalar.fromString(finalLocalExitRoot, 16)).toString(16), 64);
+
+    // 20 bytes aggregator address
+    const strAggregatorAddress = padZeros((Scalar.fromString(aggregatorAddress, 16)).toString(16), 40);
 
     // build final bytes sha256
-    const finalStr = strAggregatorAddress
-        .concat(strOldStateRoot)
-        .concat(strOldBatchAccInputHash)
+    const finalStr = strInitStateRoot
+        .concat(strInitBlobStateRoot)
+        .concat(strInitBlobAccInputHash)
+        .concat(strInitNumBlob)
         .concat(strChainID)
         .concat(strForkID)
-        .concat(strNewStateRoot)
-        .concat(strNewBatchAccInputHash)
-        .concat(strNewLocalExitRoot);
+        .concat(strFinalStateRoot)
+        .concat(strFinalBlobStateRoot)
+        .concat(strFinalBlobAccInputHash)
+        .concat(strFinalNumBlob)
+        .concat(strFinalLocalExitRoot)
+        .concat(strAggregatorAddress);
 
     return sha256Snark(finalStr);
 }

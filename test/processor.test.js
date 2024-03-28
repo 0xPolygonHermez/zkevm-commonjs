@@ -97,7 +97,6 @@ describe('Processor', async function () {
                 db,
                 poseidon,
                 [F.zero, F.zero, F.zero, F.zero],
-                smtUtils.stringToH4(oldBatchAccInputHash),
                 genesis,
                 null,
                 null,
@@ -158,6 +157,7 @@ describe('Processor', async function () {
             const batch = await zkEVMDB.buildBatch(
                 sequencerAddress,
                 forcedHashData,
+                oldBatchAccInputHash,
                 previousL1InfoTreeRoot,
                 previousL1InfoTreeIndex,
                 Constants.DEFAULT_MAX_TX,

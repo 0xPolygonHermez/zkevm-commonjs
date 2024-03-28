@@ -357,7 +357,7 @@ module.exports = class BlobProcessor {
                     this.finalAccBatchHashData,
                     await computeBatchL2HashData(batchData),
                     this.sequencerAddress,
-                    this.forcedHashData,
+                    (this.blobType === blobConstants.BLOB_TYPE.FORCED) ? this.forcedHashData : Constants.ZERO_BYTES32,
                 );
             }
         }
