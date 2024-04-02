@@ -98,17 +98,18 @@ module.exports = class BlobProcessor {
         // remove '0x' if necessary
         const batchL2Data = _batchL2Data.startsWith('0x') ? _batchL2Data.slice(2) : _batchL2Data;
 
-        if(batchL2Data === "") {
+        if (batchL2Data === '') {
             this.blobLength += 4;
         } else {
             // check hexadecimal string
             if (!isHex(batchL2Data)) {
                 throw new Error('BlobProcessor:addBatchL2Data: invalid hexadecimal string');
             }
-            this.batches.push(batchL2Data);
             this.blobLength += 4 + batchL2Data.length / 2;
         }
-    
+
+        this.batches.push(batchL2Data);
+
         if (this.blobLength > blobConstants.MAX_BLOB_DATA_BYTES) {
             throw new Error('BlobProcessor:addBatchL2Data: blob length exceeds maximum size');
         }
@@ -356,12 +357,14 @@ module.exports = class BlobProcessor {
             // compute finalAccBatchHashData
             for (let i = 0; i < this.batches.length; i++) {
                 const batchData = this.batches[i];
-                this.finalAccBatchHashData = await computeBatchAccInputHash(
-                    this.finalAccBatchHashData,
-                    await computeBatchL2HashData(batchData),
-                    this.sequencerAddress,
-                    (this.blobType === blobConstants.BLOB_TYPE.FORCED) ? this.forcedHashData : Constants.ZERO_BYTES32,
-                );
+                if (batchData !== '') {
+                    this.finalAccBatchHashData = await computeBatchAccInputHash(
+                        this.finalAccBatchHashData,
+                        await computeBatchL2HashData(batchData),
+                        this.sequencerAddress,
+                        (this.blobType === blobConstants.BLOB_TYPE.FORCED) ? this.forcedHashData : Constants.ZERO_BYTES32,
+                    );
+                }
             }
         }
 
