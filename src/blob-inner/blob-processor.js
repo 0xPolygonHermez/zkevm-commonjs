@@ -98,14 +98,17 @@ module.exports = class BlobProcessor {
         // remove '0x' if necessary
         const batchL2Data = _batchL2Data.startsWith('0x') ? _batchL2Data.slice(2) : _batchL2Data;
 
-        // check hexadecimal string
-        if (!isHex(batchL2Data)) {
-            throw new Error('BlobProcessor:addBatchL2Data: invalid hexadecimal string');
+        if(batchL2Data === "") {
+            this.blobLength += 4;
+        } else {
+            // check hexadecimal string
+            if (!isHex(batchL2Data)) {
+                throw new Error('BlobProcessor:addBatchL2Data: invalid hexadecimal string');
+            }
+            this.batches.push(batchL2Data);
+            this.blobLength += 4 + batchL2Data.length / 2;
         }
-
-        this.batches.push(batchL2Data);
-        this.blobLength += 4 + batchL2Data.length / 2;
-
+    
         if (this.blobLength > blobConstants.MAX_BLOB_DATA_BYTES) {
             throw new Error('BlobProcessor:addBatchL2Data: blob length exceeds maximum size');
         }
