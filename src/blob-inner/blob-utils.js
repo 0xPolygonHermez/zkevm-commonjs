@@ -111,6 +111,8 @@ async function computeBatchAccInputHash(
  * @returns {String} - Blob hash data
  */
 function computeBlobL2HashData(blobData) {
+    blobData = blobData.startsWith('0x') ? blobData : `0x${blobData}`;
+
     return ethers.utils.solidityKeccak256(
         ['bytes'],
         [blobData],
@@ -188,7 +190,7 @@ function computeBlobDataFromBatches(batches, blobType) {
     // Add batches
     let batchesData = '';
     for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
+        const batch = batches[i].startsWith('0x') ? batches[i].slice(2) : batches[i];
         // add batch length
         batchesData += Scalar.e(batch.length / 2).toString(16)
             .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH, '0');
@@ -217,7 +219,107 @@ function computeBlobDataFromBatches(batches, blobType) {
     } else {
         throw new Error('BlobProcessor:executeBlob: invalid blob type');
     }
+
     return blobData;
+}
+
+/**
+ * Parse blodData to batchesData
+ * @param {String} blobData - blob data
+ * @param {Scalar} blobType - Blob type
+ * @returns {boolean} - isInvalid
+ * @returns {Array[string]} - batches data
+ */
+function parseBlobData(blobData, blobType) {
+    let tmpBlobdata = '';
+    let isInvalid = false;
+    const batches = [];
+
+    // if blobData is calldata or forced, no need to check and remove MSB each 32 bytes
+    if (blobType === blobConstants.BLOB_TYPE.CALLDATA || blobType === blobConstants.BLOB_TYPE.FORCED) {
+        tmpBlobdata = blobData;
+    } else if (blobType === blobConstants.BLOB_TYPE.EIP4844) {
+        // assure the most significant byte is '00' each slot of 32 bytes
+        for (let i = 0; i < blobData.length; i += 64) {
+            const slot32 = blobData.slice(i, i + 64);
+            if (slot32.slice(0, 2) !== '00') {
+                isInvalid = true;
+
+                return { isInvalid, batches };
+            }
+            tmpBlobdata += slot32.slice(2, 64);
+        }
+    }
+
+    const tmpBlobDataLenString = tmpBlobdata.length;
+
+    // parse blobdata
+    let offsetBytes = 0;
+
+    // read compression type
+    // check 1 byte can be read
+    if (tmpBlobDataLenString < blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE * 2) {
+        isInvalid = true;
+
+        return { isInvalid, batches };
+    }
+
+    const compressionType = Scalar.e(parseInt(tmpBlobdata.slice(
+        offsetBytes,
+        offsetBytes + blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE * 2,
+    ), 16));
+    if (compressionType !== Scalar.e(blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION)) {
+        isInvalid = true;
+
+        return { isInvalid, batches };
+    }
+    offsetBytes += blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE * 2;
+
+    // read body length
+    // check 4 bytes can be read
+    if (tmpBlobDataLenString < offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2) {
+        isInvalid = true;
+
+        return { isInvalid, batches };
+    }
+    const bodyLen = Scalar.e(parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2), 16));
+    offsetBytes += blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2;
+
+    // read batches
+    let bytesBodyReaded = 0;
+    while (offsetBytes < bodyLen) {
+        // check 4 bytes can be read
+        if (tmpBlobDataLenString < offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2) {
+            isInvalid = true;
+
+            return { isInvalid, batches };
+        }
+        const batchLength = parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2), 16);
+        offsetBytes += blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2;
+        bytesBodyReaded += blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH;
+
+        // check batchLength bytes can be read
+        if (tmpBlobDataLenString < offsetBytes + batchLength * 2) {
+            isInvalid = true;
+
+            return { isInvalid, batches };
+        }
+
+        // do not add empty batch
+        if (batchLength !== 0) {
+            const batchData = tmpBlobdata.slice(offsetBytes, offsetBytes + 2 * batchLength);
+            batches.push(batchData);
+        }
+        offsetBytes += batchLength * 2;
+        bytesBodyReaded += batchLength;
+    }
+
+    // check length matches
+    if (bodyLen !== Scalar.e(bytesBodyReaded)) {
+        isInvalid = true;
+    }
+
+    return { isInvalid, batches };
 }
 
 module.exports = {
@@ -229,4 +331,5 @@ module.exports = {
     computeBatchL2HashData,
     computeBatchAccInputHash,
     computeBlobDataFromBatches,
+    parseBlobData,
 };
