@@ -11,7 +11,7 @@ const { getCurrentDB } = require('../smt-utils');
 
 const {
     isHex, computeBlobAccInputHash, computeBlobL2HashData, computePointZ, computePointY,
-    computeBatchL2HashData, computeBatchAccInputHash,
+    computeBatchL2HashData, computeBatchAccInputHash, computeBlobDataFromBatches
 } = require('./blob-utils');
 const blobConstants = require('./blob-constants');
 
@@ -150,7 +150,7 @@ module.exports = class BlobProcessor {
      */
     async execute() {
         // build blobData
-        await this._buildBlobData();
+        this._buildBlobData();
 
         // check zkGasLimit
         await this._checkZkGasLimit();
@@ -168,42 +168,7 @@ module.exports = class BlobProcessor {
 
     _buildBlobData() {
         if (this.addingBatchData === true) {
-            // build blobdata with no spaces
-            // Compression type: 1 byte
-            let resBlobdata = `0x${Scalar.e(blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION).toString(16)
-                .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE, '0')}`;
-
-            // Add batches
-            let batchesData = '';
-            for (let i = 0; i < this.batches.length; i++) {
-                const batch = this.batches[i];
-                // add batch length
-                batchesData += Scalar.e(batch.length / 2).toString(16)
-                    .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH, '0');
-                // add batch
-                batchesData += batch;
-            }
-            // add body length
-            resBlobdata += Scalar.e(batchesData.length / 2).toString(16)
-                .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH, '0');
-            // add batches data
-            resBlobdata += batchesData;
-
-            if (this.blobType === blobConstants.BLOB_TYPE.CALLDATA || this.blobType === blobConstants.BLOB_TYPE.FORCED) {
-                this.blobData = resBlobdata;
-            } else if (this.blobType === blobConstants.BLOB_TYPE.EIP4844) {
-            // build blob data with no spaces and then add 0x00 each 32 bytes
-                this.blobData = '';
-                const blobDataNoSpaces = resBlobdata.slice(2);
-                // add 0x00 each 31 bytes
-                for (let i = 0; i < blobDataNoSpaces.length; i += 62) {
-                    this.blobData += `00${blobDataNoSpaces.slice(i, i + 62)}`;
-                }
-                // pad until blob space is reached
-                this.blobData = `0x${this.blobData.padEnd(blobConstants.BLOB_BYTES * 2, '0')}`;
-            } else {
-                throw new Error('BlobProcessor:executeBlob: invalid blob type');
-            }
+            this.blobData = computeBlobDataFromBatches(this.batches, this.blobType);
         } else if (this.addingBlobData === true) {
             let tmpBlobdata = '';
 

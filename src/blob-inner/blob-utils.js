@@ -173,6 +173,53 @@ async function computePointY(_blobData, _pointZ) {
     return `0x${frBLS12381.mul(a, accum).toString(16).padStart(64, '0')}`;
 }
 
+/**
+ * Compute blodData from batchesData
+ * @param {String} batches - Batches data
+ * @param {Scalar} blobType - Blob type
+ * @returns {Object} - blobData
+ */
+function computeBlobDataFromBatches(batches, blobType) {
+    // build blobdata with no spaces
+    // Compression type: 1 byte
+    let resBlobdata = `0x${Scalar.e(blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION).toString(16)
+        .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE, '0')}`;
+
+    // Add batches
+    let batchesData = '';
+    for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        // add batch length
+        batchesData += Scalar.e(batch.length / 2).toString(16)
+            .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH, '0');
+        // add batch
+        batchesData += batch;
+    }
+    // add body length
+    resBlobdata += Scalar.e(batchesData.length / 2).toString(16)
+        .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH, '0');
+    // add batches data
+    resBlobdata += batchesData;
+
+    let blobData;
+    if (blobType === blobConstants.BLOB_TYPE.CALLDATA || blobType === blobConstants.BLOB_TYPE.FORCED) {
+        blobData = resBlobdata;
+    } else if (blobType === blobConstants.BLOB_TYPE.EIP4844) {
+    // build blob data with no spaces and then add 0x00 each 32 bytes
+        blobData = '';
+        const blobDataNoSpaces = resBlobdata.slice(2);
+        // add 0x00 each 31 bytes
+        for (let i = 0; i < blobDataNoSpaces.length; i += 62) {
+            blobData += `00${blobDataNoSpaces.slice(i, i + 62)}`;
+        }
+        // pad until blob space is reached
+        blobData = `0x${blobData.padEnd(blobConstants.BLOB_BYTES * 2, '0')}`;
+    } else {
+        throw new Error('BlobProcessor:executeBlob: invalid blob type');
+    }
+    return blobData;
+}
+
 module.exports = {
     isHex,
     computeBlobAccInputHash,
@@ -181,4 +228,5 @@ module.exports = {
     computePointY,
     computeBatchL2HashData,
     computeBatchAccInputHash,
+    computeBlobDataFromBatches,
 };
