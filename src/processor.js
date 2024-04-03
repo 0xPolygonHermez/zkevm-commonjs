@@ -240,20 +240,23 @@ module.exports = class Processor {
         }
     }
 
+   /**
+    * The RLP encoding, encodes the 0 integer as "0x" ( empty byte array),
+    * In order to be compatible with Scalar or Number we will update the 0x integer cases with 0x00
+    * @param {bool} isInvalid 
+    * @param {String} reason 
+    * @param {Object} txDecoded 
+    */
     _pushToDecodedTxs(isInvalid, reason, txDecoded) {
         if (txDecoded) {
-            /*
-             * The RLP encoding, encodes the 0 integer as "0x" ( empty byte array),
-             * In order to be compatible with Scalar or Number we will update the 0x integer cases with 0x00
-             */
-           const txParams = Object.keys(txDecoded);
+            const txParams = Object.keys(txDecoded);
             txParams.forEach((key) => {
                 if (txDecoded[key] === '0x' && key !== 'data' && key !== 'to') {
                     txDecoded[key] = '0x00';
                 }
             });
         }
-        this.decodedTxs.push({ isInvalid: isInvalid, reason: reason, tx: txDecoded });
+        this.decodedTxs.push({ isInvalid, reason, tx: txDecoded });
     }
 
     /**
