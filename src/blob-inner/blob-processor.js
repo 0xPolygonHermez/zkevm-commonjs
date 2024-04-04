@@ -11,7 +11,7 @@ const { getCurrentDB } = require('../smt-utils');
 
 const {
     isHex, computeBlobAccInputHash, computeBlobL2HashData, computePointZ, computePointY,
-    computeBatchL2HashData, computeBatchAccInputHash,
+    computeBatchL2HashData, computeBatchAccInputHash, computeBlobDataFromBatches, parseBlobData,
 } = require('./blob-utils');
 const blobConstants = require('./blob-constants');
 
@@ -132,16 +132,20 @@ module.exports = class BlobProcessor {
 
         this.addingBlobData = true;
 
-        // check hexadecimal string
-        if (!isHex(_blobData)) {
-            throw new Error('BlobProcessor:addBatchL2Data: invalid hexadecimal string');
-        }
-
-        // remove '0x' if necessary
+        // remove '0x'
         const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
 
-        if ((blobData.length / 2) === blobConstants.BLOB_BYTES) {
-            throw new Error(`BlobProcessor:addBatchL2Data: blob length is not ${blobConstants.BLOB_BYTES} bytes`);
+        // check hexadecimal string
+        if (!isHex(blobData)) {
+            throw new Error('BlobProcessor:addBlobData: invalid hexadecimal string');
+        }
+
+        this.blobData = blobData;
+
+        if (this.blobType === blobConstants.BLOB_TYPE.EIP4844) {
+            if ((blobData.length / 2) !== blobConstants.BLOB_BYTES) {
+                throw new Error(`BlobProcessor:addBlobData: blob length is not ${blobConstants.BLOB_BYTES} bytes`);
+            }
         }
     }
 
@@ -150,7 +154,7 @@ module.exports = class BlobProcessor {
      */
     async execute() {
         // build blobData
-        await this._buildBlobData();
+        this._buildBlobData();
 
         // check zkGasLimit
         await this._checkZkGasLimit();
@@ -168,122 +172,11 @@ module.exports = class BlobProcessor {
 
     _buildBlobData() {
         if (this.addingBatchData === true) {
-            // build blobdata with no spaces
-            // Compression type: 1 byte
-            let resBlobdata = `0x${Scalar.e(blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION).toString(16)
-                .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE, '0')}`;
-
-            // Add batches
-            let batchesData = '';
-            for (let i = 0; i < this.batches.length; i++) {
-                const batch = this.batches[i];
-                // add batch length
-                batchesData += Scalar.e(batch.length / 2).toString(16)
-                    .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH, '0');
-                // add batch
-                batchesData += batch;
-            }
-            // add body length
-            resBlobdata += Scalar.e(batchesData.length / 2).toString(16)
-                .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH, '0');
-            // add batches data
-            resBlobdata += batchesData;
-
-            if (this.blobType === blobConstants.BLOB_TYPE.CALLDATA || this.blobType === blobConstants.BLOB_TYPE.FORCED) {
-                this.blobData = resBlobdata;
-            } else if (this.blobType === blobConstants.BLOB_TYPE.EIP4844) {
-            // build blob data with no spaces and then add 0x00 each 32 bytes
-                this.blobData = '';
-                const blobDataNoSpaces = resBlobdata.slice(2);
-                // add 0x00 each 31 bytes
-                for (let i = 0; i < blobDataNoSpaces.length; i += 62) {
-                    this.blobData += `00${blobDataNoSpaces.slice(i, i + 62)}`;
-                }
-                // pad until blob space is reached
-                this.blobData = `0x${this.blobData.padEnd(blobConstants.BLOB_BYTES * 2, '0')}`;
-            } else {
-                throw new Error('BlobProcessor:executeBlob: invalid blob type');
-            }
+            this.blobData = computeBlobDataFromBatches(this.batches, this.blobType);
         } else if (this.addingBlobData === true) {
-            let tmpBlobdata = '';
-
-            // if blobData is calldata or forced, no need to check and remove MSB each 32 bytes
-            if (this.blobType === blobConstants.BLOB_TYPE.CALLDATA || this.blobType === blobConstants.BLOB_TYPE.FORCED) {
-                tmpBlobdata = this.blobData;
-            } else if (this.blobType === blobConstants.BLOB_TYPE.EIP4844) {
-                // assure the most significant byte is '00' each slot of 32 bytes
-                for (let i = 0; i < this.blobData.length; i += 64) {
-                    const slot32 = this.blobData.slice(i, i + 64);
-                    if (slot32.slice(0, 2) !== '00') {
-                        this.isInvalid = true;
-
-                        return;
-                    }
-                    tmpBlobdata += slot32.slice(2, 64);
-                }
-            }
-
-            // parse blobdata
-            let offsetBytes = 0;
-            // read compression type
-            // check 1 byte can be read
-            if (tmpBlobdata.length / 2 < blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE) {
-                this.isInvalid = true;
-
-                return;
-            }
-
-            const compressionType = Scalar.e(parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + 2), 16));
-            if (compressionType !== blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION) {
-                this.isInvalid = true;
-
-                return;
-            }
-            offsetBytes += blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE * 2;
-
-            // read body length
-            // check 4 bytes can be read
-            if (tmpBlobdata.length / 2 < offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH) {
-                this.isInvalid = true;
-
-                return;
-            }
-            const bodyLen = Scalar.e(parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2), 16));
-            offsetBytes += blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2;
-
-            // read batches
-            let bytesBodyReaded = 0;
-            while (offsetBytes < bodyLen) {
-                // check 4 bytes can be read
-                if (tmpBlobdata.length / 2 < offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH) {
-                    this.isInvalid = true;
-
-                    return;
-                }
-                const batchLength = Scalar.e(parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2), 16));
-                offsetBytes += blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2;
-                bytesBodyReaded += blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH;
-
-                // check batchLength bytes can be read
-                if (tmpBlobdata.length / 2 < offsetBytes + batchLength) {
-                    this.isInvalid = true;
-
-                    return;
-                }
-
-                // do not add empty batch
-                if (batchLength !== 0) {
-                    const batchData = tmpBlobdata.slice(offsetBytes, offsetBytes + 2 * batchLength);
-                    this.batches.push(batchData);
-                }
-                offsetBytes += 2 * batchLength;
-                bytesBodyReaded += batchLength;
-            }
-
-            // check length matches
-            if (bodyLen !== bytesBodyReaded) {
-                this.isInvalid = true;
-            }
+            const res = parseBlobData(this.blobData, this.blobType);
+            this.isInvalid = res.isInvalid;
+            this.batches = res.batches;
         } else {
             // TODO: Build empty blobInner with no batches. Almost same result
             throw new Error('BlobProcessor:executeBlob: no data added');
@@ -398,7 +291,7 @@ module.exports = class BlobProcessor {
 
         // add extra data
         // add DB
-        this.starkInput.blobData = this.blobData;
+        this.starkInput.blobData = this.blobData.startsWith('0x') ? this.blobData : `0x${this.blobData}`;
         // add DB
         this.starkInput.db = await getCurrentDB(this.oldStateRoot, this.db, this.F);
     }
