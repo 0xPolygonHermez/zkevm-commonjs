@@ -99,13 +99,13 @@ module.exports = class BlobProcessor {
         const batchL2Data = _batchL2Data.startsWith('0x') ? _batchL2Data.slice(2) : _batchL2Data;
 
         if (batchL2Data === '') {
-            this.blobLength += 4;
+            this.blobLength += blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH;
         } else {
             // check hexadecimal string
             if (!isHex(batchL2Data)) {
                 throw new Error('BlobProcessor:addBatchL2Data: invalid hexadecimal string');
             }
-            this.blobLength += 4 + batchL2Data.length / 2;
+            this.blobLength += blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH + batchL2Data.length / 2;
         }
 
         this.batches.push(batchL2Data);
@@ -156,8 +156,15 @@ module.exports = class BlobProcessor {
         // build blobData
         this._buildBlobData();
 
-        // check zkGasLimit
-        await this._checkZkGasLimit();
+        // check forced batches
+        if (this.isInvalid === false) {
+            this._checkForcedBatches();
+        }
+
+        // check zkGasLimit if not already invalid blob
+        if (this.isInvalid === false) {
+            await this._checkZkGasLimit();
+        }
 
         // read local exit root if necessary
         if (this.isInvalid === true) {
@@ -178,8 +185,15 @@ module.exports = class BlobProcessor {
             this.isInvalid = res.isInvalid;
             this.batches = res.batches;
         } else {
-            // TODO: Build empty blobInner with no batches. Almost same result
             throw new Error('BlobProcessor:executeBlob: no data added');
+        }
+    }
+
+    _checkForcedBatches() {
+        if (this.blobType === blobConstants.BLOB_TYPE.FORCED) {
+            if (this.batches.length > blobConstants.MAX_BATCHES_FORCED) {
+                this.isInvalid = true;
+            }
         }
     }
 
