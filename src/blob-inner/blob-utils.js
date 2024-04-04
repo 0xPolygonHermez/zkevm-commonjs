@@ -182,6 +182,7 @@ async function computePointY(_blobData, _pointZ) {
  * @returns {Object} - blobData
  */
 function computeBlobDataFromBatches(batches, blobType) {
+    let isInvalid = false;
     // build blobdata with no spaces
     // Compression type: 1 byte
     let resBlobdata = `0x${Scalar.e(blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION).toString(16)
@@ -217,10 +218,13 @@ function computeBlobDataFromBatches(batches, blobType) {
         // pad until blob space is reached
         blobData = `0x${blobData.padEnd(blobConstants.BLOB_BYTES * 2, '0')}`;
     } else {
-        throw new Error('BlobProcessor:executeBlob: invalid blob type');
+        // throw new Error('BlobProcessor:executeBlob: invalid blob type');
+        isInvalid = true;
+
+        return { isInvalid, blobData };
     }
 
-    return blobData;
+    return { isInvalid, blobData };
 }
 
 /**

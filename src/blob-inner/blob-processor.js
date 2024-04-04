@@ -179,7 +179,9 @@ module.exports = class BlobProcessor {
 
     _buildBlobData() {
         if (this.addingBatchData === true) {
-            this.blobData = computeBlobDataFromBatches(this.batches, this.blobType);
+            const res = computeBlobDataFromBatches(this.batches, this.blobType);
+            this.isInvalid = res.isInvalid;
+            this.blobData = res.blobData;
         } else if (this.addingBlobData === true) {
             const res = parseBlobData(this.blobData, this.blobType);
             this.isInvalid = res.isInvalid;
@@ -240,7 +242,8 @@ module.exports = class BlobProcessor {
             this.pointZ = await computePointZ(this.blobData);
             this.pointY = await computePointY(this.blobData, this.pointZ);
         } else {
-            throw new Error('BlobProcessor:executeBlob: invalid blob type');
+            // throw new Error('BlobProcessor:executeBlob: invalid blob type');
+            this.isInvalid = true;
         }
 
         this.newBlobAccInputHash = computeBlobAccInputHash(
