@@ -7,6 +7,7 @@ module.exports.FIELD_ELEMENTS_PER_BLOB = fieldElementsPerBlob;
 module.exports.BYTES_PER_FIELD_ELEMENT = bytesPerFieldElement;
 module.exports.BLOB_BYTES = fieldElementsPerBlob * bytesPerFieldElement; // 131072
 module.exports.ZKGAS_BATCH = 100000000;
+module.exports.MAX_BATCHES_FORCED = 1;
 
 // blob type
 module.exports.BLOB_TYPE = {
