@@ -153,8 +153,13 @@ module.exports = class BlobProcessor {
      * Execute Blob
      */
     async execute() {
+        // check blob type
+        this._checkBlobType();
+
         // build blobData
-        this._buildBlobData();
+        if (this.isInvalid === false) {
+            this._buildBlobData();
+        }
 
         // check forced batches
         if (this.isInvalid === false) {
@@ -175,6 +180,17 @@ module.exports = class BlobProcessor {
         await this._computeStarkInput();
 
         this.builded = true;
+    }
+
+    _checkBlobType() {
+        if (this.blobType !== blobConstants.BLOB_TYPE.CALLDATA
+            && this.blobType !== blobConstants.BLOB_TYPE.EIP4844
+            && this.blobType !== blobConstants.BLOB_TYPE.FORCED) {
+            if (this.addingBatchData === true) {
+                throw new Error('BlobProcessor:executeBlob: invalid blob type not compatible with batch data');
+            }
+            this.isInvalid = true;
+        }
     }
 
     _buildBlobData() {
@@ -240,7 +256,12 @@ module.exports = class BlobProcessor {
             this.pointZ = await computePointZ(this.blobData);
             this.pointY = await computePointY(this.blobData, this.pointZ);
         } else {
-            throw new Error('BlobProcessor:executeBlob: invalid blob type');
+            // enter here only if blobType is invalid. Hence, blobData has been added previously
+            // blobL2HashData not used
+            this.blobL2HashData = Constants.ZERO_BYTES32;
+            // compute points
+            this.pointZ = await computePointZ(this.blobData);
+            this.pointY = await computePointY(this.blobData, this.pointZ);
         }
 
         this.newBlobAccInputHash = computeBlobAccInputHash(
