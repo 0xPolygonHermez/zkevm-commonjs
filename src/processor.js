@@ -240,12 +240,12 @@ module.exports = class Processor {
         }
     }
 
-   /**
+    /**
     * The RLP encoding, encodes the 0 integer as "0x" ( empty byte array),
     * In order to be compatible with Scalar or Number we will update the 0x integer cases with 0x00
-    * @param {bool} isInvalid 
-    * @param {String} reason 
-    * @param {Object} txDecoded 
+    * @param {bool} isInvalid
+    * @param {String} reason
+    * @param {Object} txDecoded
     */
     _pushToDecodedTxs(isInvalid, reason, txDecoded) {
         if (txDecoded) {
