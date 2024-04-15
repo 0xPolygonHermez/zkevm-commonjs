@@ -172,9 +172,7 @@ module.exports = class BlobProcessor {
         }
 
         // read local exit root if necessary
-        if (this.isInvalid === true) {
-            await this._readLocalExitRoot();
-        }
+        await this._readLocalExitRoot();
 
         // compute stark input
         await this._computeStarkInput();
