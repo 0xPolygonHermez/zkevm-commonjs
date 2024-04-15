@@ -12,6 +12,7 @@ const { getCurrentDB } = require('../smt-utils');
 const {
     isHex, computeBlobAccInputHash, computeBlobL2HashData, computePointZ, computePointY,
     computeBatchL2HashData, computeBatchAccInputHash, computeBlobDataFromBatches, parseBlobData,
+    computeVersionedHash,
 } = require('./blob-utils');
 const blobConstants = require('./blob-constants');
 
@@ -245,21 +246,30 @@ module.exports = class BlobProcessor {
             // compute blobL2HashData
             this.blobL2HashData = await computeBlobL2HashData(this.blobData);
             // points not used
+            this.kzgCommitment = Constants.ZERO_BYTES32;
+            this.versionedHash = Constants.ZERO_BYTES32;
             this.pointZ = Constants.ZERO_BYTES32;
             this.pointY = Constants.ZERO_BYTES32;
+            this.proof = Constants.ZERO_BYTES32;
         } else if (this.blobType === blobConstants.BLOB_TYPE.EIP4844) {
             // blobL2HashData not used
             this.blobL2HashData = Constants.ZERO_BYTES32;
-            // compute points
-            this.pointZ = await computePointZ(this.blobData);
+            // compute kzg data
+            this.kzgCommitment = blobConstants.MOCK_KZG_COMMITMENT;
+            this.versionedHash = computeVersionedHash(this.kzgCommitment);
+            this.pointZ = await computePointZ(this.blobData, this.kzgCommitment);
             this.pointY = await computePointY(this.blobData, this.pointZ);
+            this.kzgProof = blobConstants.MOCK_KZG_PROOF;
         } else {
             // enter here only if blobType is invalid. Hence, blobData has been added previously
             // blobL2HashData not used
             this.blobL2HashData = Constants.ZERO_BYTES32;
-            // compute points
-            this.pointZ = await computePointZ(this.blobData);
+            // compute kzg data
+            this.kzgCommitment = blobConstants.MOCK_KZG_COMMITMENT;
+            this.versionedHash = computeVersionedHash(this.kzgCommitment);
+            this.pointZ = await computePointZ(this.blobData, this.kzgCommitment);
             this.pointY = await computePointY(this.blobData, this.pointZ);
+            this.kzgProof = blobConstants.MOCK_KZG_PROOF;
         }
 
         this.newBlobAccInputHash = computeBlobAccInputHash(
@@ -270,8 +280,7 @@ module.exports = class BlobProcessor {
             this.sequencerAddress,
             this.zkGasLimit,
             this.blobType,
-            this.pointZ,
-            this.pointY,
+            this.versionedHash,
             this.blobL2HashData,
             this.forcedHashData,
         );
@@ -302,8 +311,7 @@ module.exports = class BlobProcessor {
             oldStateRoot: smtUtils.h4toString(this.oldStateRoot),
             forkID: this.forkID,
             // compute accInputHash
-            y: this.pointY,
-            z: this.pointZ,
+            versionedHash: this.versionedHash,
             blobType: this.blobType,
             sequencerAddr: this.sequencerAddress,
             zkGasLimit: this.zkGasLimit.toString(),
@@ -322,9 +330,16 @@ module.exports = class BlobProcessor {
             lastL1InfoTreeRoot: this.lastL1InfoTreeRoot,
         };
 
-        // add extra data
-        // add DB
+        // add data kzg computations
+        this.starkInput.kzgCommitment = this.kzgCommitment;
+        this.starkInput.versionedHash = this.versionedHash;
+        this.starkInput.kzgProof = this.kzgProof;
+        this.starkInput.z = this.pointZ;
+        this.starkInput.y = this.pointY;
+
+        // add blobdata
         this.starkInput.blobData = this.blobData.startsWith('0x') ? this.blobData : `0x${this.blobData}`;
+
         // add DB
         this.starkInput.db = await getCurrentDB(this.oldStateRoot, this.db, this.F);
     }
