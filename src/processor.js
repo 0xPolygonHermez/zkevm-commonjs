@@ -200,7 +200,7 @@ module.exports = class Processor {
             // check is changeL2Block transaction
             if (rawTx.startsWith(`0x${Constants.TX_CHANGE_L2_BLOCK.toString(16).padStart(2, '0')}`)) {
                 txDecoded = await decodeChangeL2BlockTx(rawTx);
-                this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
+                this._pushToDecodedTxs(false, '', txDecoded);
                 continue;
             }
 
@@ -209,7 +209,7 @@ module.exports = class Processor {
                 txDecoded = decodedObject.txDecoded;
                 rlpSignData = decodedObject.rlpSignData;
             } catch (error) {
-                this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Failed to RLP decode signing data', tx: txDecoded });
+                this._pushToDecodedTxs(true, 'TX INVALID: Failed to RLP decode signing data', txDecoded);
                 this.isInvalid = true;
                 continue;
             }
@@ -219,7 +219,7 @@ module.exports = class Processor {
             this.isLegacyTx = typeof txDecoded.chainID === 'undefined';
             txDecoded.chainID = this.isLegacyTx ? txDecoded.chainID : Number(txDecoded.chainID);
             if (!this.isLegacyTx && txDecoded.chainID !== this.chainID) {
-                this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Chain ID does not match', tx: txDecoded });
+                this._pushToDecodedTxs(true, 'TX INVALID: Chain ID does not match', txDecoded);
                 continue;
             }
 
@@ -232,23 +232,31 @@ module.exports = class Processor {
                     v: txDecoded.v,
                 });
             } catch (error) {
-                this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Failed signature', tx: txDecoded });
+                this._pushToDecodedTxs(true, 'TX INVALID: Failed signature', txDecoded);
                 continue;
             }
 
-            /*
-             * The RLP encoding, encodes the 0 integer as "0x" ( empty byte array),
-             * In order to be compatible with Scalar or Number we will update the 0x integer cases with 0x00
-             */
-            const txParams = Object.keys(txDecoded);
+            this._pushToDecodedTxs(false, '', txDecoded);
+        }
+    }
 
+    /**
+    * The RLP encoding, encodes the 0 integer as "0x" ( empty byte array),
+    * In order to be compatible with Scalar or Number we will update the 0x integer cases with 0x00
+    * @param {bool} isInvalid
+    * @param {String} reason
+    * @param {Object} txDecoded
+    */
+    _pushToDecodedTxs(isInvalid, reason, txDecoded) {
+        if (txDecoded) {
+            const txParams = Object.keys(txDecoded);
             txParams.forEach((key) => {
                 if (txDecoded[key] === '0x' && key !== 'data' && key !== 'to') {
                     txDecoded[key] = '0x00';
                 }
             });
-            this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
         }
+        this.decodedTxs.push({ isInvalid, reason, tx: txDecoded });
     }
 
     /**
