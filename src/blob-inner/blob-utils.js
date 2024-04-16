@@ -145,7 +145,7 @@ function computeVersionedHash(kzgCommitment) {
  * @param {String} _blobData - Blob data
  * @returns pointZ
  */
-async function computePointZ(_kzgCommitment, _blobData) {
+async function computePointZ(_blobData, _kzgCommitment) {
     // remove 0x from blobData
     const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
 
