@@ -900,11 +900,6 @@ module.exports = class Processor {
                     return true;
                 }
 
-                // Verify newTimestamp >= l1InfoRoot.minTimestamp
-                if (Scalar.lt(newTimestamp, l1Info.minTimestamp)) {
-                    return true;
-                }
-
                 // Check if previousL1InfoTree index is 0
                 if (this.currentL1InfoTreeIndex === 0) {
                     if (typeof l1Info.historicRoot === 'undefined') {
@@ -923,6 +918,12 @@ module.exports = class Processor {
                     this.currentL1InfoTreeRoot = getL1InfoTreeRoot(historicRoot, infoTreeData);
                     this.currentL1InfoTreeIndex = tx.indexL1InfoTree;
                 }
+
+                // Verify newTimestamp >= l1InfoRoot.minTimestamp
+                if (Scalar.lt(newTimestamp, l1Info.minTimestamp)) {
+                    return true;
+                }
+
                 // write l1Info data depending if the global exit root already exist or is zero
                 finalGER = l1Info.globalExitRoot;
                 const writeL1Info = await this._shouldWriteL1Info(l1Info.globalExitRoot);

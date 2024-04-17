@@ -59,7 +59,7 @@ describe('BlobProcessor', async function () {
             // Add localExitRoot to the DB
             const smt = new SMT(db, poseidon, poseidon.F);
 
-            // Update smt with the new timestamp
+            // Update smt with the init localExitRoot
             const oldStateRoot = await stateUtils.setContractStorage(
                 Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2,
                 smt,
