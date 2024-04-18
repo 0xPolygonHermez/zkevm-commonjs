@@ -257,7 +257,7 @@ module.exports = class BlobProcessor {
             // compute kzg data
             this.kzgCommitment = blobConstants.MOCK_KZG_COMMITMENT;
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
-            this.pointZ = await computePointZ(this.blobData, this.kzgCommitment);
+            this.pointZ = await computePointZ(this.kzgCommitment, this.blobData);
             this.pointY = await computePointY(this.blobData, this.pointZ);
             this.kzgProof = blobConstants.MOCK_KZG_PROOF;
         } else {
@@ -267,7 +267,7 @@ module.exports = class BlobProcessor {
             // compute kzg data
             this.kzgCommitment = blobConstants.MOCK_KZG_COMMITMENT;
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
-            this.pointZ = await computePointZ(this.blobData, this.kzgCommitment);
+            this.pointZ = await computePointZ(this.kzgCommitment, this.blobData);
             this.pointY = await computePointY(this.blobData, this.pointZ);
             this.kzgProof = blobConstants.MOCK_KZG_PROOF;
         }
