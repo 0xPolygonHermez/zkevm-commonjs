@@ -138,6 +138,19 @@ function computeVersionedHash(kzgCommitment) {
 
     return `0x${blobConstants.VERSIONED_HASH_VERSION_KZG}${sha256Str.slice(2, 64)}`;
 }
+/**
+ * Compute pointZ data
+ * @param {String} _kzgCommitment - kzg commitment
+ * @param {String} _blobData - Blob data
+ * @returns pointZData = kzgCommitment + blobData
+ */
+function buildPointZData(_kzgCommitment, _blobData) {
+    // remove 0x from blobData
+    const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
+    const pointZData = `${_kzgCommitment}${blobData}`;
+
+    return pointZData;
+}
 
 /**
  * Compute pointZ
@@ -145,11 +158,10 @@ function computeVersionedHash(kzgCommitment) {
  * @param {String} _blobData - Blob data
  * @returns pointZ
  */
-async function computePointZ(_blobData, _kzgCommitment) {
-    // remove 0x from blobData
-    const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
+async function computePointZ(_kzgCommitment, _blobData) {
+    const pointZData = buildPointZData(_kzgCommitment, _blobData);
 
-    return linearPoseidon(`${_kzgCommitment}${blobData}`);
+    return linearPoseidon(pointZData);
 }
 
 /**
@@ -339,6 +351,7 @@ module.exports = {
     isHex,
     computeBlobAccInputHash,
     computeBlobL2HashData,
+    buildPointZData,
     computePointZ,
     computePointY,
     computeBatchL2HashData,
