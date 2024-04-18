@@ -1,6 +1,7 @@
 /* eslint-disable no-continue */
 const ethers = require('ethers');
 const { Scalar } = require('ffjavascript');
+const { createHash } = require('node:crypto');
 
 const blobConstants = require('./blob-constants');
 const { linearPoseidon } = require('../smt-utils');
@@ -32,8 +33,7 @@ function isHex(str) {
  * @param {String} sequencerAddress - Sequencer address
  * @param {BigInt} zkGasLimit - zkGasLimit
  * @param {Number} blobType - blob type
- * @param {String} pointZ - pointZ
- * @param {String} pointY - pointY
+ * @param {String} versionedHash - versioned hash
  * @param {String} blobL2HashData - blob hash data
  * @param {String} forcedHashData - forced hash data
  * @returns {String} - accumulateInputHash in hex encoding
@@ -46,13 +46,12 @@ function computeBlobAccInputHash(
     sequencerAddress,
     zkGasLimit,
     blobType,
-    pointZ,
-    pointY,
+    versionedHash,
     blobL2HashData,
     forcedHashData,
 ) {
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'uint32', 'bytes32', 'uint64', 'address', 'uint64', 'uint8', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
+        ['bytes32', 'uint32', 'bytes32', 'uint64', 'address', 'uint64', 'uint8', 'bytes32', 'bytes32', 'bytes32'],
         [
             oldBlobAccInputHash,
             lastL1InfoTreeIndex,
@@ -61,8 +60,7 @@ function computeBlobAccInputHash(
             sequencerAddress,
             zkGasLimit,
             blobType,
-            pointZ,
-            pointY,
+            versionedHash,
             blobL2HashData,
             forcedHashData,
         ],
@@ -131,12 +129,27 @@ async function computeBatchL2HashData(
 }
 
 /**
+ * Compute versioned hash
+ * @param {String} kzgCommitment - kzg commitment
+ * @returns {String} - versioned hash in hex encoding
+ */
+function computeVersionedHash(kzgCommitment) {
+    const sha256Str = createHash('sha256').update(Uint8Array.from(kzgCommitment)).digest('hex');
+
+    return `0x${blobConstants.VERSIONED_HASH_VERSION_KZG}${sha256Str.slice(2, 64)}`;
+}
+
+/**
  * Compute pointZ
- * @param {String} blobData - Blob data
+ * @param {String} _kzgCommitment - kzg commitment
+ * @param {String} _blobData - Blob data
  * @returns pointZ
  */
-async function computePointZ(blobData) {
-    return linearPoseidon(blobData);
+async function computePointZ(_blobData, _kzgCommitment) {
+    // remove 0x from blobData
+    const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
+
+    return linearPoseidon(`${_kzgCommitment}${blobData}`);
 }
 
 /**
@@ -332,4 +345,5 @@ module.exports = {
     computeBatchAccInputHash,
     computeBlobDataFromBatches,
     parseBlobData,
+    computeVersionedHash,
 };
