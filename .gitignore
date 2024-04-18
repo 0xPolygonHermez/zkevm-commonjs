@@ -118,3 +118,6 @@ tools/fill-genesis/*.ignore.json
 
 # input examples
 tools/inputs-examples/
+
+# trusted setup cache
+src/trusted-setup/trusted-setup.txt

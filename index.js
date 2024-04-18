@@ -26,4 +26,5 @@ module.exports.blobInner = {
     Constants: require('./src/blob-inner/blob-constants'),
     parsers: require('./src/blob-inner/blob-parsers'),
     frBLS12381: require('./src/blob-inner/fr-bls-12-381'),
+    getKzg: require('./src/blob-inner/kzg-utils'),
 };

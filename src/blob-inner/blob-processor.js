@@ -8,9 +8,10 @@ const Constants = require('../constants');
 const smtUtils = require('../smt-utils');
 const stateUtils = require('../state-utils');
 const { getCurrentDB } = require('../smt-utils');
+const getKzg = require('./kzg-utils');
 
 const {
-    isHex, computeBlobAccInputHash, computeBlobL2HashData, computePointZ, computePointY,
+    isHex, computeBlobAccInputHash, computeBlobL2HashData,
     computeBatchL2HashData, computeBatchAccInputHash, computeBlobDataFromBatches, parseBlobData,
     computeVersionedHash,
 } = require('./blob-utils');
@@ -154,6 +155,9 @@ module.exports = class BlobProcessor {
      * Execute Blob
      */
     async execute() {
+        // load kzg
+        this.kzg = await getKzg();
+
         // check blob type
         this._checkBlobType();
 
@@ -255,21 +259,23 @@ module.exports = class BlobProcessor {
             // blobL2HashData not used
             this.blobL2HashData = Constants.ZERO_BYTES32;
             // compute kzg data
-            this.kzgCommitment = blobConstants.MOCK_KZG_COMMITMENT;
+            this.kzgCommitment = this.kzg.blobToKzgCommitment(this.blobData);
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
-            this.pointZ = await computePointZ(this.kzgCommitment, this.blobData);
-            this.pointY = await computePointY(this.blobData, this.pointZ);
-            this.kzgProof = blobConstants.MOCK_KZG_PROOF;
+            this.pointZ = await this.kzg.computePointZ(this.blobData, this.kzgCommitment);
+            const { proof, pointY } = this.kzg.computeKzgProof(this.blobData, this.pointZ);
+            this.pointY = pointY;
+            this.kzgProof = proof;
         } else {
             // enter here only if blobType is invalid. Hence, blobData has been added previously
             // blobL2HashData not used
             this.blobL2HashData = Constants.ZERO_BYTES32;
             // compute kzg data
-            this.kzgCommitment = blobConstants.MOCK_KZG_COMMITMENT;
+            this.kzgCommitment = this.kzg.blobToKzgCommitment(this.blobData);
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
-            this.pointZ = await computePointZ(this.kzgCommitment, this.blobData);
-            this.pointY = await computePointY(this.blobData, this.pointZ);
-            this.kzgProof = blobConstants.MOCK_KZG_PROOF;
+            this.pointZ = await this.kzg.computePointZ(this.blobData, this.kzgCommitment);
+            const { proof, pointY } = this.kzg.computeKzgProof(this.blobData, this.pointZ);
+            this.pointY = pointY;
+            this.kzgProof = proof;
         }
 
         this.newBlobAccInputHash = computeBlobAccInputHash(
