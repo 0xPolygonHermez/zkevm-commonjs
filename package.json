@@ -10,8 +10,8 @@
     "test:e2e": "npx mocha ./test/processor.test.js --e2e",
     "test:blockinfo": "npx mocha ./test/processor.test.js --blockinfo",
     "test:selfdestruct": "npx mocha ./test/processor.test.js --selfdestruct",
-    "eslint": "npx eslint 'src/**' 'test/**/**.test.js' && npx eslint tools",
-    "eslint:fix": "npx 'eslint src/**' 'test/**/**.test.js' --fix  && npx eslint tools --fix",
+    "eslint": "npx eslint 'src/**/**.js' 'test/**/**.test.js' && npx eslint tools",
+    "eslint:fix": "npx 'eslint src/**/**.js' 'test/**/**.test.js' --fix  && npx eslint tools --fix",
     "test:update": "./tools/update-tests/update-tests.sh",
     "test:database": "npx mocha ./test/database.test.js",
     "build:inputs": "npx mocha ./test/processor.test.js --update --geninputs && npx mocha ./test/processor.test.js --etrog --update --geninputs"
@@ -54,6 +54,7 @@
     "@ethereumjs/tx": "^3.4.0",
     "@polygon-hermez/common": "2.6.4",
     "@polygon-hermez/vm": "7.0.0",
+    "c-kzg": "^2.1.2",
     "ethereumjs-util": "^7.1.4",
     "ethers": "^5.5.4",
     "ffjavascript": "^0.2.55",

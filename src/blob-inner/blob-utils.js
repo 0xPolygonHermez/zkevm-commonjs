@@ -6,6 +6,7 @@ const { createHash } = require('node:crypto');
 const blobConstants = require('./blob-constants');
 const { linearPoseidon } = require('../smt-utils');
 const { frBLS12381, rootsUnity, inv4096Fr } = require('./fr-bls-12-381');
+const utils = require('../utils');
 
 /**
  * Check if a string is a valid hexadecimal string
@@ -134,7 +135,8 @@ async function computeBatchL2HashData(
  * @returns {String} - versioned hash in hex encoding
  */
 function computeVersionedHash(kzgCommitment) {
-    const sha256Str = createHash('sha256').update(Uint8Array.from(kzgCommitment)).digest('hex');
+    const kzgCommitmentArray = new Uint8Array(utils.hexString2byteArray(kzgCommitment));
+    const sha256Str = createHash('sha256').update(kzgCommitmentArray).digest('hex');
 
     return `0x${blobConstants.VERSIONED_HASH_VERSION_KZG}${sha256Str.slice(2, 64)}`;
 }
@@ -159,9 +161,11 @@ function buildPointZData(_kzgCommitment, _blobData) {
  * @returns pointZ
  */
 async function computePointZ(_kzgCommitment, _blobData) {
-    const pointZData = buildPointZData(_kzgCommitment, _blobData);
+    const hash = await linearPoseidon(buildPointZData(_kzgCommitment, _blobData));
 
-    return linearPoseidon(pointZData);
+    const hashModFrBLS = Scalar.mod(Scalar.fromString(hash, 16), frBLS12381.p);
+
+    return `0x${hashModFrBLS.toString(16).padStart(blobConstants.BYTES_PER_FIELD_ELEMENT, '0')}`;
 }
 
 /**
@@ -170,7 +174,7 @@ async function computePointZ(_kzgCommitment, _blobData) {
  * @param {Scalar} _pointZ - pointZ
  * @returns {Object} - pointY
  */
-async function computePointY(_blobData, _pointZ) {
+function computePointY(_blobData, _pointZ) {
     // remove 0x from blobData
     const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
     const pointZ = Scalar.e(_pointZ);
