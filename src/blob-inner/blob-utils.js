@@ -165,7 +165,7 @@ async function computePointZ(_kzgCommitment, _blobData) {
 
     const hashModFrBLS = Scalar.mod(Scalar.fromString(hash, 16), frBLS12381.p);
 
-    return `0x${hashModFrBLS.toString(16).padStart(blobConstants.BYTES_PER_FIELD_ELEMENT, '0')}`;
+    return `0x${hashModFrBLS.toString(16).padStart(2 * blobConstants.BYTES_PER_FIELD_ELEMENT, '0')}`;
 }
 
 /**
