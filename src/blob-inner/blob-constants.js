@@ -34,3 +34,24 @@ module.exports.BLOB_ENCODING = {
     BYTES_BODY_LENGTH: 4,
     BYTES_BATCH_LENGTH: 4,
 };
+
+// blob errors
+module.exports.BLOB_ERRORS = {
+    ROM_BLOB_ERROR_UNSPECIFIED: 'unspecified error',
+    // ROM_ERROR_NO_ERROR indicates the execution ended successfully
+    ROM_BLOB_ERROR_NO_ERROR: '',
+    // ROM_BLOB_ERROR_INVALID_PARSING indicates that has been an error while parsing the blob data
+    ROM_BLOB_ERROR_INVALID_PARSING: 'error_invalid_parsing',
+    // ROM_BLOB_ERROR_INVALID_MSB_BYTE indicates that the MSB on one field element is different than zero (only for blob_type = 1)
+    ROM_BLOB_ERROR_INVALID_MSB_BYTE: 'error_invalid_msb_byte',
+    // ROM_BLOB_ERROR_INVALID_ZK_GAS_LIMIT not enough zk_gas_limit supplied to pay for batches proofs
+    ROM_BLOB_ERROR_INVALID_ZK_GAS_LIMIT: 'error_invalid_zkgaslimit',
+    // ROM_BLOB_ERROR_INVALID_BLOB_TYPE blob_type not supported
+    ROM_BLOB_ERROR_INVALID_BLOB_TYPE: 'error_invalid_blob_type',
+    // ROM_BLOB_ERROR_INVALID_COMPRESSION_TYPE compression type not supported
+    ROM_BLOB_ERROR_INVALID_COMPRESSION_TYPE: 'error_invalid_compression_type',
+    // ROM_BLOB_ERROR_INVALID_FORCED_BATCHES blobtype = 2 and numBatches > 1
+    ROM_BLOB_ERROR_INVALID_FORCED_BATCHES: 'error_invalid_forced_batches',
+    // ROM_BLOB_ERROR_INVALID_TOTALBODY_LEN totalBodyLen != blobDataLen - 1 (byte compression) - 4 (bytes totalBodyLen)
+    ROM_BLOB_ERROR_INVALID_TOTALBODY_LEN: 'error_invalid_totalbody_len',
+};

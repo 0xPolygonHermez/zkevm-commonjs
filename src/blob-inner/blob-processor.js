@@ -79,6 +79,7 @@ module.exports = class BlobProcessor {
         this.blobLength = 0;
         this.builded = false;
         this.isInvalid = false;
+        this.error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_NO_ERROR;
 
         this.batches = [];
         this.starkInput = {};
@@ -193,6 +194,7 @@ module.exports = class BlobProcessor {
                 throw new Error('BlobProcessor:executeBlob: invalid blob type not compatible with batch data');
             }
             this.isInvalid = true;
+            this.error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_BLOB_TYPE;
         }
     }
 
@@ -203,6 +205,7 @@ module.exports = class BlobProcessor {
             const res = parseBlobData(this.blobData, this.blobType);
             this.isInvalid = res.isInvalid;
             this.batches = res.batches;
+            this.error = res.error;
         } else {
             throw new Error('BlobProcessor:executeBlob: no data added');
         }
@@ -212,6 +215,7 @@ module.exports = class BlobProcessor {
         if (this.blobType === blobConstants.BLOB_TYPE.FORCED) {
             if (this.batches.length > blobConstants.MAX_BATCHES_FORCED) {
                 this.isInvalid = true;
+                this.error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_FORCED_BATCHES;
             }
         }
     }
@@ -221,6 +225,7 @@ module.exports = class BlobProcessor {
 
         if (Scalar.lt(this.zkGasLimit, minZkGasLimit)) {
             this.isInvalid = true;
+            this.error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_ZK_GAS_LIMIT;
         }
     }
 
@@ -330,6 +335,7 @@ module.exports = class BlobProcessor {
             finalAccBatchHashData: this.finalAccBatchHashData,
             localExitRootFromBlob: this.localExitRootFromBlob,
             isInvalid: this.isInvalid,
+            error: this.error,
             // outputs from blobAccInputHash
             timestampLimit: this.timestampLimit.toString(),
             lastL1InfoTreeIndex: this.lastL1InfoTreeIndex,
