@@ -261,7 +261,7 @@ module.exports = class BlobProcessor {
             // compute kzg data
             this.kzgCommitment = this.kzg.blobToKzgCommitment(this.blobData);
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
-            this.pointZ = await this.kzg.computePointZ(this.blobData, this.kzgCommitment);
+            this.pointZ = await this.kzg.computePointZ(this.kzgCommitment, this.blobData);
             const { proof, pointY } = this.kzg.computeKzgProof(this.blobData, this.pointZ);
             this.pointY = pointY;
             this.kzgProof = proof;
@@ -272,7 +272,7 @@ module.exports = class BlobProcessor {
             // compute kzg data
             this.kzgCommitment = this.kzg.blobToKzgCommitment(this.blobData);
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
-            this.pointZ = await this.kzg.computePointZ(this.blobData, this.kzgCommitment);
+            this.pointZ = await this.kzg.computePointZ(this.kzgCommitment, this.blobData);
             const { proof, pointY } = this.kzg.computeKzgProof(this.blobData, this.pointZ);
             this.pointY = pointY;
             this.kzgProof = proof;
