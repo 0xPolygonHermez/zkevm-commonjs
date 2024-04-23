@@ -259,11 +259,11 @@ module.exports = class BlobProcessor {
             // blobL2HashData not used
             this.blobL2HashData = Constants.ZERO_BYTES32;
             // compute kzg data
-            const newBlobData = reduceBlobData(this.blobData);
-            this.kzgCommitment = this.kzg.blobToKzgCommitment(newBlobData);
+            const reducedBlobData = reduceBlobData(this.blobData);
+            this.kzgCommitment = this.kzg.blobToKzgCommitment(reducedBlobData);
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
-            this.pointZ = await this.kzg.computePointZ(newBlobData, this.kzgCommitment);
-            const { proof, pointY } = this.kzg.computeKzgProof(newBlobData, this.pointZ);
+            this.pointZ = await this.kzg.computePointZ(this.kzgCommitment, this.blobData);
+            const { proof, pointY } = this.kzg.computeKzgProof(reducedBlobData, this.pointZ);
             this.pointY = pointY;
             this.kzgProof = proof;
         } else {
@@ -273,7 +273,7 @@ module.exports = class BlobProcessor {
             // compute kzg data
             this.kzgCommitment = this.kzg.blobToKzgCommitment(this.blobData);
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
-            this.pointZ = await this.kzg.computePointZ(this.blobData, this.kzgCommitment);
+            this.pointZ = await this.kzg.computePointZ(this.kzgCommitment, this.blobData);
             const { proof, pointY } = this.kzg.computeKzgProof(this.blobData, this.pointZ);
             this.pointY = pointY;
             this.kzgProof = proof;
