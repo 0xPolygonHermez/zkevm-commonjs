@@ -13,7 +13,7 @@ const getKzg = require('./kzg-utils');
 const {
     isHex, computeBlobAccInputHash, computeBlobL2HashData,
     computeBatchL2HashData, computeBatchAccInputHash, computeBlobDataFromBatches, parseBlobData,
-    computeVersionedHash, reduceBlobData
+    computeVersionedHash, reduceBlobData,
 } = require('./blob-utils');
 const blobConstants = require('./blob-constants');
 
@@ -259,7 +259,7 @@ module.exports = class BlobProcessor {
             // blobL2HashData not used
             this.blobL2HashData = Constants.ZERO_BYTES32;
             // compute kzg data
-            const newBlobData = reduceBlobData(this.blobData)
+            const newBlobData = reduceBlobData(this.blobData);
             this.kzgCommitment = this.kzg.blobToKzgCommitment(newBlobData);
             this.versionedHash = computeVersionedHash(this.kzgCommitment);
             this.pointZ = await this.kzg.computePointZ(newBlobData, this.kzgCommitment);

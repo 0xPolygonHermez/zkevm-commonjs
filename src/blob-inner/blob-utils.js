@@ -351,21 +351,22 @@ function parseBlobData(blobData, blobType) {
     return { isInvalid, batches };
 }
 
-function reduceBlobData(blobData) {
-    const r = Scalar.e("0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001");
-    let counter = 0;
-    let blobDataFinal = "0x";
-    if(blobData.startsWith("0x")) {
-        counter += 2;
+/**
+ * Apply mod FrBLS12381 to each element in blobData
+ * @param {String} _blobData blob data
+ * @returns {String} - blobData with each element % FrBLA12_381
+ */
+function reduceBlobData(_blobData) {
+    const blobData = _blobData.startsWith('0x') ? _blobData.slice(2) : _blobData;
+    let blobDataReduced = '0x';
+
+    for (let i = 0; i < blobConstants.FIELD_ELEMENTS_PER_BLOB; i++) {
+        const fieldBlobData = Scalar.e(`0x${blobData.slice(i * (blobConstants.BYTES_PER_FIELD_ELEMENT * 2), (i + 1) * (blobConstants.BYTES_PER_FIELD_ELEMENT * 2))}`);
+        const final = (Scalar.mod(fieldBlobData, frBLS12381.p)).toString(16).padStart(blobConstants.BYTES_PER_FIELD_ELEMENT * 2, '0');
+        blobDataReduced += final;
     }
-    for(let i = 0; i < blobConstants.FIELD_ELEMENTS_PER_BLOB; i++) {
-        const finalCounter = counter+blobConstants.BYTES_PER_FIELD_ELEMENT*2;
-        const elem = Scalar.e("0x" + blobData.substring(counter, finalCounter));
-        const final = Scalar.mod(elem,r).toString(16).padStart(64,'0');
-        blobDataFinal = blobDataFinal+final;
-        counter = finalCounter; 
-    }
-    return blobDataFinal
+
+    return blobDataReduced;
 }
 
 module.exports = {
@@ -380,5 +381,5 @@ module.exports = {
     computeBlobDataFromBatches,
     parseBlobData,
     computeVersionedHash,
-    reduceBlobData
+    reduceBlobData,
 };
