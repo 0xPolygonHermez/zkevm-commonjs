@@ -1,7 +1,6 @@
 [
     {
         "oldStateRoot": "0x1fe466d9df83e1d2a4c32e21c6078b8f5f590e7db30b006965faa2f27a9b4fea",
-        "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "newBlockNumber": 1,
         "blockGasLimit": "0xffffffff",
         "finalTimestamp": 1944498031,
@@ -31,11 +30,10 @@
                 "effectivePercentage": "0xff"
             }
         ],
-        "finalBlockInfoRoot": "0xc613144bc2893293e4ec4db6a225ccaf58ab9ebe820035e74f44013f85db1067"
+        "finalBlockInfoRoot": "0x8faa0995eb9d7d0e4f0854d719b4d6c0ffc3438203a08f3cb9a8a28922708748"
     },
     {
         "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
-        "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "newBlockNumber": 1,
         "blockGasLimit": "0xffffffff",
         "finalTimestamp": 1944498031,
@@ -50,11 +48,10 @@
                 "effectivePercentage": "0x00"
             }
         ],
-        "finalBlockInfoRoot": "0x01f06eb68cadab49affb988b9f03dcb1789f852e1046c6f74c3b0d758af1cc8b"
+        "finalBlockInfoRoot": "0x828d7e466675c4cd8fa25f75098c32209139427444412caae3c9c0de0546a021"
     },
     {
         "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
-        "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "newBlockNumber": 1,
         "blockGasLimit": "0xffffffff",
         "finalTimestamp": 1944498031,
@@ -69,11 +66,10 @@
                 "effectivePercentage": "0xff"
             }
         ],
-        "finalBlockInfoRoot": "0x34805cbe4a3afd8f8d2d091f284a2bb52a60827af14cce94063bc54728466703"
+        "finalBlockInfoRoot": "0xa555ee7ebe861da4758b897f487fff99028bd18626706ec851a7105d95cce167"
     },
     {
         "oldStateRoot": "0x4a9bfcb163ec91c5beb22e6aca41592433092c8c7821b01d37fd0de483f9265d",
-        "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "newBlockNumber": 5,
         "blockGasLimit": "0xffffffff",
         "finalTimestamp": 1944498031,
@@ -88,6 +84,6 @@
                 "effectivePercentage": "0xff"
             }
         ],
-        "finalBlockInfoRoot": "0x774e651f18ea6fb4ecfb698ec769bc519b59474474dae344c360301792d0a9f1"
+        "finalBlockInfoRoot": "0xfba3cedb7242f97e575a65ff027e41b793c433f4bf04d0af79046d78bb489cba"
     }
 ]

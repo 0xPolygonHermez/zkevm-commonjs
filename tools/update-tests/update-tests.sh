@@ -14,7 +14,7 @@ cd ../..
 npx mocha ./test/smt-utils.test.js --update
 npx mocha ./test/smt-full-genesis.test.js --update
 npx mocha ./test/smt-genesis.test.js --update
-
+npx mocha ./test/e2e-circuits.test.js --update
 npx mocha ./test/block-info.test.js --update
 npx mocha ./test/processor.test.js --update
 npx mocha ./test/processor.test.js --update --e2e --geninput

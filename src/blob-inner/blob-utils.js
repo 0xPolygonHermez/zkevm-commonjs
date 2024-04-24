@@ -31,7 +31,6 @@ function isHex(str) {
  * @param {Number} lastL1InfoTreeIndex - last index of the l1InfoTree
  * @param {String} lastL1InfoTreeRoot - last root of the l1InfoTree
  * @param {Number} timestampLimit - Block timestampLimit
- * @param {String} sequencerAddress - Sequencer address
  * @param {BigInt} zkGasLimit - zkGasLimit
  * @param {Number} blobType - blob type
  * @param {String} versionedHash - versioned hash
@@ -44,7 +43,6 @@ function computeBlobAccInputHash(
     lastL1InfoTreeIndex,
     lastL1InfoTreeRoot,
     timestampLimit,
-    sequencerAddress,
     zkGasLimit,
     blobType,
     versionedHash,
@@ -52,13 +50,12 @@ function computeBlobAccInputHash(
     forcedHashData,
 ) {
     const hashKeccak = ethers.utils.solidityKeccak256(
-        ['bytes32', 'uint32', 'bytes32', 'uint64', 'address', 'uint64', 'uint8', 'bytes32', 'bytes32', 'bytes32'],
+        ['bytes32', 'uint32', 'bytes32', 'uint64', 'uint64', 'uint8', 'bytes32', 'bytes32', 'bytes32'],
         [
             oldBlobAccInputHash,
             lastL1InfoTreeIndex,
             lastL1InfoTreeRoot,
             timestampLimit,
-            sequencerAddress,
             zkGasLimit,
             blobType,
             versionedHash,
@@ -74,14 +71,12 @@ function computeBlobAccInputHash(
  * Compute batchAccInputHash
  * @param {String} oldBlobAccInputHash - old blob accBlobInputHash (32 bytes)
  * @param {String} batchL2HashData - blob hash data (32 bytes)
- * @param {String} sequencerAddress - Sequencer address (20 bytes)
  * @param {String} forcedHashData - forced hash data (32 bytes)
  * @returns {String} - accumulateInputHash in hex encoding
  */
 async function computeBatchAccInputHash(
     _oldBlobAccInputHash,
     _batchL2HashData,
-    _sequencerAddress,
     _forcedHashData,
 ) {
     // oldBlobAccInputHash
@@ -92,16 +87,12 @@ async function computeBatchAccInputHash(
     let batchL2HashData = _batchL2HashData.startsWith('0x') ? _batchL2HashData.slice(2) : _batchL2HashData;
     batchL2HashData = batchL2HashData.padStart(64, '0');
 
-    // sequencerAddress
-    let sequencerAddress = _sequencerAddress.startsWith('0x') ? _sequencerAddress.slice(2) : _sequencerAddress;
-    sequencerAddress = sequencerAddress.padStart(40, '0');
-
     // forcedHashData
     let forcedHashData = _forcedHashData.startsWith('0x') ? _forcedHashData.slice(2) : _forcedHashData;
     forcedHashData = forcedHashData.padStart(64, '0');
 
     // compute linearPoseidon
-    return linearPoseidon(`0x${oldBlobAccInputHash}${batchL2HashData}${sequencerAddress}${forcedHashData}`);
+    return linearPoseidon(`0x${oldBlobAccInputHash}${batchL2HashData}${forcedHashData}`);
 }
 
 /**

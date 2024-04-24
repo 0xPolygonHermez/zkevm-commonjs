@@ -51,6 +51,7 @@ module.exports = class Processor {
      * @param {Number} options.newBlockGasLimit New batch gas limit
      * @param {Bool} options.skipFirstChangeL2Block Skips verification that first transaction must be a ChangeL2BlockTx
      * @param {Bool} options.skipWriteBlockInfoRoot Skips writing blockL2Info root on L2
+     * @param {String} options.coinbase Provided coinbase in case skipFirstChangeL2Block is true
      * @param {Object} extraData - additional data embedded in the batch
      * @param {Object} extraData.forcedData - object with the following properties: ger, blockHashL1 & minTimestamp
      * @param {Array[Object]} extraData.l1Info - L1Info - object with the following [key - value] ==> [indexL1InfoTree - L1InfoLeaf]
@@ -64,7 +65,6 @@ module.exports = class Processor {
         poseidon,
         maxNTx,
         root,
-        sequencerAddress,
         oldBatchAccInputHash,
         chainID,
         forkID,
@@ -97,7 +97,7 @@ module.exports = class Processor {
         this.batchHashData = '0x';
         this.inputHash = '0x';
 
-        this.sequencerAddress = sequencerAddress;
+        this.sequencerAddress = '';
         this.chainID = chainID;
         this.forkID = forkID;
         // could set either BLOB_TYPE_CALLDATA or BLOB_TYPE_EIP4844
@@ -177,9 +177,9 @@ module.exports = class Processor {
     /**
      * Try to decode and check the validity of rawTxs
      * Save the decoded transaction, whether is valid or not, and the invalidated reason if any in a new array: decodedTxs
-     * Note that, even if this funcion mark a transactions as valid, there are some checks that are performed
+     * Note that, even if this function mark a transactions as valid, there are some checks that are performed
      * During the processing of the transactions, therefore can be invalidated after
-     * This funcion will check:
+     * This function will check:
      * A: Well formed RLP encoding
      * B: Valid ChainID
      * C: Valid signature
@@ -420,6 +420,8 @@ module.exports = class Processor {
 
                     return;
                 }
+            } else {
+                this.sequencerAddress = this.options.coinbase;
             }
             const currentTx = currentDecodedTx.tx;
 
@@ -846,6 +848,8 @@ module.exports = class Processor {
         let finalBlockHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
         if (this.isForced) {
+            // forced tx fees are burnt (sent to zero address)
+            this.sequencerAddress = ethers.constants.AddressZero;
             // get and verify forcedHashData
             const computedForcedHashData = getL1InfoTreeValue(
                 this.forcedData.globalExitRoot,
@@ -874,6 +878,8 @@ module.exports = class Processor {
             // forced batch has no enforced blockhash
             await this._setGlobalExitRoot(finalGER, finalBlockHash);
         } else {
+            // Set sequencer address
+            this.sequencerAddress = tx.coinbase;
             const newTimestamp = Scalar.add(currentTimestamp, Scalar.e(tx.deltaTimestamp));
 
             // write timestamp
@@ -994,7 +1000,6 @@ module.exports = class Processor {
         const newBatchAccInputHash = await computeBatchAccInputHash(
             oldBatchAccInputHash,
             this.batchHashData,
-            this.sequencerAddress,
             this.forcedHashData,
         );
 

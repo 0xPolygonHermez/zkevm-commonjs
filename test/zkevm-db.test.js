@@ -34,7 +34,6 @@ describe('ZkEVMDB', function () {
     });
 
     it('Check zkEVMDB basic functions', async () => {
-        const sequencerAddress = '0x0000000000000000000000000000000000000000';
         const genesisRoot = [F.zero, F.zero, F.zero, F.zero];
         const oldBatchAccInputHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
         const genesis = [];
@@ -58,7 +57,6 @@ describe('ZkEVMDB', function () {
 
         // build an empty batch
         const batch = await zkEVMDB.buildBatch(
-            sequencerAddress,
             forcedHashData,
             oldBatchAccInputHash,
             previousL1InfoTreeRoot,
@@ -111,7 +109,6 @@ describe('ZkEVMDB', function () {
             txs,
             newStateRoot,
             batchL2Data,
-            sequencerAddress,
             newLocalExitRoot,
             oldBatchAccInputHash,
             newBatchAccInputHash,
@@ -260,7 +257,6 @@ describe('ZkEVMDB', function () {
         );
 
         const batch = await zkEVMDB.buildBatch(
-            sequencerAddress,
             forcedHashData,
             oldBatchAccInputHash,
             previousL1InfoTreeRoot,

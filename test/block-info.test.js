@@ -57,7 +57,6 @@ describe('Block info tests', function () {
                 genesis,
                 oldStateRoot,
                 batches,
-                sequencerAddress,
                 bridgeDeployed,
                 oldBatchAccInputHash,
                 forkID,
@@ -133,7 +132,7 @@ describe('Block info tests', function () {
                 const {
                     txs, newStateRoot, expectedNewLeafs, batchL2Data, l1InfoRoot,
                     inputHash, batchHashData, newLocalExitRoot,
-                    skipFirstChangeL2Block, skipWriteBlockInfoRoot, currentL1InfoTreeRoot, currentL1InfoTreeIndex,
+                    skipFirstChangeL2Block, skipWriteBlockInfoRoot, currentL1InfoTreeRoot, currentL1InfoTreeIndex, coinbase,
                 } = batches[k];
                 const rawTxs = [];
                 for (let j = 0; j < txs.length; j++) {
@@ -250,7 +249,6 @@ describe('Block info tests', function () {
                 }
 
                 const batch = await zkEVMDB.buildBatch(
-                    sequencerAddress,
                     forcedHashData,
                     oldBatchAccInputHash,
                     previousL1InfoTreeRoot,
@@ -259,6 +257,7 @@ describe('Block info tests', function () {
                     {
                         skipFirstChangeL2Block,
                         skipWriteBlockInfoRoot,
+                        coinbase,
                     },
                     {},
                 );
@@ -393,7 +392,6 @@ describe('Block info tests', function () {
                     testVectors[i].batches[k].batchHashData = circuitInput.batchHashData;
                     testVectors[i].batches[k].inputHash = circuitInput.inputHash;
                     testVectors[i].batches[k].newLocalExitRoot = circuitInput.newLocalExitRoot;
-                    testVectors[i].batches[k].batchL2Data = batchL2Data;
                     testVectors[i].batches[k].currentL1InfoTreeRoot = batch.currentL1InfoTreeRoot;
                     testVectors[i].batches[k].currentL1InfoTreeIndex = batch.currentL1InfoTreeIndex;
                 }
@@ -423,7 +421,7 @@ describe('Block info tests', function () {
         const smt = new SMT(db, poseidon, poseidon.F);
         for (let i = 0; i < blockInfoTree.length; i++) {
             const {
-                oldStateRoot, newBlockNumber, sequencerAddress, blockGasLimit, finalTimestamp, finalGER, finalBlockHash, txs,
+                oldStateRoot, newBlockNumber, blockGasLimit, finalTimestamp, finalGER, finalBlockHash, txs,
             } = blockInfoTree[i];
             // Init block info root
             let blockInfoRoot = [F.zero, F.zero, F.zero, F.zero];
@@ -431,7 +429,6 @@ describe('Block info tests', function () {
                 smt,
                 blockInfoRoot,
                 oldStateRoot,
-                sequencerAddress,
                 newBlockNumber,
                 blockGasLimit,
                 finalTimestamp,

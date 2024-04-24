@@ -32,7 +32,6 @@ module.exports = class BlobProcessor {
      * @param {String} privateInputs.lastL1InfoTreeIndex
      * @param {String} privateInputs.lastL1InfoTreeRoot
      * @param {BigInt} privateInputs.timestampLimit
-     * @param {String} privateInputs.sequencerAddress
      * @param {BigInt} privateInputs.zkGasLimit
      * @param {Number} privateInputs.blobType
      * @param {String} privateInputs.forcedHashData
@@ -59,7 +58,6 @@ module.exports = class BlobProcessor {
         this.lastL1InfoTreeIndex = privateInputs.lastL1InfoTreeIndex; // exposed as an output
         this.lastL1InfoTreeRoot = privateInputs.lastL1InfoTreeRoot; // exposed as an output
         this.timestampLimit = privateInputs.timestampLimit; // exposed as an output
-        this.sequencerAddress = privateInputs.sequencerAddress;
         this.zkGasLimit = privateInputs.zkGasLimit;
         this.blobType = privateInputs.blobType;
         this.forcedHashData = privateInputs.forcedHashData;
@@ -279,7 +277,6 @@ module.exports = class BlobProcessor {
             this.lastL1InfoTreeIndex,
             this.lastL1InfoTreeRoot,
             this.timestampLimit,
-            this.sequencerAddress,
             this.zkGasLimit,
             this.blobType,
             this.versionedHash,
@@ -298,7 +295,6 @@ module.exports = class BlobProcessor {
                     this.finalAccBatchHashData = await computeBatchAccInputHash(
                         this.finalAccBatchHashData,
                         await computeBatchL2HashData(batchData),
-                        this.sequencerAddress,
                         (this.blobType === blobConstants.BLOB_TYPE.FORCED) ? this.forcedHashData : Constants.ZERO_BYTES32,
                     );
                 }
@@ -315,7 +311,6 @@ module.exports = class BlobProcessor {
             // compute accInputHash
             versionedHash: this.versionedHash,
             blobType: this.blobType,
-            sequencerAddr: this.sequencerAddress,
             zkGasLimit: this.zkGasLimit.toString(),
             forcedHashData: this.forcedHashData,
             blobL2HashData: this.blobL2HashData,

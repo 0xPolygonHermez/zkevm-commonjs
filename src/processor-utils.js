@@ -173,7 +173,7 @@ function encodedStringToArray(encodedTransactions) {
 
     while (offset < encodedTxBytes.length) {
         if (encodedTxBytes[offset] === Constants.TX_CHANGE_L2_BLOCK) {
-            const bytesToRead = 1 + Constants.DELTA_TIMESTAMP_BYTES + Constants.INDEX_L1INFOTREE_BYTES;
+            const bytesToRead = 1 + Constants.DELTA_TIMESTAMP_BYTES + Constants.INDEX_L1INFOTREE_BYTES + Constants.COINBASE_BYTES;
             const tx = ethers.utils.hexlify(encodedTxBytes.slice(offset, offset + bytesToRead));
             decodedRawTx.push(tx);
             offset += bytesToRead;
@@ -467,15 +467,23 @@ async function decodeChangeL2BlockTx(_rawTx) {
 
     let charsToRead = Constants.TYPE_BYTES * 2;
 
+    // Decode transaction type
     tx.type = parseInt(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
     offsetChars += charsToRead;
 
+    // Decode deltaTimestamp
     charsToRead = Constants.DELTA_TIMESTAMP_BYTES * 2;
     tx.deltaTimestamp = Scalar.fromString(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
     offsetChars += charsToRead;
 
+    // Decode indexL1InfoTree
     charsToRead = Constants.INDEX_L1INFOTREE_BYTES * 2;
     tx.indexL1InfoTree = parseInt(serializedTx.slice(offsetChars, offsetChars + charsToRead), 16);
+    offsetChars += charsToRead;
+
+    // Decode coinbase
+    charsToRead = Constants.COINBASE_BYTES * 2;
+    tx.coinbase = `0x${serializedTx.slice(offsetChars, offsetChars + charsToRead)}`;
 
     return tx;
 }
@@ -491,6 +499,9 @@ function serializeChangeL2Block(tx) {
     let data = Scalar.e(0);
 
     let offsetBits = 0;
+
+    data = Scalar.add(data, Scalar.shl(tx.coinbase, offsetBits));
+    offsetBits += Constants.COINBASE_BYTES * 8;
 
     data = Scalar.add(data, Scalar.shl(tx.indexL1InfoTree, offsetBits));
     offsetBits += Constants.INDEX_L1INFOTREE_BYTES * 8;

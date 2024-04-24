@@ -89,6 +89,7 @@ module.exports.TX_CHANGE_L2_BLOCK = 11;
 module.exports.DELTA_TIMESTAMP_BYTES = 4;
 module.exports.INDEX_L1INFOTREE_BYTES = 4;
 module.exports.TYPE_BYTES = 1;
+module.exports.COINBASE_BYTES = 20;
 
 // Bridge
 module.exports.GLOBAL_INDEX_MAINNET_FLAG = Scalar.pow(2, 64);

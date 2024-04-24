@@ -4,7 +4,6 @@
     "description": "Batch with two blocks with new blockInfoTree index",
     "chainID": 1000,
     "forkID": 10,
-    "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
         "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
@@ -26,6 +25,7 @@
     "txs": [
       {
         "type": 11,
+        "coinbase": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "deltaTimestamp": "1944498030",
         "l1InfoTree": {
           "globalExitRoot": "0x887c22bd8750d34016ac3c66b5ff102dacdd73f6b014e710b51e8022af9a1968",
@@ -85,6 +85,7 @@
       },
       {
         "type": 11,
+        "coinbase": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "deltaTimestamp": "1",
         "l1InfoTree": {
           "globalExitRoot": "0x662ee4dd2dd7b2bc707961b1e646c4047669dcb6584f0d8d770daf5d7e7deb2e",
@@ -184,7 +185,6 @@
     "description": "Batch with two blocks with new blockInfoTree index, previousL1InfoTreeIndex is zero",
     "chainID": 1000,
     "forkID": 10,
-    "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
         "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
@@ -206,6 +206,7 @@
     "txs": [
       {
         "type": 11,
+        "coinbase": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "deltaTimestamp": "1944498030",
         "l1InfoTree": {
           "globalExitRoot": "0x887c22bd8750d34016ac3c66b5ff102dacdd73f6b014e710b51e8022af9a1968",
@@ -266,6 +267,7 @@
       },
       {
         "type": 11,
+        "coinbase": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "deltaTimestamp": "1",
         "l1InfoTree": {
           "globalExitRoot": "0x662ee4dd2dd7b2bc707961b1e646c4047669dcb6584f0d8d770daf5d7e7deb2e",
@@ -365,7 +367,6 @@
     "description": "Forced batch: 2 accounts and 1 valid transaction",
     "chainID": 1000,
     "forkID": 10,
-    "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
         "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
@@ -456,7 +457,6 @@
     "description": "Forced batch: starts with changeL2Block --> invalid batch",
     "chainID": 1000,
     "forkID": 10,
-    "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
         "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
@@ -483,6 +483,7 @@
     "txs": [
       {
         "type": 11,
+        "coinbase": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "deltaTimestamp": "1944498030",
         "l1InfoTree": {
           "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
@@ -542,6 +543,7 @@
       },
       {
         "type": 11,
+        "coinbase": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "deltaTimestamp": "1",
         "l1InfoTree": {
           "globalExitRoot": "0x887c22bd8750d34016ac3c66b5ff102dacdd73f6b014e710b51e8022af9a1968",

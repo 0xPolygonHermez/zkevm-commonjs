@@ -52,7 +52,6 @@ describe('e2e circuits', function () {
                 genesis,
                 oldStateRoot,
                 blobOuters,
-                sequencerAddress,
                 aggregatorAddress,
                 forkID,
                 chainID,
@@ -197,7 +196,6 @@ describe('e2e circuits', function () {
                     }
 
                     const batch = await zkEVMDB.buildBatch(
-                        sequencerAddress,
                         forcedHashData,
                         initBatchAccInputHash,
                         initL1InfoTreeRoot,

@@ -49,7 +49,6 @@ class ZkEVMDB {
 
     /**
      * Build Batch
-     * @param {String} sequencerAddress
      * @param {String} forcedHashData
      * @param {String} oldBatchAccInputHash
      * @param {String} previousL1InfoTreeRoot
@@ -65,7 +64,6 @@ class ZkEVMDB {
      * @returns {Object} batch processor
      */
     async buildBatch(
-        sequencerAddress,
         forcedHashData,
         oldBatchAccInputHash,
         previousL1InfoTreeRoot,
@@ -80,7 +78,6 @@ class ZkEVMDB {
             this.poseidon,
             maxNTx,
             this.stateRoot,
-            sequencerAddress,
             stringToH4(oldBatchAccInputHash),
             this.chainID,
             this.forkID,
@@ -254,10 +251,6 @@ class ZkEVMDB {
             if (current.currentL1InfoTreeIndex !== next.previousL1InfoTreeIndex) {
                 throw new Error(`Batch ${i} currentL1InfoTreeIndex must be equal to next batch previousL1InfoTreeIndex`);
             }
-
-            if (current.sequencerAddress !== next.sequencerAddress) {
-                throw new Error(`Batch ${i} sequencerAddress must be equal to next batch sequencerAddress`);
-            }
         }
 
         // add common data
@@ -266,7 +259,6 @@ class ZkEVMDB {
         fullAggData.aggBatchData.previousL1InfoTreeIndex = 0;
         fullAggData.aggBatchData.chainID = this.chainID;
         fullAggData.aggBatchData.forkID = this.forkID;
-        fullAggData.aggBatchData.sequencerAddress = fullAggData.singleBatchData[0].sequencerAddr;
 
         // get data from the first batch
         fullAggData.aggBatchData.oldStateRoot = fullAggData.singleBatchData[0].oldStateRoot;
@@ -346,7 +338,6 @@ class ZkEVMDB {
             zkGasLimit: _zkGasLimit,
             blobType: _blobType,
             forcedHashData: _forcedHashData,
-            sequencerAddress: fullAggData.aggBatchData.sequencerAddress,
         };
 
         const blobInner = new BlobProcessor(

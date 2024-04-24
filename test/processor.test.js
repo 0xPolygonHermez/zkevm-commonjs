@@ -75,7 +75,6 @@ describe('Processor', async function () {
                 txs,
                 newStateRoot,
                 newBatchAccInputHash,
-                sequencerAddress,
                 expectedNewLeafs,
                 batchL2Data,
                 oldBatchAccInputHash,
@@ -155,7 +154,6 @@ describe('Processor', async function () {
 
             const extraData = { forcedData, l1Info: {} };
             const batch = await zkEVMDB.buildBatch(
-                sequencerAddress,
                 forcedHashData,
                 oldBatchAccInputHash,
                 previousL1InfoTreeRoot,

@@ -4,7 +4,6 @@
     "description": "2 accounts and 1 valid transaction.",
     "chainID": 1000,
     "forkID": 10,
-    "sequencerAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
     "genesis": [
       {
         "address": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
@@ -26,6 +25,7 @@
     "txs": [
       {
         "type": 11,
+        "coinbase": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "deltaTimestamp": "1944498031",
         "l1InfoTree": {
           "globalExitRoot": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
@@ -34,7 +34,7 @@
         },
         "indexL1InfoTree": 0,
         "reason": "",
-        "customRawTx": "0x0b73e6af6f00000000"
+        "customRawTx": "0x0b73e6af6f00000000617b3a3528f9cdd6630fd3301b9c8911f7bf063d"
       },
       {
         "id": 0,
@@ -50,7 +50,7 @@
         "customRawTx": "0xee80843b9aca00830186a0944d5cf5032b2a844602278b01199ed191a86c93ff88016345785d8a0000808203e880801cee7e01dc62f69a12c3510c6d64de04ee6346d84b6a017f3e786c7d87f963e75d8cc91fa983cd6d9cf55fff80d73bd26cd333b0f098acc1e58edb1fd484ad731bff"
       }
     ],
-    "newStateRoot": "0x5fc97a9a6ea9918f4b26e2dd52b27a688621cd4d2ff5c624c2df0cd1986d3b41",
+    "newStateRoot": "0x617e21fe743e7dc8b69823cff83c917dbb620205d77358aac2b2847bebe429e1",
     "expectedNewLeafs": {
       "0x617b3a3528f9cdd6630fd3301b9c8911f7bf063d": {
         "balance": "99900000000000000000",
@@ -61,10 +61,10 @@
         "nonce": "0"
       }
     },
-    "batchL2Data": "0x0b73e6af6f00000000ee80843b9aca00830186a0944d5cf5032b2a844602278b01199ed191a86c93ff88016345785d8a0000808203e880801cee7e01dc62f69a12c3510c6d64de04ee6346d84b6a017f3e786c7d87f963e75d8cc91fa983cd6d9cf55fff80d73bd26cd333b0f098acc1e58edb1fd484ad731bff",
+    "batchL2Data": "0x0b73e6af6f00000000617b3a3528f9cdd6630fd3301b9c8911f7bf063dee80843b9aca00830186a0944d5cf5032b2a844602278b01199ed191a86c93ff88016345785d8a0000808203e880801cee7e01dc62f69a12c3510c6d64de04ee6346d84b6a017f3e786c7d87f963e75d8cc91fa983cd6d9cf55fff80d73bd26cd333b0f098acc1e58edb1fd484ad731bff",
     "newLocalExitRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "batchHashData": "0x3d53e7e5be04b00f66af647512af6d17e4e767a5e41fa1293010b885c9fe06db",
     "oldBatchAccInputHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "newBatchAccInputHash": "0xa78cd7278eb8b48a40e791486985ad6290af374ca45ad962ed08cc83b2e184ba"
+    "newBatchAccInputHash": "0x0b5fc859f1805ff056b64164f29a3eb90ca402bf94cdb7c7321fa0da1b8cc7d3"
   }
 ]
