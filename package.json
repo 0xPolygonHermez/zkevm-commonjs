@@ -11,7 +11,7 @@
     "test:blockinfo": "npx mocha ./test/processor.test.js --blockinfo",
     "test:selfdestruct": "npx mocha ./test/processor.test.js --selfdestruct",
     "eslint": "npx eslint 'src/**/**.js' 'test/**/**.test.js' && npx eslint tools",
-    "eslint:fix": "npx 'eslint src/**/**.js' 'test/**/**.test.js' --fix  && npx eslint tools --fix",
+    "eslint:fix": "npx eslint 'src/**/**.js' 'test/**/**.test.js' --fix && npx eslint tools --fix",
     "test:update": "./tools/update-tests/update-tests.sh",
     "test:database": "npx mocha ./test/database.test.js",
     "build:inputs": "npx mocha ./test/processor.test.js --update --geninputs && npx mocha ./test/processor.test.js --etrog --update --geninputs"
