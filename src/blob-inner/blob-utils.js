@@ -105,17 +105,28 @@ async function computeBatchAccInputHash(
 }
 
 /**
- * Blob hash data
+ * Blob hash data (keccak256)
  * @param {String} blobData - Blob data
- * @returns {String} - Blob hash data
+ * @returns {String} - Blob hash data (keccak256)
  */
-function computeBlobL2HashData(blobData) {
+function computeBlobL2HashKData(blobData) {
     blobData = blobData.startsWith('0x') ? blobData : `0x${blobData}`;
 
     return ethers.utils.solidityKeccak256(
         ['bytes'],
         [blobData],
     );
+}
+
+/**
+ * Blob hash data (poseidon)
+ * @param {String} blobData - Blob data
+ * @returns {String} - Blob hash data (poseidon)
+ */
+function computeBlobL2HashPData(blobData) {
+    blobData = blobData.startsWith('0x') ? blobData : `0x${blobData}`;
+
+    return linearPoseidon(blobData);
 }
 
 /**
@@ -233,7 +244,9 @@ function computeBlobDataFromBatches(batches, blobType) {
     resBlobdata += batchesData;
 
     let blobData;
-    if (blobType === blobConstants.BLOB_TYPE.CALLDATA || blobType === blobConstants.BLOB_TYPE.FORCED) {
+    if (blobType === blobConstants.BLOB_TYPE.CALLDATA
+        || blobType === blobConstants.BLOB_TYPE.FORCED
+        || blobType === blobConstants.BLOB_TYPE.VALIDIUM) {
         blobData = resBlobdata;
     } else if (blobType === blobConstants.BLOB_TYPE.EIP4844) {
     // build blob data with no spaces and then add 0x00 each 32 bytes
@@ -266,7 +279,9 @@ function parseBlobData(blobData, blobType) {
     const batches = [];
 
     // if blobData is calldata or forced, no need to check and remove MSB each 32 bytes
-    if (blobType === blobConstants.BLOB_TYPE.CALLDATA || blobType === blobConstants.BLOB_TYPE.FORCED) {
+    if (blobType === blobConstants.BLOB_TYPE.CALLDATA
+        || blobType === blobConstants.BLOB_TYPE.FORCED
+        || blobType === blobConstants.BLOB_TYPE.VALIDIUM) {
         tmpBlobdata = blobData;
     } else if (blobType === blobConstants.BLOB_TYPE.EIP4844) {
         // assure the most significant byte is '00' each slot of 32 bytes
@@ -399,7 +414,8 @@ function reduceBlobData(_blobData) {
 module.exports = {
     isHex,
     computeBlobAccInputHash,
-    computeBlobL2HashData,
+    computeBlobL2HashKData,
+    computeBlobL2HashPData,
     buildPointZData,
     computePointZ,
     computePointY,
