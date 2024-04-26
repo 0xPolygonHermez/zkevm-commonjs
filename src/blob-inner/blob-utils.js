@@ -262,6 +262,7 @@ function computeBlobDataFromBatches(batches, blobType) {
 function parseBlobData(blobData, blobType) {
     let tmpBlobdata = '';
     let isInvalid = false;
+    let error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_NO_ERROR;
     const batches = [];
 
     // if blobData is calldata or forced, no need to check and remove MSB each 32 bytes
@@ -273,8 +274,9 @@ function parseBlobData(blobData, blobType) {
             const slot32 = blobData.slice(i, i + 64);
             if (slot32.slice(0, 2) !== '00') {
                 isInvalid = true;
+                error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_MSB_BYTE;
 
-                return { isInvalid, batches };
+                return { isInvalid, batches, error };
             }
             tmpBlobdata += slot32.slice(2, 64);
         }
@@ -289,8 +291,9 @@ function parseBlobData(blobData, blobType) {
     // check 1 byte can be read
     if (tmpBlobDataLenString < blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE * 2) {
         isInvalid = true;
+        error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_PARSING;
 
-        return { isInvalid, batches };
+        return { isInvalid, batches, error };
     }
 
     const compressionType = Scalar.e(parseInt(tmpBlobdata.slice(
@@ -299,8 +302,9 @@ function parseBlobData(blobData, blobType) {
     ), 16));
     if (compressionType !== Scalar.e(blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION)) {
         isInvalid = true;
+        error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_COMPRESSION_TYPE;
 
-        return { isInvalid, batches };
+        return { isInvalid, batches, error };
     }
     offsetBytes += blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE * 2;
 
@@ -308,20 +312,41 @@ function parseBlobData(blobData, blobType) {
     // check 4 bytes can be read
     if (tmpBlobDataLenString < offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2) {
         isInvalid = true;
+        error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_PARSING;
 
-        return { isInvalid, batches };
+        return { isInvalid, batches, error };
     }
+
     const bodyLen = Scalar.e(parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2), 16));
     offsetBytes += blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2;
+
+    if (blobType === blobConstants.BLOB_TYPE.CALLDATA || blobType === blobConstants.BLOB_TYPE.FORCED) {
+        const firstBytes = blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH;
+        if (bodyLen !== Scalar.e(blobData.length / 2 - firstBytes)) {
+            isInvalid = true;
+            error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_TOTALBODY_LEN;
+
+            return { isInvalid, batches, error };
+        }
+    }
 
     // read batches
     let bytesBodyReaded = 0;
     while (offsetBytes < bodyLen) {
+        // check forced batches
+        if (blobType === blobConstants.BLOB_TYPE.FORCED && batches.length > 0) {
+            isInvalid = true;
+            error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_FORCED_BATCHES;
+
+            return { isInvalid, batches, error };
+        }
+
         // check 4 bytes can be read
         if (tmpBlobDataLenString < offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2) {
             isInvalid = true;
+            error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_PARSING;
 
-            return { isInvalid, batches };
+            return { isInvalid, batches, error };
         }
         const batchLength = parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2), 16);
         offsetBytes += blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2;
@@ -330,8 +355,9 @@ function parseBlobData(blobData, blobType) {
         // check batchLength bytes can be read
         if (tmpBlobDataLenString < offsetBytes + batchLength * 2) {
             isInvalid = true;
+            error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_PARSING;
 
-            return { isInvalid, batches };
+            return { isInvalid, batches, error };
         }
 
         // do not add empty batch
@@ -346,9 +372,10 @@ function parseBlobData(blobData, blobType) {
     // check length matches
     if (bodyLen !== Scalar.e(bytesBodyReaded)) {
         isInvalid = true;
+        error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_TOTALBODY_LEN;
     }
 
-    return { isInvalid, batches };
+    return { isInvalid, batches, error };
 }
 
 /**
