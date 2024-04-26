@@ -316,12 +316,31 @@ function parseBlobData(blobData, blobType) {
 
         return { isInvalid, batches, error };
     }
+
     const bodyLen = Scalar.e(parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2), 16));
     offsetBytes += blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2;
+
+    if (blobType === blobConstants.BLOB_TYPE.CALLDATA || blobType === blobConstants.BLOB_TYPE.FORCED) {
+        const firstBytes = blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH;
+        if (bodyLen !== Scalar.e(blobData.length / 2 - firstBytes)) {
+            isInvalid = true;
+            error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_TOTALBODY_LEN;
+
+            return { isInvalid, batches, error };
+        }
+    }
 
     // read batches
     let bytesBodyReaded = 0;
     while (offsetBytes < bodyLen) {
+        // check forced batches
+        if (blobType === blobConstants.BLOB_TYPE.FORCED && batches.length > 0) {
+            isInvalid = true;
+            error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_FORCED_BATCHES;
+
+            return { isInvalid, batches, error };
+        }
+
         // check 4 bytes can be read
         if (tmpBlobDataLenString < offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BATCH_LENGTH * 2) {
             isInvalid = true;

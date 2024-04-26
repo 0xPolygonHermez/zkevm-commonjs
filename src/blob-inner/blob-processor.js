@@ -167,11 +167,6 @@ module.exports = class BlobProcessor {
             this._buildBlobData();
         }
 
-        // check forced batches
-        if (this.isInvalid === false) {
-            this._checkForcedBatches();
-        }
-
         // check zkGasLimit if not already invalid blob
         if (this.isInvalid === false) {
             await this._checkZkGasLimit();
@@ -201,6 +196,10 @@ module.exports = class BlobProcessor {
     _buildBlobData() {
         if (this.addingBatchData === true) {
             this.blobData = computeBlobDataFromBatches(this.batches, this.blobType);
+            if (this.blobType === blobConstants.BLOB_TYPE.FORCED && this.batches.length > 1) {
+                this.isInvalid = true;
+                this.error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_FORCED_BATCHES;
+            }
         } else if (this.addingBlobData === true) {
             const res = parseBlobData(this.blobData, this.blobType);
             this.isInvalid = res.isInvalid;
@@ -208,15 +207,6 @@ module.exports = class BlobProcessor {
             this.error = res.error;
         } else {
             throw new Error('BlobProcessor:executeBlob: no data added');
-        }
-    }
-
-    _checkForcedBatches() {
-        if (this.blobType === blobConstants.BLOB_TYPE.FORCED) {
-            if (this.batches.length > blobConstants.MAX_BATCHES_FORCED) {
-                this.isInvalid = true;
-                this.error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_FORCED_BATCHES;
-            }
         }
     }
 
