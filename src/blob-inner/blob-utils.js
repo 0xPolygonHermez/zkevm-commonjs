@@ -335,7 +335,9 @@ function parseBlobData(blobData, blobType) {
     const bodyLen = Scalar.e(parseInt(tmpBlobdata.slice(offsetBytes, offsetBytes + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2), 16));
     offsetBytes += blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH * 2;
 
-    if (blobType === blobConstants.BLOB_TYPE.CALLDATA || blobType === blobConstants.BLOB_TYPE.FORCED) {
+    if (blobType === blobConstants.BLOB_TYPE.CALLDATA
+        || blobType === blobConstants.BLOB_TYPE.FORCED
+        || blobType === blobConstants.BLOB_TYPE.VALIDIUM) {
         const firstBytes = blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE + blobConstants.BLOB_ENCODING.BYTES_BODY_LENGTH;
         if (bodyLen !== Scalar.e(blobData.length / 2 - firstBytes)) {
             isInvalid = true;
