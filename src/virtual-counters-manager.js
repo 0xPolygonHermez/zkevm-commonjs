@@ -1154,6 +1154,7 @@ module.exports = class VirtualCountersManager {
                 this._reduceCounters(10, 'S');
                 for (let i = 0; i < input.pushBytes; i++) {
                     this._reduceCounters(10, 'S');
+                    this._SHLarith();
                 }
             }
         } else {
@@ -1351,7 +1352,7 @@ module.exports = class VirtualCountersManager {
 
     _opcode(input) {
         this._reduceCounters(12, 'S');
-        if (input.isCreate2 || input.isCreate || input.isDeploy) {
+        if (input.isCreate2 || input.isCreate) {
             this._mLoadX();
             this._SHRarith();
         }
@@ -1697,8 +1698,8 @@ module.exports = class VirtualCountersManager {
     }
 
     _SHLarith() {
-        this._reduceCounters(100, 'S');
-        this._reduceCounters(4, 'B');
+        this._reduceCounters(40, 'S');
+        this._reduceCounters(2, 'B');
         this._reduceCounters(2, 'A');
     }
 
