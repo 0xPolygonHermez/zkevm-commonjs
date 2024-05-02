@@ -56,15 +56,16 @@ module.exports = class BlobOuter {
         }
 
         // add table to map final outputs
-        // | isInvalid | isZero(accBatch_blob) | isEqualAccBatch | isTimeOK | isIndexEqual | isRootEqual | **newLocalExitRoot** | **newStateRoot** | **FAIL PROOF** |
-        // |:---------:|:---------------------:|:---------------:|:--------:|:------------:|:-----------:|:--------------------:|:----------------:|:--------------:|
-        // |     1     |           X           |        X        |    X     |      X       |      X      |       blob_ler       |     blob_SR      |       0        |
-        // |     0     |           1           |        X        |    X     |      X       |      X      |       blob_ler       |     blob_SR      |       0        |
-        // |     0     |           0           |        0        |    X     |      X       |      X      |          X           |        X         |       1        |
-        // |     0     |           0           |        1        |    0     |      X       |      X      |       blob_ler       |     blob_SR      |       0        |
-        // |     0     |           0           |        1        |    1     |      0       |      X      |       blob_ler       |     blob_SR      |       0        |
-        // |     0     |           0           |        1        |    1     |      1       |      0      |          X           |        X         |       1        |
-        // |     0     |           0           |        1        |    1     |      1       |      1      |       batch_SR       |    batch_ler     |       0        |
+        // | isInvalid | isZero(accBatch_blob) | isEqualAccBatch | isTimeOK | isIndexEqual | isRootEqual | isNewStateRootEqual | **newLocalExitRoot** | **newStateRoot** | **FAIL PROOF** |
+        // |:---------:|:---------------------:|:---------------:|:--------:|:------------:|:-----------:|:-------------------:|:--------------------:|:----------------:|:--------------:|
+        // |     1     |           X           |        X        |    X     |      X       |      X      |          X          |       blob_ler       |     blob_SR      |       0        |
+        // |     0     |           1           |        X        |    X     |      X       |      X      |          X          |       blob_ler       |     blob_SR      |       0        |
+        // |     0     |           0           |        0        |    X     |      X       |      X      |          X          |          X           |        X         |       1        |
+        // |     0     |           0           |        1        |    0     |      X       |      X      |          X          |       blob_ler       |     blob_SR      |       0        |
+        // |     0     |           0           |        1        |    1     |      0       |      X      |          X          |       blob_ler       |     blob_SR      |       0        |
+        // |     0     |           0           |        1        |    1     |      1       |      0      |          X          |          X           |        X         |       1        |
+        // |     0     |           0           |        1        |    1     |      1       |      1      |          1          |       batch_SR       |    batch_ler     |       0        |
+        // |     0     |           0           |        1        |    1     |      1       |      1      |          0          |       blob_ler       |     blob_SR      |       0        |
 
         if (this.blobInner.isInvalid) {
             this.newLocalExitRoot = this.blobInner.localExitRootFromBlob;
@@ -101,6 +102,13 @@ module.exports = class BlobOuter {
 
         if (Scalar.neq(this.blobInner.lastL1InfoTreeRoot, this.aggBatches.currentL1InfoTreeRoot)) {
             throw new Error('BlobOuter:_processBlobOuter: L1InfoTreeRoot mismatch');
+        }
+
+        if (Scalar.neq(this.blobInner.expectedNewStateRoot, this.aggBatches.newStateRoot)) {
+            this.newLocalExitRoot = this.blobInner.localExitRootFromBlob;
+            this.newStateRoot = this.blobInner.oldStateRoot;
+
+            return;
         }
 
         // set outputs from batch aggregation

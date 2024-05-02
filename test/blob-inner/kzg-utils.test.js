@@ -24,7 +24,6 @@ describe('kzg', async function () {
 
     it('should get kzg functions', async () => {
         const kzg = await getKzg();
-        console.log(kzg);
 
         for (let i = 0; i < testVectors.length; i++) {
             const {

@@ -20,6 +20,7 @@ function parsePrivateInputs(_privateInputs) {
         zkGasLimit: Scalar.e(_privateInputs.zkGasLimit),
         blobType: Number(_privateInputs.blobType),
         forcedHashData: _privateInputs.forcedHashData,
+        expectedNewStateRoot: _privateInputs.expectedNewStateRoot,
     };
 }
 

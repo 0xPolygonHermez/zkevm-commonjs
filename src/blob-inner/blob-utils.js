@@ -208,13 +208,19 @@ function computePointY(_blobData, _pointZ) {
  * Compute blodData from batchesData
  * @param {String} batches - Batches data
  * @param {Scalar} blobType - Blob type
+ * @param {String} expectedNewStateRoot - expected new state root
  * @returns {Object} - blobData
  */
-function computeBlobDataFromBatches(batches, blobType) {
+function computeBlobDataFromBatches(batches, blobType, _expectedNewStateRoot) {
     // build blobdata with no spaces
     // Compression type: 1 byte
     let resBlobdata = `0x${Scalar.e(blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION).toString(16)
         .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE, '0')}`;
+
+    // add expected new state root
+    const expectedNewStateRoot = `${Scalar.e(_expectedNewStateRoot).toString(16)
+        .padStart(2 * blobConstants.BLOB_ENCODING.BYTES_EXPECTED_NEW_STATE_ROOT, '0')}`;
+    resBlobdata += expectedNewStateRoot;
 
     // Add batches
     let batchesData = '';
@@ -300,13 +306,31 @@ function parseBlobData(blobData, blobType) {
         offsetBytes,
         offsetBytes + blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE * 2,
     ), 16));
+
     if (compressionType !== Scalar.e(blobConstants.BLOB_COMPRESSION_TYPE.NO_COMPRESSION)) {
         isInvalid = true;
         error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_COMPRESSION_TYPE;
 
         return { isInvalid, batches, error };
     }
+
     offsetBytes += blobConstants.BLOB_ENCODING.BYTES_COMPRESSION_TYPE * 2;
+
+    // read expected new state root
+    // check 32 bytes can be read
+    if (tmpBlobDataLenString < offsetBytes + blobConstants.BLOB_ENCODING.BYTES_EXPECTED_NEW_STATE_ROOT * 2) {
+        isInvalid = true;
+        error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_PARSING;
+
+        return { isInvalid, batches, error };
+    }
+
+    const expectedNewStateRoot = tmpBlobdata.slice(
+        offsetBytes,
+        offsetBytes + blobConstants.BLOB_ENCODING.BYTES_EXPECTED_NEW_STATE_ROOT * 2,
+    );
+
+    offsetBytes += blobConstants.BLOB_ENCODING.BYTES_EXPECTED_NEW_STATE_ROOT * 2;
 
     // read body length
     // check 4 bytes can be read
@@ -375,7 +399,9 @@ function parseBlobData(blobData, blobType) {
         error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_TOTALBODY_LEN;
     }
 
-    return { isInvalid, batches, error };
+    return {
+        isInvalid, batches, error, expectedNewStateRoot,
+    };
 }
 
 /**

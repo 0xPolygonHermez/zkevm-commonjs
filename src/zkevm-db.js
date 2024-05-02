@@ -347,6 +347,7 @@ class ZkEVMDB {
             blobType: _blobType,
             forcedHashData: _forcedHashData,
             sequencerAddress: fullAggData.aggBatchData.sequencerAddress,
+            expectedNewStateRoot: fullAggData.aggBatchData.newStateRoot,
         };
 
         const blobInner = new BlobProcessor(

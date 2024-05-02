@@ -113,6 +113,7 @@ describe('BlobProcessor', async function () {
                 expect(expected.finalAccBatchHashData).to.be.equal(inputBlobInner.finalAccBatchHashData);
                 expect(expected.localExitRootFromBlob).to.be.equal(inputBlobInner.localExitRootFromBlob);
                 expect(expected.isInvalid).to.be.equal(inputBlobInner.isInvalid);
+                expect(expected.expectedNewStateRoot).to.be.equal(inputBlobInner.expectedNewStateRoot);
             } else {
                 // update expected
                 expected.newBlobStateRoot = inputBlobInner.newBlobStateRoot;
@@ -121,6 +122,7 @@ describe('BlobProcessor', async function () {
                 expected.finalAccBatchHashData = inputBlobInner.finalAccBatchHashData;
                 expected.localExitRootFromBlob = inputBlobInner.localExitRootFromBlob;
                 expected.isInvalid = inputBlobInner.isInvalid;
+                expected.expectedNewStateRoot = inputBlobInner.expectedNewStateRoot;
             }
 
             if (update && geninput) {

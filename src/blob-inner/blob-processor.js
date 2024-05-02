@@ -24,7 +24,7 @@ module.exports = class BlobProcessor {
      * @param {Object} poseidon - hash function
      * @param {Object} globalInputs - high level inputs. Set at snark level
      * @param {Array[Field]} globalInputs.oldBlobStateRoot - old blob root in 4 field element array
-     * @param {String} globalInputs.oldBlobAccInputHash - old blob accumlate input hash in hexadecimal string representation
+     * @param {String} globalInputs.oldBlobAccInputHash - old blob accumulate input hash in hexadecimal string representation
      * @param {Number} globalInputs.oldNumBlob - old num blob in hexadecimal string representation
      * @param {Array[Field]} globalInputs.oldStateRoot - old state root in 4 field element array
      * @param {Number} globalInputs.forkID - old blob root in hexadecimal string representation
@@ -36,6 +36,8 @@ module.exports = class BlobProcessor {
      * @param {BigInt} privateInputs.zkGasLimit
      * @param {Number} privateInputs.blobType
      * @param {String} privateInputs.forcedHashData
+     * necessary data to build full blobData
+     * @param {String} privateInputs.expectedNewStateRoot
      */
     constructor(
         db,
@@ -48,7 +50,7 @@ module.exports = class BlobProcessor {
         this.poseidon = poseidon;
         this.F = poseidon.F;
 
-        // globaInputs
+        // globalInputs
         this.oldBlobStateRoot = globalInputs.oldBlobStateRoot;
         this.oldBlobAccInputHash = globalInputs.oldBlobAccInputHash;
         this.oldNumBlob = globalInputs.oldNumBlob;
@@ -63,6 +65,8 @@ module.exports = class BlobProcessor {
         this.zkGasLimit = privateInputs.zkGasLimit;
         this.blobType = privateInputs.blobType;
         this.forcedHashData = privateInputs.forcedHashData;
+        this.expectedNewStateRoot = Constants.ZERO_BYTES32; // set when reading the blobData
+        this._expectedNewStateRoot = privateInputs.expectedNewStateRoot;
 
         // outputs
         this.newBlobStateRoot = this.oldBlobStateRoot;
@@ -195,7 +199,8 @@ module.exports = class BlobProcessor {
 
     _buildBlobData() {
         if (this.addingBatchData === true) {
-            this.blobData = computeBlobDataFromBatches(this.batches, this.blobType);
+            this.blobData = computeBlobDataFromBatches(this.batches, this.blobType, this._expectedNewStateRoot);
+            this.expectedNewStateRoot = this._expectedNewStateRoot;
             if (this.blobType === blobConstants.BLOB_TYPE.FORCED && this.batches.length > 1) {
                 this.isInvalid = true;
                 this.error = blobConstants.BLOB_ERRORS.ROM_BLOB_ERROR_INVALID_FORCED_BATCHES;
@@ -205,6 +210,7 @@ module.exports = class BlobProcessor {
             this.isInvalid = res.isInvalid;
             this.batches = res.batches;
             this.error = res.error;
+            this.expectedNewStateRoot = res.expectedNewStateRoot;
         } else {
             throw new Error('BlobProcessor:executeBlob: no data added');
         }
@@ -240,7 +246,7 @@ module.exports = class BlobProcessor {
     }
 
     async _computeStarkInput() {
-        // compute points Z & Y dependng on the blob type. Otherwise, compute batchL2HashData
+        // compute points Z & Y depending on the blob type. Otherwise, compute batchL2HashData
         if (this.blobType === blobConstants.BLOB_TYPE.CALLDATA || this.blobType === blobConstants.BLOB_TYPE.FORCED) {
             // compute blobL2HashData
             this.blobL2HashData = await computeBlobL2HashData(this.blobData);
@@ -327,6 +333,7 @@ module.exports = class BlobProcessor {
             localExitRootFromBlob: this.localExitRootFromBlob,
             isInvalid: this.isInvalid,
             error: this.error,
+            expectedNewStateRoot: this.expectedNewStateRoot,
             // outputs from blobAccInputHash
             timestampLimit: this.timestampLimit.toString(),
             lastL1InfoTreeIndex: this.lastL1InfoTreeIndex,
