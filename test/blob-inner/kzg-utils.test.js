@@ -24,7 +24,6 @@ describe('kzg', async function () {
 
     it('should get kzg functions', async () => {
         const kzg = await getKzg();
-        console.log(kzg);
 
         for (let i = 0; i < testVectors.length; i++) {
             const {
@@ -89,12 +88,16 @@ describe('kzg', async function () {
             // compute proof & pointY
             const { proof, pointY } = kzg.computeKzgProof(blobData, computedPointZ);
 
+            // compute pointY with custom implementation
+            const pointYcustom = kzg.computePointY(blobData, computedPointZ);
+
             if (update) {
                 testVectors[i].expectedProof = proof;
                 testVectors[i].expectedPointY = pointY;
             } else {
                 expect(proof).to.be.equal(expectedProof);
                 expect(pointY).to.be.equal(expectedPointY);
+                expect(pointYcustom).to.be.equal(expectedPointY);
             }
 
             // verify proof
