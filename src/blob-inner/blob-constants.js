@@ -19,6 +19,7 @@ module.exports.BLOB_TYPE = {
     CALLDATA: 0,
     EIP4844: 1,
     FORCED: 2,
+    VALIDIUM: 3,
 };
 
 // Blob compression type

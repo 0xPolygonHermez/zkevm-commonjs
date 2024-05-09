@@ -14,7 +14,8 @@
     "eslint:fix": "npx eslint 'src/**/**.js' 'test/**/**.test.js' --fix && npx eslint tools --fix",
     "test:update": "./tools/update-tests/update-tests.sh",
     "test:database": "npx mocha ./test/database.test.js",
-    "build:inputs": "npx mocha ./test/processor.test.js --update --geninputs && npx mocha ./test/processor.test.js --etrog --update --geninputs"
+    "build:inputs": "npx mocha ./test/processor.test.js --update --geninputs && npx mocha ./test/processor.test.js --etrog --update --geninputs",
+    "build:blob-inputs": "npx mocha ./test/blob-inner/blob-inner-processor.test.js --update --geninput"
   },
   "repository": {
     "type": "git",

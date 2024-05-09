@@ -11,7 +11,7 @@ const { getCurrentDB } = require('../smt-utils');
 const getKzg = require('./kzg-utils');
 
 const {
-    isHex, computeBlobAccInputHash, computeBlobL2HashData,
+    isHex, computeBlobAccInputHash, computeBlobL2HashKData, computeBlobL2HashPData,
     computeBatchL2HashData, computeBatchAccInputHash, computeBlobDataFromBatches, parseBlobData,
     computeVersionedHash, reduceBlobData,
 } = require('./blob-utils');
@@ -184,7 +184,8 @@ module.exports = class BlobProcessor {
     _checkBlobType() {
         if (this.blobType !== blobConstants.BLOB_TYPE.CALLDATA
             && this.blobType !== blobConstants.BLOB_TYPE.EIP4844
-            && this.blobType !== blobConstants.BLOB_TYPE.FORCED) {
+            && this.blobType !== blobConstants.BLOB_TYPE.FORCED
+            && this.blobType !== blobConstants.BLOB_TYPE.VALIDIUM) {
             if (this.addingBatchData === true) {
                 throw new Error('BlobProcessor:executeBlob: invalid blob type not compatible with batch data');
             }
@@ -243,7 +244,7 @@ module.exports = class BlobProcessor {
         // compute points Z & Y dependng on the blob type. Otherwise, compute batchL2HashData
         if (this.blobType === blobConstants.BLOB_TYPE.CALLDATA || this.blobType === blobConstants.BLOB_TYPE.FORCED) {
             // compute blobL2HashData
-            this.blobL2HashData = await computeBlobL2HashData(this.blobData);
+            this.blobL2HashData = await computeBlobL2HashKData(this.blobData);
             // points not used
             this.kzgCommitment = Constants.ZERO_BYTES32;
             this.versionedHash = Constants.ZERO_BYTES32;
@@ -261,6 +262,15 @@ module.exports = class BlobProcessor {
             const { proof, pointY } = this.kzg.computeKzgProof(reducedBlobData, this.pointZ);
             this.pointY = pointY;
             this.kzgProof = proof;
+        } else if (this.blobType === blobConstants.BLOB_TYPE.VALIDIUM) {
+            // compute blobL2HashData
+            this.blobL2HashData = await computeBlobL2HashPData(this.blobData);
+            // points not used
+            this.kzgCommitment = Constants.ZERO_BYTES32;
+            this.versionedHash = Constants.ZERO_BYTES32;
+            this.pointZ = Constants.ZERO_BYTES32;
+            this.pointY = Constants.ZERO_BYTES32;
+            this.proof = Constants.ZERO_BYTES32;
         } else {
             // enter here only if blobType is invalid. Hence, blobData has been added previously
             // blobL2HashData not used
