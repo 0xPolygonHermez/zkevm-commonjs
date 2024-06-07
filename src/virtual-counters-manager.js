@@ -651,28 +651,24 @@ module.exports = class VirtualCountersManager {
         this._opcode(input);
         this._reduceCounters(10, 'S');
         this._reduceCounters(1, 'B');
-        this._reduceCounters(MCP, 'P');
     }
 
     opOr(input) {
         this._opcode(input);
         this._reduceCounters(10, 'S');
         this._reduceCounters(1, 'B');
-        this._reduceCounters(MCP, 'P');
     }
 
     opXor(input) {
         this._opcode(input);
         this._reduceCounters(10, 'S');
         this._reduceCounters(1, 'B');
-        this._reduceCounters(MCP, 'P');
     }
 
     opNot(input) {
         this._opcode(input);
         this._reduceCounters(10, 'S');
         this._reduceCounters(1, 'B');
-        this._reduceCounters(MCP, 'P');
     }
 
     opByte(input) {
