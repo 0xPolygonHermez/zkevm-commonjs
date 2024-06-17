@@ -7,7 +7,6 @@
 /* eslint-disable no-use-before-define */
 /* eslint-disable prefer-destructuring */
 
-const totalSteps = 2 ** 23;
 // Maximum counters poseidon level when interacting with a small smt (blockInfoTree, touchedAccountsTree..), is constant
 const MCPL = 23;
 // Maximum counters poseidon level when interacting with a big smt (stateTree), is variable and can be updated
@@ -19,7 +18,6 @@ const FPEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 const FNEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const FNEC_MINUS_ONE = Scalar.sub(FNEC, Scalar.e(1));
 const spentCountersByFunction = {};
-
 module.exports = class VirtualCountersManager {
     /**
      * constructor class
@@ -27,48 +25,51 @@ module.exports = class VirtualCountersManager {
      * @param {Boolean} config.verbose - Activate or deactivate verbose mode, default: false
      */
     constructor(config = {}) {
+        this.totalSteps = config.steps || 2 ** 23;
         this.verbose = config.verbose || false;
+        this.consumptionReport = [];
+        this.MCPReduction = config.MCPReduction || 0.6;
         // Compute counter initial amounts
         this.currentCounters = {
             S: {
-                amount: totalSteps,
+                amount: this.totalSteps,
                 name: 'steps',
-                initAmount: totalSteps,
+                initAmount: this.totalSteps,
             },
             A: {
-                amount: Math.floor(totalSteps / 32),
+                amount: Math.floor(this.totalSteps / 32),
                 name: 'arith',
-                initAmount: Math.floor(totalSteps / 32),
+                initAmount: Math.floor(this.totalSteps / 32),
             },
             B: {
-                amount: Math.floor(totalSteps / 16),
+                amount: Math.floor(this.totalSteps / 16),
                 name: 'binary',
-                initAmount: Math.floor(totalSteps / 16),
+                initAmount: Math.floor(this.totalSteps / 16),
             },
             M: {
-                amount: Math.floor(totalSteps / 32),
+                amount: Math.floor(this.totalSteps / 32),
                 name: 'memAlign',
-                initAmount: Math.floor(totalSteps / 32),
+                initAmount: Math.floor(this.totalSteps / 32),
             },
             K: {
-                amount: Math.floor((totalSteps / 155286) * 44),
+                amount: Math.floor((this.totalSteps / 155286) * 44),
                 name: 'keccaks',
-                initAmount: Math.floor((totalSteps / 155286) * 44),
+                initAmount: Math.floor((this.totalSteps / 155286) * 44),
             },
             D: {
-                amount: Math.floor(totalSteps / 56),
+                amount: Math.floor(this.totalSteps / 56),
                 name: 'padding',
-                initAmount: Math.floor(totalSteps / 56),
+                initAmount: Math.floor(this.totalSteps / 56),
             },
             P: {
-                amount: Math.floor(totalSteps / 30),
+                amount: Math.floor(this.totalSteps / 30),
                 name: 'poseidon',
-                initAmount: Math.floor(totalSteps / 30),
+                initAmount: Math.floor(this.totalSteps / 30),
             },
             SHA: {
-                amount: Math.floor((totalSteps - 1) / 31488) * 7,
+                amount: Math.floor((this.totalSteps - 1) / 31488) * 7,
                 name: 'sha256',
-                initAmount: Math.floor((totalSteps - 1) / 31488) * 7,
+                initAmount: Math.floor((this.totalSteps - 1) / 31488) * 7,
             },
         };
         this.currentCountersSnapshot = {};
@@ -110,7 +111,7 @@ module.exports = class VirtualCountersManager {
      * @param {Number} levels number of levels
      */
     setSMTLevels(levels) {
-        MCP = levels;
+        MCP = Math.floor(levels * this.MCPReduction);
     }
 
     /**
@@ -130,6 +131,10 @@ module.exports = class VirtualCountersManager {
             spentCounters[this.currentCountersSnapshot[counter].name] = this.currentCountersSnapshot[counter].amount - this.currentCounters[counter].amount;
         });
         this._verbose(spentCounters);
+        this.consumptionReport.push({
+            function: this.calledFunc,
+            vcounters: spentCounters,
+        });
         this.currentCountersSnapshot = spentCounters;
         // Fill counters consumption by function
         if (!spentCountersByFunction[this.calledFunc]) {
@@ -242,14 +247,17 @@ module.exports = class VirtualCountersManager {
         this._processContractCall({ ...input, ...{ isCreate: false, isCreate2: false } });
     }
 
-    processChangeL2Block() {
+    processChangeL2Block(input) {
+        this._checkInput(input, ['verifyMerkleProof']);
         this._reduceCounters(70, 'S');
         this._reduceCounters(4 + 4, 'B');
         this._reduceCounters(6 * MCP, 'P');
         this._reduceCounters(2, 'K');
         this._consolidateBlock();
         this._setupNewBlockInfoTree();
-        this._verifyMerkleProof();
+        if (input.verifyMerkleProof) {
+            this._verifyMerkleProof();
+        }
     }
 
     _verifyMerkleProof() {
@@ -912,7 +920,7 @@ module.exports = class VirtualCountersManager {
         this._opcode(input);
         this._checkInput(input, ['inputSize']);
         this._reduceCounters(40, 'S');
-        this._reduceCounters(Math.ceil((input.inputSize + 1) / 32), 'K');
+        this._reduceCounters(Math.ceil((input.inputSize + 1) / 136), 'K');
         this._saveMem({ length: input.inputSize });
         this._multiCall('_divArith', 2);
         this._mulArith();
@@ -992,7 +1000,7 @@ module.exports = class VirtualCountersManager {
         this._divArith();
         this._reduceCounters(Math.ceil(input.inputSize / 56) + 4, 'P');
         this._reduceCounters(Math.ceil(input.inputSize / 56) + 4, 'D');
-        this._multiCall('_opLogLoop', Math.floor(input.inputSize + 1 / 32));
+        this._multiCall('_opLogLoop', Math.floor((input.inputSize + 1) / 32));
         this._mLoadX();
         this._SHRarith();
         this._fillBlockInfoTreeWithLog();
@@ -1511,7 +1519,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _mLoadX() {
-        this._reduceCounters(40, 'S');
+        this._reduceCounters(30, 'S');
         this._reduceCounters(2, 'B');
         this._reduceCounters(1, 'M');
         this._offsetUtil();
@@ -1520,7 +1528,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _mStoreX() {
-        this._reduceCounters(100, 'S');
+        this._reduceCounters(80, 'S');
         this._reduceCounters(1, 'B');
         this._reduceCounters(1, 'M');
         this._offsetUtil();
@@ -1529,7 +1537,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _mStore32() {
-        this._reduceCounters(100, 'S');
+        this._reduceCounters(80, 'S');
         this._reduceCounters(1, 'B');
         this._reduceCounters(1, 'M');
         this._offsetUtil();
@@ -1682,7 +1690,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _mulArith() {
-        this._reduceCounters(50, 'S');
+        this._reduceCounters(40, 'S');
         this._reduceCounters(1, 'B');
         this._reduceCounters(1, 'A');
     }
@@ -1722,7 +1730,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _SHRarith() {
-        this._reduceCounters(50, 'S');
+        this._reduceCounters(40, 'S');
         this._reduceCounters(2, 'B');
         this._reduceCounters(1, 'A');
         this._divArith();
@@ -1740,7 +1748,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _divArith() {
-        this._reduceCounters(50, 'S');
+        this._reduceCounters(40, 'S');
         this._reduceCounters(3, 'B');
         this._reduceCounters(1, 'A');
     }

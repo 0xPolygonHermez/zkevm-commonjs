@@ -773,7 +773,7 @@ module.exports = class Processor {
 
     async _processChangeL2BlockTx(tx) {
         // Reduce counters
-        this.vcm.computeFunctionCounters('processChangeL2Block');
+        this.vcm.computeFunctionCounters('processChangeL2Block', { verifyMerkleProof: tx.indexL1InfoTree !== 0 });
 
         // write old blockhash (oldStateRoot) on storage
         // Get old blockNumber
