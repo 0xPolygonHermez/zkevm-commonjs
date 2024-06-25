@@ -202,6 +202,17 @@ module.exports = class Processor {
             try {
                 const decodedObject = decodeCustomRawTxProverMethod(rawTx);
                 txDecoded = decodedObject.txDecoded;
+                /*
+                * The RLP encoding, encodes the 0 integer as "0x" ( empty byte array),
+                * In order to be compatible with Scalar or Number we will update the 0x integer cases with 0x00
+                */
+                const txParams = Object.keys(txDecoded);
+
+                txParams.forEach((key) => {
+                    if (txDecoded[key] === '0x' && key !== 'data' && key !== 'to') {
+                        txDecoded[key] = '0x00';
+                    }
+                });
                 rlpSignData = decodedObject.rlpSignData;
             } catch (error) {
                 this.decodedTxs.push({ isInvalid: true, reason: 'TX INVALID: Failed to RLP decode signing data', tx: txDecoded });
@@ -231,17 +242,6 @@ module.exports = class Processor {
                 continue;
             }
 
-            /*
-             * The RLP encoding, encodes the 0 integer as "0x" ( empty byte array),
-             * In order to be compatible with Scalar or Number we will update the 0x integer cases with 0x00
-             */
-            const txParams = Object.keys(txDecoded);
-
-            txParams.forEach((key) => {
-                if (txDecoded[key] === '0x' && key !== 'data' && key !== 'to') {
-                    txDecoded[key] = '0x00';
-                }
-            });
             this.decodedTxs.push({ isInvalid: false, reason: '', tx: txDecoded });
         }
     }
