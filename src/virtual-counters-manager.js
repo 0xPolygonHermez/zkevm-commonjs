@@ -25,7 +25,10 @@ module.exports = class VirtualCountersManager {
      * @param {Boolean} config.verbose - Activate or deactivate verbose mode, default: false
      */
     constructor(config = {}) {
-        this.totalSteps = config.steps || 2 ** 23;
+        this.configSteps = config.steps || 2 ** 23;
+        // safe guard counters to not take into account (%RANGE = 1 / SAFE_RANGE)
+        this.safeRange = config.safeRange || 20;
+        this.totalSteps = Math.floor(this.configSteps - this.configSteps / this.safeRange);
         this.verbose = config.verbose || false;
         this.consumptionReport = [];
         this.MCPReduction = config.MCPReduction || 0.6;
