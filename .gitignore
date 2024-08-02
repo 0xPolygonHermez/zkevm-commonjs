@@ -118,3 +118,7 @@ tools/fill-genesis/*.ignore.json
 
 # input examples
 tools/inputs-examples/
+
+# ignore
+*.ignore/
+tools/*.ignore/
