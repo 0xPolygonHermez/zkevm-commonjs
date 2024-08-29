@@ -265,6 +265,7 @@ module.exports = class VirtualCountersManager {
 
     _verifyMerkleProof() {
         this._reduceCounters(250, 'S');
+        this._reduceCounters(1, 'B');
         this._reduceCounters(33, 'K');
     }
 
@@ -1747,7 +1748,7 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(200, 'S');
         this._reduceCounters(2, 'K');
         this._reduceCounters(MCP, 'P');
-        this._reduceCounters(1, 'B');
+        this._reduceCounters(2, 'B');
     }
 
     _divArith() {
