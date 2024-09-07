@@ -365,7 +365,7 @@ module.exports = class VirtualCountersManager {
         this._checkInput(input, ['calldataLength']);
         this._reduceCounters(100, 'S');
         this._reduceCounters(1, 'B');
-        this._reduceCounters(Math.ceil((input.calldataLength + 1) / 64), 'SHA');
+        this._reduceCounters(Math.ceil((input.calldataLength + 1 + 8) / 64), 'SHA');
         this._multiCall('_divArith', 2);
         this._mStore32();
         this._mStoreX();
