@@ -291,9 +291,9 @@ module.exports = class VirtualCountersManager {
 
     _ecAdd() {
         // Worst case scenario
-        this._reduceCounters(323, 'S');
-        this._reduceCounters(33, 'B');
-        this._reduceCounters(40, 'A');
+        this._reduceCounters(800, 'S');
+        this._reduceCounters(50, 'B');
+        this._reduceCounters(50, 'A');
     }
 
     preECMul() {
@@ -307,9 +307,9 @@ module.exports = class VirtualCountersManager {
 
     _ecMul() {
         // Worst case scenario
-        this._reduceCounters(162890, 'S');
-        this._reduceCounters(16395, 'B');
-        this._reduceCounters(19161, 'A');
+        this._reduceCounters(175000, 'S');
+        this._reduceCounters(20000, 'B');
+        this._reduceCounters(20000, 'A');
     }
 
     preECPairing(input) {
@@ -325,9 +325,9 @@ module.exports = class VirtualCountersManager {
 
     _ecPairing(inputsCount) {
         // worst case scenario
-        this._reduceCounters(16 + inputsCount * 184017 + 171253, 'S');
-        this._reduceCounters(inputsCount * 3986 + 650, 'B');
-        this._reduceCounters(inputsCount * 13694 + 15411, 'A');
+        this._reduceCounters(16 + inputsCount * 200000 + 175000, 'S');
+        this._reduceCounters(inputsCount * 4100 + 750, 'B');
+        this._reduceCounters(inputsCount * 15000 + 17500, 'A');
     }
 
     preModExp(input) {
