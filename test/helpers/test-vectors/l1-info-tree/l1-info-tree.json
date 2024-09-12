@@ -1,0 +1,73 @@
+[
+  {
+    "description": "empty tree",
+    "leafs": [],
+    "expectedRoot": "0x27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757"
+  },
+  {
+    "description": "one leaf",
+    "leafs": [
+      {
+        "leafData": {
+          "ger": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
+          "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
+          "timestamp": "1697231573"
+        },
+        "expectedLeafValue": "0xf62f487534b899b1c362242616725878188ca891fab60854b792ca0628286de7"
+      }
+    ],
+    "expectedRoot": "0x0a45670382cab3b636561952f7cc1ebbd5f9734e907d762875e89b419ce89c04"
+  },
+  {
+    "description": "two leafs",
+    "leafs": [
+      {
+        "leafData": {
+          "ger": "0x16994edfddddb9480667b64174fc00d3b6da7290d37b8db3a16571b4ddf0789f",
+          "blockHash": "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb",
+          "timestamp": "1697231573"
+        },
+        "expectedLeafValue": "0xf62f487534b899b1c362242616725878188ca891fab60854b792ca0628286de7"
+      },
+      {
+        "leafData": {
+          "ger": "0x356682567c5d485bbabe89590d3d72b08671a0a07899dcbaddccbe0599491669",
+          "blockHash": "0x8f9cfb43c0f6bc7ce9f9e43e8761776a2ef9657ccf87318e2487c313d119b8cf",
+          "timestamp": "658736476"
+        },
+        "expectedLeafValue": "0xba9c9985e6c9cee54f57991049af0c42439fa2b2915a0597f4d63f63d31c1d4f"
+      }
+    ],
+    "expectedRoot": "0xce3937cebcd96734c492f13d47a8bc22e466cce44117fec1c28e2636d8cf543b"
+  },
+  {
+    "description": "three leafs",
+    "leafs": [
+      {
+        "leafData": {
+          "ger": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "timestamp": "0"
+        },
+        "expectedLeafValue": "0x3cac317908c699fe873a7f6ee4e8cd63fbe9918b2315c97be91585590168e301"
+      },
+      {
+        "leafData": {
+          "ger": "0x356682567c5d485bbabe89590d3d72b08671a0a07899dcbaddccbe0599491669",
+          "blockHash": "0x8f9cfb43c0f6bc7ce9f9e43e8761776a2ef9657ccf87318e2487c313d119b8cf",
+          "timestamp": "658736476"
+        },
+        "expectedLeafValue": "0xba9c9985e6c9cee54f57991049af0c42439fa2b2915a0597f4d63f63d31c1d4f"
+      },
+      {
+        "leafData": {
+          "ger": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "blockHash": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "timestamp": "0xffffffffffffffff"
+        },
+        "expectedLeafValue": "0xc2db4c8d173afd8fff4a7344663525d3ae155f2a60db2f157850eccb46887589"
+      }
+    ],
+    "expectedRoot": "0xe4f94a9663b007e7a1186cf27047aa2b85387c65c840e3811b7ac63c97555091"
+  }
+]
