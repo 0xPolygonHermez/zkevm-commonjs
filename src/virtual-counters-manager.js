@@ -265,6 +265,7 @@ module.exports = class VirtualCountersManager {
 
     _verifyMerkleProof() {
         this._reduceCounters(250, 'S');
+        this._reduceCounters(1, 'B');
         this._reduceCounters(33, 'K');
     }
 
@@ -290,9 +291,9 @@ module.exports = class VirtualCountersManager {
 
     _ecAdd() {
         // Worst case scenario
-        this._reduceCounters(323, 'S');
-        this._reduceCounters(33, 'B');
-        this._reduceCounters(40, 'A');
+        this._reduceCounters(800, 'S');
+        this._reduceCounters(50, 'B');
+        this._reduceCounters(50, 'A');
     }
 
     preECMul() {
@@ -306,9 +307,9 @@ module.exports = class VirtualCountersManager {
 
     _ecMul() {
         // Worst case scenario
-        this._reduceCounters(162890, 'S');
-        this._reduceCounters(16395, 'B');
-        this._reduceCounters(19161, 'A');
+        this._reduceCounters(175000, 'S');
+        this._reduceCounters(20000, 'B');
+        this._reduceCounters(20000, 'A');
     }
 
     preECPairing(input) {
@@ -324,9 +325,9 @@ module.exports = class VirtualCountersManager {
 
     _ecPairing(inputsCount) {
         // worst case scenario
-        this._reduceCounters(16 + inputsCount * 184017 + 171253, 'S');
-        this._reduceCounters(inputsCount * 3986 + 650, 'B');
-        this._reduceCounters(inputsCount * 13694 + 15411, 'A');
+        this._reduceCounters(16 + inputsCount * 200000 + 175000, 'S');
+        this._reduceCounters(inputsCount * 4100 + 750, 'B');
+        this._reduceCounters(inputsCount * 15000 + 17500, 'A');
     }
 
     preModExp(input) {
@@ -364,7 +365,7 @@ module.exports = class VirtualCountersManager {
         this._checkInput(input, ['calldataLength']);
         this._reduceCounters(100, 'S');
         this._reduceCounters(1, 'B');
-        this._reduceCounters(Math.ceil((input.calldataLength + 1) / 64), 'SHA');
+        this._reduceCounters(Math.ceil((input.calldataLength + 1 + 8) / 64), 'SHA');
         this._multiCall('_divArith', 2);
         this._mStore32();
         this._mStoreX();
@@ -1747,7 +1748,7 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(200, 'S');
         this._reduceCounters(2, 'K');
         this._reduceCounters(MCP, 'P');
-        this._reduceCounters(1, 'B');
+        this._reduceCounters(2, 'B');
     }
 
     _divArith() {
