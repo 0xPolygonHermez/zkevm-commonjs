@@ -65,9 +65,9 @@ module.exports = class VirtualCountersManager {
                 initAmount: Math.floor(this.totalSteps / 56),
             },
             P: {
-                amount: Math.floor(this.totalSteps / 30),
+                amount: Math.floor(this.totalSteps / 31),
                 name: 'poseidon',
-                initAmount: Math.floor(this.totalSteps / 30),
+                initAmount: Math.floor(this.totalSteps / 31),
             },
             SHA: {
                 amount: Math.floor((this.totalSteps - 1) / 31488) * 7,
