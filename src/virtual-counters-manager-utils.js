@@ -7,38 +7,22 @@
 /* eslint-disable guard-for-in */
 /* eslint-disable camelcase */
 /* eslint-disable no-use-before-define */
-/**
- * Computes the expected modExp counters for the given inputs.
- * @param ctx - Context.
- * @param tag - Tag.
- * @sets ctx.ctx.emodExpCounters.
- */
-
-const BASE = 1n << 256n;
 
 function expectedModExpCounters(lenB, lenE, lenM, B, E, M) {
     const [Q_B_M, R_B_M] = [B / M, B % M];
     const Bsq = B * B;
-    const NZ_Bsq = 2 * lenB - computeLenThisBase(Bsq);
     const [Q_Bsq_M, R_Bsq_M] = [Bsq / M, Bsq % M];
-    const BM = B * M;
 
-    const E2 = Math.floor(lenE / 2) || 1;
+    const lenE2 = Math.floor(lenE / 2) || 1;
 
-    let nTimesOdd = 0;
-    while (E > 0n) {
-        nTimesOdd += Number(E & 1n);
-        E >>= 1n;
-    }
-    const nTimesEven = lenE * 256 - nTimesOdd;
+    const log2E = Math.floor(Math.log(E) / Math.log(2));
 
     const counters = { ariths: 0, binaries: 0, steps: 0 };
     const a = setupAndFirstDivCounters();
-    const b = halfLoopCounters();
-    const c = fullLoopCounters();
+    const b = oddIterationCounters();
 
     for (const key in counters) {
-        counters[key] = a[key] + nTimesEven * b[key] + nTimesOdd * c[key];
+        counters[key] = a[key] + log2E * b[key];
     }
 
     return counters;
@@ -56,122 +40,54 @@ function expectedModExpCounters(lenB, lenE, lenM, B, E, M) {
         return len;
     }
 
-    // Computes the positions of the first different chunk between x and y.
-    function first_diff_chunk(x, y) {
-        const xLen = computeLenThisBase(x);
-        const yLen = computeLenThisBase(y);
-
-        if (xLen > yLen || xLen < yLen) {
-            return xLen;
-        }
-
-        let i = xLen - 1;
-        while (i >= 0 && ((x >> (256n * BigInt(i))) & 0xffffffffffffffffffffffffffffffffn) === ((y >> (256n * BigInt(i))) & 0xffffffffffffffffffffffffffffffffn)) {
-            i -= 1;
-        }
-
-        return i + 1;
-    }
-
     // Counters computation of the setup and first division.
     function setupAndFirstDivCounters() {
         return {
             steps:
-                218
-                + 39 * lenB
-                + 45 * lenM
-                + computeLenThisBase(Q_B_M) * (30 + 33 * lenM)
-                + 17 * computeLenThisBase(R_B_M)
-                - 14 * first_diff_chunk(B, M)
-                - 7 * first_diff_chunk(M, R_B_M),
-            binaries:
-                12
-                + 6 * lenB
-                + 3 * lenM
-                + computeLenThisBase(Q_B_M) * (1 + 4 * lenM)
-                + computeLenThisBase(R_B_M)
-                - 4 * first_diff_chunk(B, M)
-                - 2 * first_diff_chunk(M, R_B_M),
-            ariths: 1 + computeLenThisBase(Q_B_M) * lenM,
+                74
+                + 2 // last 2 steps
+                + 10 * lenB
+                + 26 * lenM
+                + (8 + 19 * lenM ) * computeLenThisBase(Q_B_M)
+                + 8 * computeLenThisBase(R_B_M),
+             binaries:
+                2
+                + 2 * lenM
+                + 2 * computeLenThisBase(Q_B_M) * lenM,
+            ariths:
+                lenM 
+                + (19 * lenM - 18) * computeLenThisBase(Q_B_M)
         };
     }
 
     // Counters computation of the half loop.
-    function halfLoopCounters() {
+    function oddIterationCounters() {
         return {
             steps:
-                399
-                + 100 * lenB
-                + 61 * ((lenB * (lenB + 1)) / 2)
-                + 48 * lenM
-                + 19 * lenE
-                + 44 * E2
-                + computeLenThisBase(Q_Bsq_M) * (30 + 33 * lenM)
-                + 14 * computeLenThisBase(R_Bsq_M)
-                - 14 * first_diff_chunk(Bsq, M)
-                - 7 * first_diff_chunk(M, R_Bsq_M)
-                - 5 * NZ_Bsq,
-            binaries:
-                23
+                229
                 + 14 * lenB
-                + 9 * ((lenB * (lenB + 1)) / 2)
-                + 3 * lenM
-                + 2 * lenE
-                + 3 * E2
-                + computeLenThisBase(Q_Bsq_M) * (1 + 4 * lenM)
-                + computeLenThisBase(R_Bsq_M)
-                - 4 * first_diff_chunk(Bsq, M)
-                - 2 * first_diff_chunk(M, R_Bsq_M)
-                - NZ_Bsq,
-            ariths:
-                2
-                + lenB
-                + (lenB * (lenB + 1)) / 2
-                + E2
-                + computeLenThisBase(Q_Bsq_M) * lenM,
-        };
-    }
-
-    // Counters computation of the full loop.
-    function fullLoopCounters() {
-        return {
-            steps:
-                674
-                + 180 * lenB
-                + 61 * ((lenB * (lenB + 1)) / 2)
-                + 149 * lenM
-                + 19 * lenE
-                + 44 * E2
-                + 66 * lenB * lenM
-                + computeLenThisBase(Q_Bsq_M) * (30 + 33 * lenM)
-                + 14 * computeLenThisBase(R_Bsq_M)
-                - 14 * first_diff_chunk(BM, M)
-                - 14 * first_diff_chunk(Bsq, M)
-                - 7 * first_diff_chunk(M, [0n])
-                - 7 * first_diff_chunk(M, R_Bsq_M)
-                - 5 * NZ_Bsq,
+                + 6 * lenE
+                + 68 * lenM
+                + 51 * lenB**2
+                + 38 * lenB * lenM
+                + 25 * lenE2
+                + (19 * lenM + 8) * computeLenThisBase(Q_Bsq_M) 
+                + 8 * computeLenThisBase(R_Bsq_M),
             binaries:
-                36
-                + 21 * lenB
-                + 9 * ((lenB * (lenB + 1)) / 2)
-                + 12 * lenM
-                + 2 * lenE
-                + 3 * E2
-                + 8 * lenB * lenM
-                + computeLenThisBase(Q_Bsq_M) * (1 + 4 * lenM)
-                + computeLenThisBase(R_Bsq_M)
-                - 4 * first_diff_chunk(BM, M)
-                - 4 * first_diff_chunk(Bsq, M)
-                - 2 * first_diff_chunk(M, [0n])
-                - 2 * first_diff_chunk(M, R_Bsq_M)
-                - NZ_Bsq,
+                11
+                - 9 * lenB
+                + 3 * lenM
+                + 9 * lenB**2
+                + 4 * lenB * lenM
+                + 2 * lenE2
+                + 2 * computeLenThisBase(Q_Bsq_M) * lenM,
             ariths:
-                4
-                + lenB
-                + (lenB * (lenB + 1)) / 2
-                + E2
-                + 2 * lenB * lenM
-                + computeLenThisBase(Q_Bsq_M) * lenM,
+                - 1
+                - 16 * lenB
+                - 16 * lenM
+                + lenB**2
+                + 38 * lenB * lenM
+                + (19 * lenM - 18) * computeLenThisBase(Q_Bsq_M),
         };
     }
 }
