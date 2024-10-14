@@ -415,7 +415,7 @@ module.exports = class VirtualCountersManager {
     }
 
     preP256Verify(input) {
-        this._checkInput(input, ['r', 's', 'x', 'y']);
+        this._checkInput(input, ['r', 's', 'pubKeyX', 'pubKeyY']);
         this._reduceCounters(50, 'S');
         this._reduceCounters(1, 'B');
         this._multiCall('_readFromCalldataOffset', 5);
@@ -441,23 +441,23 @@ module.exports = class VirtualCountersManager {
             this._reduceCounters(19, 'S');
             this._reduceCounters(4, 'B');
             return;
-        } else if(Scalar.lt(SECP256R1_P_MINUS_ONE, input.x)) {
+        } else if(Scalar.lt(SECP256R1_P_MINUS_ONE, input.pubKeyX)) {
             this._reduceCounters(22, 'S');
             this._reduceCounters(5, 'B');
             return;
-        } else if(Scalar.lt(SECP256R1_P_MINUS_ONE, input.y)) {
+        } else if(Scalar.lt(SECP256R1_P_MINUS_ONE, input.pubKeyY)) {
             this._reduceCounters(24, 'S');
             this._reduceCounters(6, 'B');
             return;
-        } else if(input.x === 0n && input.y === 0n) {
+        } else if(input.pubKeyX === 0n && input.pubKeyY === 0n) {
             this._reduceCounters(29, 'S');
             this._reduceCounters(8, 'B');
         } else {
-            const aux_y2 = Scalar.exp(input.y, 2);
-            const aux_x3 = Scalar.exp(input.x, 3);
-            const aux_ax_b = Scalar.add(Scalar.mul(input.x, SECP256R1_A), SECP256R1_B);
+            const aux_y2 = Scalar.exp(input.pubKeyY, 2);
+            const aux_x3 = Scalar.exp(input.pubKeyX, 3);
+            const aux_ax_b = Scalar.add(Scalar.mul(input.pubKeyX, SECP256R1_A), SECP256R1_B);
             const aux_x3_ax_b = Scalar.add(aux_x3, aux_ax_b);
-            if (!aux_y2.eq(aux_x3_ax_b)) {
+            if (!Scalar.eq(aux_y2,aux_x3_ax_b)) {
                 this._reduceCounters(104, 'S');
                 this._reduceCounters(15, 'B');
                 this._reduceCounters(12, 'A');

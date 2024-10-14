@@ -15,7 +15,7 @@ function expectedModExpCounters(lenB, lenE, lenM, B, E, M) {
 
     const lenE2 = Math.floor(lenE / 2) || 1;
 
-    const log2E = Math.floor(Math.log(E) / Math.log(2));
+    const log2E = Math.floor(Math.log(Number(E)) / Math.log(2));
 
     const counters = { ariths: 0, binaries: 0, steps: 0 };
     const a = setupAndFirstDivCounters();
