@@ -358,7 +358,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _modexp(bLen, mLen, eLen, base, exponent, modulus) {
-        const modexpCounters = expectedModExpCounters(Math.ceil(bLen / 32), Math.ceil(mLen / 32), Math.ceil(eLen / 32), base, exponent, modulus);
+        const modexpCounters = expectedModExpCounters(Math.ceil(bLen / 32), Math.ceil(eLen / 32), Math.ceil(mLen / 32), base, exponent, modulus);
         this._reduceCounters(modexpCounters.steps, 'S');
         this._reduceCounters(modexpCounters.binaries, 'B');
         this._reduceCounters(modexpCounters.ariths, 'A');
