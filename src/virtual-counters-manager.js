@@ -17,6 +17,14 @@ const { expectedModExpCounters } = require('./virtual-counters-manager-utils');
 const FPEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
 const FNEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const FNEC_MINUS_ONE = Scalar.sub(FNEC, Scalar.e(1));
+
+const SECP256R1_N = Scalar.e('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551');
+const SECP256R1_N_MINUS_ONE = Scalar.sub(SECP256R1_N, 1);
+const SECP256R1_P = Scalar.e('0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff');
+const SECP256R1_P_MINUS_ONE = Scalar.sub(SECP256R1_P, 1);
+const SECP256R1_A = Scalar.e('0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc');
+const SECP256R1_B = Scalar.e('0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b');
+
 const spentCountersByFunction = {};
 module.exports = class VirtualCountersManager {
     /**
@@ -236,7 +244,7 @@ module.exports = class VirtualCountersManager {
     processTx(input) {
         this._checkInput(input, ['bytecodeLength', 'isDeploy']);
         this._reduceCounters(300, 'S');
-        this._reduceCounters(11 + 7, 'B');
+        this._reduceCounters(12 + 7, 'B');
         this._reduceCounters(14 * MCP, 'P');
         this._reduceCounters(5, 'D');
         this._reduceCounters(2, 'A');
@@ -350,7 +358,7 @@ module.exports = class VirtualCountersManager {
     }
 
     _modexp(bLen, mLen, eLen, base, exponent, modulus) {
-        const modexpCounters = expectedModExpCounters(Math.ceil(bLen / 32), Math.ceil(mLen / 32), Math.ceil(eLen / 32), base, exponent, modulus);
+        const modexpCounters = expectedModExpCounters(Math.ceil(bLen / 32), Math.ceil(eLen / 32), Math.ceil(mLen / 32), base, exponent, modulus);
         this._reduceCounters(modexpCounters.steps, 'S');
         this._reduceCounters(modexpCounters.binaries, 'B');
         this._reduceCounters(modexpCounters.ariths, 'A');
@@ -404,6 +412,61 @@ module.exports = class VirtualCountersManager {
         this._reduceCounters(12, 'S');
         this._mLoad32();
         this._mStore32();
+    }
+
+    preP256Verify(input) {
+        this._checkInput(input, ['r', 's', 'pubKeyX', 'pubKeyY']);
+        this._reduceCounters(50, 'S');
+        this._reduceCounters(1, 'B');
+        this._multiCall('_readFromCalldataOffset', 5);
+        this._p256verify(input);
+        this._mStore32();
+        this._mStoreX();
+    }
+
+    _p256verify(input) {
+        if(input.r === 0n) {
+            this._reduceCounters(13, 'S');
+            this._reduceCounters(1, 'B');
+            return;
+        } else if(Scalar.lt(SECP256R1_N_MINUS_ONE, input.r)) {
+            this._reduceCounters(15, 'S');
+            this._reduceCounters(2, 'B');
+            return;
+        } else if(input.s === 0n) {
+            this._reduceCounters(17, 'S');
+            this._reduceCounters(3, 'B');
+            return;
+        } else if(Scalar.lt(SECP256R1_N_MINUS_ONE, input.s)) {
+            this._reduceCounters(19, 'S');
+            this._reduceCounters(4, 'B');
+            return;
+        } else if(Scalar.lt(SECP256R1_P_MINUS_ONE, input.pubKeyX)) {
+            this._reduceCounters(22, 'S');
+            this._reduceCounters(5, 'B');
+            return;
+        } else if(Scalar.lt(SECP256R1_P_MINUS_ONE, input.pubKeyY)) {
+            this._reduceCounters(24, 'S');
+            this._reduceCounters(6, 'B');
+            return;
+        } else if(input.pubKeyX === 0n && input.pubKeyY === 0n) {
+            this._reduceCounters(29, 'S');
+            this._reduceCounters(8, 'B');
+        } else {
+            const aux_x3 = Scalar.mod(Scalar.exp(input.pubKeyX, 3),SECP256R1_P);
+            const aux_ax_b = Scalar.add(Scalar.mul(input.pubKeyX, SECP256R1_A), SECP256R1_B);
+            const aux_x3_ax_b = Scalar.mod(Scalar.add(aux_x3, aux_ax_b),SECP256R1_P);
+            const aux_y2 = Scalar.mod(Scalar.exp(input.pubKeyY, 2),SECP256R1_P);
+            if (!Scalar.eq(aux_y2,aux_x3_ax_b)) {
+                this._reduceCounters(104, 'S');
+                this._reduceCounters(15, 'B');
+                this._reduceCounters(12, 'A');
+                return;
+            }
+            this._reduceCounters(7718, 'S');
+            this._reduceCounters(22, 'B');
+            this._reduceCounters(531, 'A');
+        }
     }
 
     opAdd(input) {
@@ -1701,7 +1764,7 @@ module.exports = class VirtualCountersManager {
 
     _isColdAddress() {
         this._reduceCounters(100, 'S');
-        this._reduceCounters(2 + 1, 'B');
+        this._reduceCounters(3 + 1, 'B');
         this._reduceCounters(2 * MCPL, 'P');
     }
 
