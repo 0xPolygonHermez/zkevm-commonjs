@@ -425,42 +425,37 @@ module.exports = class VirtualCountersManager {
     }
 
     _p256verify(input) {
-        if(input.r === 0n) {
+        if (input.r === 0n) {
             this._reduceCounters(13, 'S');
             this._reduceCounters(1, 'B');
-            return;
-        } else if(Scalar.lt(SECP256R1_N_MINUS_ONE, input.r)) {
+        } else if (Scalar.lt(SECP256R1_N_MINUS_ONE, input.r)) {
             this._reduceCounters(15, 'S');
             this._reduceCounters(2, 'B');
-            return;
-        } else if(input.s === 0n) {
+        } else if (input.s === 0n) {
             this._reduceCounters(17, 'S');
             this._reduceCounters(3, 'B');
-            return;
-        } else if(Scalar.lt(SECP256R1_N_MINUS_ONE, input.s)) {
+        } else if (Scalar.lt(SECP256R1_N_MINUS_ONE, input.s)) {
             this._reduceCounters(19, 'S');
             this._reduceCounters(4, 'B');
-            return;
-        } else if(Scalar.lt(SECP256R1_P_MINUS_ONE, input.pubKeyX)) {
+        } else if (Scalar.lt(SECP256R1_P_MINUS_ONE, input.pubKeyX)) {
             this._reduceCounters(22, 'S');
             this._reduceCounters(5, 'B');
-            return;
-        } else if(Scalar.lt(SECP256R1_P_MINUS_ONE, input.pubKeyY)) {
+        } else if (Scalar.lt(SECP256R1_P_MINUS_ONE, input.pubKeyY)) {
             this._reduceCounters(24, 'S');
             this._reduceCounters(6, 'B');
-            return;
-        } else if(input.pubKeyX === 0n && input.pubKeyY === 0n) {
+        } else if (input.pubKeyX === 0n && input.pubKeyY === 0n) {
             this._reduceCounters(29, 'S');
             this._reduceCounters(8, 'B');
         } else {
-            const aux_x3 = Scalar.mod(Scalar.exp(input.pubKeyX, 3),SECP256R1_P);
-            const aux_ax_b = Scalar.add(Scalar.mul(input.pubKeyX, SECP256R1_A), SECP256R1_B);
-            const aux_x3_ax_b = Scalar.mod(Scalar.add(aux_x3, aux_ax_b),SECP256R1_P);
-            const aux_y2 = Scalar.mod(Scalar.exp(input.pubKeyY, 2),SECP256R1_P);
-            if (!Scalar.eq(aux_y2,aux_x3_ax_b)) {
+            const auxX3 = Scalar.mod(Scalar.exp(input.pubKeyX, 3), SECP256R1_P);
+            const auxAxB = Scalar.add(Scalar.mul(input.pubKeyX, SECP256R1_A), SECP256R1_B);
+            const auxX3AxB = Scalar.mod(Scalar.add(auxX3, auxAxB), SECP256R1_P);
+            const auxY2 = Scalar.mod(Scalar.exp(input.pubKeyY, 2), SECP256R1_P);
+            if (!Scalar.eq(auxY2, auxX3AxB)) {
                 this._reduceCounters(104, 'S');
                 this._reduceCounters(15, 'B');
                 this._reduceCounters(12, 'A');
+
                 return;
             }
             this._reduceCounters(7718, 'S');

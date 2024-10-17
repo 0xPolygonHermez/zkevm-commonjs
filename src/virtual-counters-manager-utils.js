@@ -55,15 +55,15 @@ function expectedModExpCounters(lenB, lenE, lenM, B, E, M) {
                 + 2 // last 2 steps
                 + 10 * lenB
                 + 3 * lenM
-                + (8 + 19 * lenM ) * computeLenThisBase(Q_B_M)
+                + (8 + 19 * lenM) * computeLenThisBase(Q_B_M)
                 + 12 * computeLenThisBase(R_B_M),
-             binaries:
+            binaries:
                 4
                 - lenM
                 + computeLenThisBase(R_B_M)
                 + 2 * computeLenThisBase(Q_B_M) * lenM,
             ariths:
-                lenM * computeLenThisBase(Q_B_M)
+                lenM * computeLenThisBase(Q_B_M),
         };
     }
 
@@ -74,19 +74,19 @@ function expectedModExpCounters(lenB, lenE, lenM, B, E, M) {
                 + 82 * lenM
                 + 6 * lenE
                 + (80 * lenM * (lenM - 1)) / 2
-                + 19 * lenM**2
+                + 19 * lenM ** 2
                 + 25 * lenQE2,
             binaries:
                 9
                 + 6 * lenM
                 + (23 * lenM * (lenM - 1)) / 2
-                + 2 * lenM**2
+                + 2 * lenM ** 2
                 + 3 * lenQE2,
             ariths:
-                - 1
+                -1
                 + 2 * lenM
                 + (2 * lenM * (lenM - 1)) / 2
-                + lenM**2
+                + lenM ** 2,
         };
     }
 
@@ -97,19 +97,19 @@ function expectedModExpCounters(lenB, lenE, lenM, B, E, M) {
                 + 114 * lenM
                 + 6 * lenE
                 + (80 * lenM * (lenM - 1)) / 2
-                + 57 * lenM**2
+                + 57 * lenM ** 2
                 + 25 * lenQE2,
             binaries:
                 17
                 + 3 * lenM
                 + (23 * lenM * (lenM - 1)) / 2
-                + 6 * lenM**2
+                + 6 * lenM ** 2
                 + 3 * lenQE2,
             ariths:
-                - 1
+                -1
                 + 2 * lenM
                 + (2 * lenM * (lenM - 1)) / 2
-                + 3 * lenM**2
+                + 3 * lenM ** 2,
         };
     }
 }
