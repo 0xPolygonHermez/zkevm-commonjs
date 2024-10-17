@@ -244,7 +244,7 @@ module.exports = class VirtualCountersManager {
     processTx(input) {
         this._checkInput(input, ['bytecodeLength', 'isDeploy']);
         this._reduceCounters(300, 'S');
-        this._reduceCounters(11 + 7, 'B');
+        this._reduceCounters(12 + 7, 'B');
         this._reduceCounters(14 * MCP, 'P');
         this._reduceCounters(5, 'D');
         this._reduceCounters(2, 'A');
@@ -1764,7 +1764,7 @@ module.exports = class VirtualCountersManager {
 
     _isColdAddress() {
         this._reduceCounters(100, 'S');
-        this._reduceCounters(2 + 1, 'B');
+        this._reduceCounters(3 + 1, 'B');
         this._reduceCounters(2 * MCPL, 'P');
     }
 
