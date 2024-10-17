@@ -18,9 +18,9 @@ const FPEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 const FNEC = Scalar.e('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const FNEC_MINUS_ONE = Scalar.sub(FNEC, Scalar.e(1));
 
-const SECP256R1_N = Scalar.e('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632550');
+const SECP256R1_N = Scalar.e('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551');
 const SECP256R1_N_MINUS_ONE = Scalar.sub(SECP256R1_N, 1);
-const SECP256R1_P = Scalar.e('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632550');
+const SECP256R1_P = Scalar.e('0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff');
 const SECP256R1_P_MINUS_ONE = Scalar.sub(SECP256R1_P, 1);
 const SECP256R1_A = Scalar.e('0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc');
 const SECP256R1_B = Scalar.e('0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b');
@@ -453,10 +453,10 @@ module.exports = class VirtualCountersManager {
             this._reduceCounters(29, 'S');
             this._reduceCounters(8, 'B');
         } else {
-            const aux_y2 = Scalar.exp(input.pubKeyY, 2);
-            const aux_x3 = Scalar.exp(input.pubKeyX, 3);
+            const aux_x3 = Scalar.mod(Scalar.exp(input.pubKeyX, 3),SECP256R1_P);
             const aux_ax_b = Scalar.add(Scalar.mul(input.pubKeyX, SECP256R1_A), SECP256R1_B);
-            const aux_x3_ax_b = Scalar.add(aux_x3, aux_ax_b);
+            const aux_x3_ax_b = Scalar.mod(Scalar.add(aux_x3, aux_ax_b),SECP256R1_P);
+            const aux_y2 = Scalar.mod(Scalar.exp(input.pubKeyY, 2),SECP256R1_P);
             if (!Scalar.eq(aux_y2,aux_x3_ax_b)) {
                 this._reduceCounters(104, 'S');
                 this._reduceCounters(15, 'B');
