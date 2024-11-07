@@ -374,9 +374,9 @@ module.exports = class VirtualCountersManager {
 
     _modexpGetLen(len) {
         this._reduceCounters(20, 'S');
-        const times = Math.ceil(len/32);
-        if(len%32 > 0) this._SHRarith();
-        for(let i = 0; i < times; i++) {
+        const times = Math.ceil(len / 32);
+        if (len % 32 > 0) this._SHRarith();
+        for (let i = 0; i < times; i++) {
             this._reduceCounters(20, 'S');
             this._reduceCounters(4, 'B');
             this._readFromCalldataOffset();
