@@ -244,7 +244,7 @@ module.exports = class VirtualCountersManager {
     processTx(input) {
         this._checkInput(input, ['bytecodeLength', 'isDeploy']);
         this._reduceCounters(300, 'S');
-        this._reduceCounters(12 + 7, 'B');
+        this._reduceCounters(11 + 7, 'B');
         this._reduceCounters(14 * MCP, 'P');
         this._reduceCounters(5, 'D');
         this._reduceCounters(2, 'A');
@@ -352,6 +352,9 @@ module.exports = class VirtualCountersManager {
         this._multiCall('_mStoreX', 2);
         this._multiCall('_preModExpLoop', Math.floor(input.calldataLength / 32));
         this._multiCall('_preModExpLoop', Math.floor(input.returnDataLength / 32));
+        this._modexpGetLen(input.bLen);
+        this._modexpGetLen(input.mLen);
+        this._modexpGetLen(input.eLen);
         if (input.modulus > 0) {
             this._modexp(input.bLen, input.mLen, input.eLen, input.base, input.exponent, input.modulus);
         }
@@ -367,6 +370,17 @@ module.exports = class VirtualCountersManager {
     _preModExpLoop() {
         this._reduceCounters(8, 'S');
         this._mStore32();
+    }
+
+    _modexpGetLen(len) {
+        this._reduceCounters(20, 'S');
+        const times = Math.ceil(len/32);
+        if(len%32 > 0) this._SHRarith();
+        for(let i = 0; i < times; i++) {
+            this._reduceCounters(20, 'S');
+            this._reduceCounters(4, 'B');
+            this._readFromCalldataOffset();
+        }
     }
 
     preSHA256(input) {
@@ -1759,7 +1773,7 @@ module.exports = class VirtualCountersManager {
 
     _isColdAddress() {
         this._reduceCounters(100, 'S');
-        this._reduceCounters(3 + 1, 'B');
+        this._reduceCounters(1 + 1, 'B');
         this._reduceCounters(2 * MCPL, 'P');
     }
 
