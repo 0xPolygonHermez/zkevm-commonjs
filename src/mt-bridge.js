@@ -16,11 +16,38 @@ class MTBridge {
         }
         this.tree = tree;
         this.dirty = false;
+
+        // Frontier
+        this.frontier = new Array(this.height).fill(ethers.constants.HashZero);
+        this.depositCount = 0;
+
+        // Historic frontiers. Index of the array is the depositCount
+        this.historicFrontiers = [];
+        this.saveFrontier();
     }
 
     add(leaf) {
         this.dirty = true;
         this.tree[0].push(leaf);
+        this.depositCount += 1;
+        this.computeFrontier(leaf);
+        this.saveFrontier();
+    }
+
+    computeFrontier(leaf) {
+        let node = leaf;
+
+        for (let i = 0; i < this.height; i++) {
+            if (((this.depositCount >> i) & 1) == 1) {
+                this.frontier[i] = node;
+                return;
+            }
+            node = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [this.frontier[i], node]);
+        }
+    }
+
+    saveFrontier() {
+        this.historicFrontiers.push(this.frontier.slice());
     }
 
     calcBranches() {
@@ -64,6 +91,40 @@ class MTBridge {
         if (this.dirty) this.calcBranches();
 
         return this.tree[this.height][0];
+    }
+
+    getRootFromFrontier(){
+        let node = ethers.constants.HashZero;
+
+        for (let i = 0; i < this.height; i++) {
+            if (((this.depositCount >> i) & 1) == 1) {
+                node = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [this.frontier[i], node]);
+            } else {
+                node = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [node, this.zeroHashes[i]]);
+            }
+        }
+
+        return node;
+    }
+
+    rollbackTree(depositCount) {
+        if (depositCount < 0 || depositCount > this.depositCount) {
+            throw new Error('MTBridge::rollbackTree: Invalid deposit count');
+        }
+
+        // Reset frontier and deposit count
+        this.depositCount = depositCount;
+        this.frontier = this.historicFrontiers[depositCount];
+        this.historicFrontiers = this.historicFrontiers.slice(0, depositCount);
+
+        // Reset leaves and tree
+        this.tree[0] = this.tree[0].slice(0, depositCount);
+        for (let i = 1; i <= this.height; i++) {
+            this.tree[i] = [];
+        }
+
+        // Recompute branches
+        this.calcBranches();
     }
 }
 
