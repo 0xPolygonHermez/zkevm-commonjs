@@ -130,7 +130,7 @@ describe('Merkle Bridge', () => {
 
         // add leaves (snaphot at middle)
         const numInsertions = 100;
-        const snapshot = Math.floor(numInsertions/2);
+        const snapshot = Math.floor(numInsertions / 2);
         let snapshotRoot;
         let snapshotDepositCount;
 
@@ -140,7 +140,7 @@ describe('Merkle Bridge', () => {
             leaves.push(leafValue);
             merkleTree.add(leafValue);
 
-            if (i == snapshot) {
+            if (i === snapshot) {
                 snapshotDepositCount = merkleTree.depositCount;
                 snapshotRoot = merkleTree.getRoot();
                 const rootFromFrontier = merkleTree.getRootFromFrontier();

@@ -38,8 +38,9 @@ class MTBridge {
         let node = leaf;
 
         for (let i = 0; i < this.height; i++) {
-            if (((this.depositCount >> i) & 1) == 1) {
+            if (((this.depositCount >> i) & 1) === 1) {
                 this.frontier[i] = node;
+
                 return;
             }
             node = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [this.frontier[i], node]);
@@ -93,11 +94,11 @@ class MTBridge {
         return this.tree[this.height][0];
     }
 
-    getRootFromFrontier(){
+    getRootFromFrontier() {
         let node = ethers.constants.HashZero;
 
         for (let i = 0; i < this.height; i++) {
-            if (((this.depositCount >> i) & 1) == 1) {
+            if (((this.depositCount >> i) & 1) === 1) {
                 node = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [this.frontier[i], node]);
             } else {
                 node = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [node, this.zeroHashes[i]]);
